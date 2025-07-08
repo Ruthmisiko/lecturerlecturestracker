@@ -39,7 +39,22 @@
         @endif
     @endforeach
 @endif
+ @if((request('lecturer') || request('class') || request('lecture_date')) && $clashes->isNotEmpty())
+                        @foreach($clashes as $clash)
+                            @php
+                                $matchesClass = request('class') ? str_contains(strtolower($clash->classs->name), strtolower(request('class'))) : true;
+                                $matchesDate = request('lecture_date') ? $clash->lecture_date === request('lecture_date') : true;
+                            @endphp
 
+                            @if($matchesClass && $matchesDate)
+                                <div class="alert alert-danger">
+                                    <strong>CLASH:</strong> Class <strong>{{ $clash->classs->name }}</strong> has multiple lecturers 
+                                    scheduled on <strong>{{ \Carbon\Carbon::parse($clash->lecture_date)->format('Y-m-d') }}</strong> 
+                                    at <strong>{{ $clash->start_time }} - {{ $clash->end_time }}</strong>.
+                                </div>
+                            @endif
+                        @endforeach
+                    @endif
 
 
         <table class="table table-bordered" id="lecturers-table">
@@ -48,8 +63,10 @@
                 <tr>
                     <th>Lecturer</th>
                     <th>Class</th>
-                    <th>Lecture Time</th>
-                    <th>Lecture Dates</th>
+                    <th>Lecture Start Time</th>
+                    <th> Lecture End Time</th>
+                    <th>Lecture Date</th>
+                     <th>Status</th>
                     <th>Action</th>
                 </tr>
             </thead>
@@ -58,7 +75,8 @@
                     <tr>
                         <td>{{ $lectureAdministered->lecturer->name }}</td>
                         <td>{{ $lectureAdministered->classs->name }}</td>
-                        <td>{{ $lectureAdministered->lecture_time }}</td>
+                        <td>{{ $lectureAdministered->start_time }}</td>
+                         <td>{{ $lectureAdministered->end_time }}</td>
                        <td>
                 @php $date = $lectureAdministered->lecture_date; @endphp
 
@@ -68,6 +86,32 @@
                     <span class="badge badge-info">{{ $date }}</span>
                 @endif
             </td>
+            <td>
+                                        @php
+                                            $isDoubleEntry = $duplicates->contains(function ($dup) use ($lectureAdministered) {
+                                                return $dup->lecturer_id == $lectureAdministered->lecturer_id &&
+                                                       $dup->classs_id == $lectureAdministered->classs_id &&
+                                                       $dup->lecture_date == $lectureAdministered->lecture_date &&
+                                                       $dup->start_time == $lectureAdministered->start_time &&
+                                                       $dup->end_time == $lectureAdministered->end_time;
+                                            });
+
+                                            $isClash = $clashes->contains(function ($clash) use ($lectureAdministered) {
+                                                return $clash->classs_id == $lectureAdministered->classs_id &&
+                                                       $clash->lecture_date == $lectureAdministered->lecture_date &&
+                                                       $clash->start_time == $lectureAdministered->start_time &&
+                                                       $clash->end_time == $lectureAdministered->end_time;
+                                            });
+                                        @endphp
+
+                                        @if($isDoubleEntry)
+                                            <span class="badge badge-danger">Double Entry</span>
+                                        @elseif($isClash)
+                                            <span class="badge badge-warning">Clash</span>
+                                        @else
+                                            <span class="badge badge-success">OK</span>
+                                        @endif
+                                    </td>
 
 
                        <td style="width: 120px">

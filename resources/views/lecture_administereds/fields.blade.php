@@ -22,10 +22,14 @@
     {!! Form::date('lecture_date', isset($lectureAdministered) ? $lectureAdministered->lecture_date : null, ['class' => 'form-control']) !!}
 </div>
 <div class="form-group col-sm-6">
-    {!! Form::label('lecture_time', 'Lecture Time:') !!}
-    {!! Form::time('lecture_time', null, ['class' => 'form-control']) !!}
+    {!! Form::label('start_time', 'Start Time:') !!}
+    {!! Form::time('start_time', null, ['class' => 'form-control']) !!}
 </div>
 
+<div class="form-group col-sm-6">
+    {!! Form::label('end_time', 'End Time:') !!}
+    {!! Form::time('end_time', null, ['class' => 'form-control']) !!}
+</div>
 <script>
 function addDateField() {
     const dateField = `<input type="date" name="lecture_dates[]" class="form-control mb-2" />`;

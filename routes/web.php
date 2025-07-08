@@ -2,7 +2,7 @@
 
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
-
+use App\Http\Controllers\LectureAdministeredController;
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -32,5 +32,7 @@ Route::middleware('auth')->group(function () {
 
 require __DIR__.'/auth.php';
 
+Route::get('lecture-administereds/download-template', [LectureAdministeredController::class, 'downloadTemplate'])->name('lecture-administereds.download-template');
+Route::post('lecture-administereds/import', [LectureAdministeredController::class, 'import'])->name('lecture-administereds.import');
 Route::resource('classses', App\Http\Controllers\ClasssController::class);
 Route::resource('lecture-administereds', App\Http\Controllers\LectureAdministeredController::class);

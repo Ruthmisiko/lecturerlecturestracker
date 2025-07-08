@@ -9,9 +9,11 @@ class LectureAdministered extends Model
     public $table = 'lecture_administereds';
 
     public $fillable = [
+        'user_id',
         'lecturer_id',
         'classs_id',
-        'lecture_time',
+         'start_time',
+        'end_time',
         'lecture_date',
     ];
 
@@ -35,4 +37,8 @@ class LectureAdministered extends Model
         return $this->belongsTo(Classs::class);
     }
 
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 }

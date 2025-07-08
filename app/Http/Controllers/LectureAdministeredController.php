@@ -8,6 +8,10 @@ use App\Http\Requests\UpdateLectureAdministeredRequest;
 use App\Http\Controllers\AppBaseController;
 use App\Repositories\LectureAdministeredRepository;
 use Illuminate\Http\Request;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\LectureTemplateExport;
+use App\Imports\LectureImport;
+use Illuminate\Support\Facades\Auth;
 use Flash;
 
 class LectureAdministeredController extends AppBaseController
@@ -25,7 +29,7 @@ class LectureAdministeredController extends AppBaseController
      */
    public function index(Request $request)
 {
-    $query = LectureAdministered::with(['lecturer', 'classs']);
+   $query = LectureAdministered::with(['lecturer', 'classs']);
 
     if ($request->filled('lecturer')) {
         $query->whereHas('lecturer', function ($q) use ($request) {
@@ -45,13 +49,28 @@ class LectureAdministeredController extends AppBaseController
 
     $lectureAdministereds = $query->paginate(10)->appends($request->all());
 
-    $duplicates = LectureAdministered::select('lecturer_id', 'classs_id', 'lecture_date')
-        ->groupBy('lecturer_id', 'classs_id', 'lecture_date')
-        ->havingRaw('COUNT(*) > 1')
-        ->with(['lecturer', 'classs'])
-        ->get(); 
+   
+       $duplicates = LectureAdministered::where('user_id', Auth::id())
+            ->select('lecturer_id', 'classs_id', 'lecture_date', 'start_time', 'end_time')
+            ->groupBy('lecturer_id', 'classs_id', 'lecture_date', 'start_time', 'end_time')
+            ->havingRaw('COUNT(*) > 1')
+            ->with(['lecturer' => function ($q) {
+                $q->where('user_id', Auth::id());
+            }, 'classs' => function ($q) {
+                $q->where('user_id', Auth::id());
+            }])
+            ->get();
 
-    return view('lecture_administereds.index', compact('lectureAdministereds', 'duplicates'))
+        $clashes = LectureAdministered::where('user_id', Auth::id())
+            ->select('classs_id', 'lecture_date', 'start_time', 'end_time')
+            ->groupBy('classs_id', 'lecture_date', 'start_time', 'end_time')
+            ->havingRaw('COUNT(DISTINCT lecturer_id) > 1')
+            ->with(['classs' => function ($q) {
+                $q->where('user_id', Auth::id());
+            }])
+            ->get();
+
+    return view('lecture_administereds.index', compact('lectureAdministereds', 'duplicates','clashes'))
         ->with('lectureAdministereds', $lectureAdministereds);
 }
 
@@ -61,34 +80,39 @@ class LectureAdministeredController extends AppBaseController
      */
     public function create()
     {
-        return view('lecture_administereds.create');
+       $lecturers = \App\Models\Lecturer::where('user_id', Auth::id())->pluck('name', 'id');
+    $classes = \App\Models\Classs::where('user_id', Auth::id())->pluck('name', 'id');
+    return view('lecture_administereds.create', compact('lecturers', 'classes'));
     }
 
     /**
      * Store a newly created LectureAdministered in storage.
      */
-   public function store(Request $request)
-{
-    $request->validate([
-        'lecturer_id' => 'required|exists:lecturers,id',
-        'classs_id' => 'required|exists:classses,id',
-        'lecture_time' => 'required',
-        'lecture_dates' => 'required|array',
-        'lecture_dates.*' => 'date',
-    ]);
-
-    foreach ($request->lecture_dates as $date) {
-        LectureAdministered::create([
-            'lecturer_id' => $request->lecturer_id,
-            'classs_id' => $request->classs_id,
-            'lecture_date' => $date,
-            'lecture_time' => $request->lecture_time,
+  public function store(Request $request)
+    {
+        $request->validate([
+          'lecturer_id' => 'required|exists:lecturers,id,user_id,' . Auth::id(),
+            'classs_id' => 'required|exists:classses,id,user_id,' . Auth::id(),
+            'start_time' => 'required|date_format:H:i',
+            'end_time' => 'required|date_format:H:i|after:start_time',
+            'lecture_dates' => 'required|array',
+            'lecture_dates.*' => 'date',
         ]);
-    }
 
-    Flash::success('Lecture(s) recorded successfully.');
-    return redirect(route('lecture-administereds.index'));
-}
+        foreach ($request->lecture_dates as $date) {
+            LectureAdministered::create([
+                'user_id' => Auth::id(),
+                'lecturer_id' => $request->lecturer_id,
+                'classs_id' => $request->classs_id,
+                'lecture_date' => $date,
+                'start_time' => $request->start_time,
+                'end_time' => $request->end_time,
+            ]);
+        }
+
+        Flash::success('Lecture(s) recorded successfully.');
+        return redirect(route('lecture-administereds.index'));
+    }
 
 
     /**
@@ -110,49 +134,48 @@ class LectureAdministeredController extends AppBaseController
     /**
      * Show the form for editing the specified LectureAdministered.
      */
-    public function edit($id)
-    {
-        $lectureAdministered = $this->lectureAdministeredRepository->find($id);
+   public function edit($id)
+{
+    $lectureAdministered = $this->lectureAdministeredRepository->find($id);
 
-        if (empty($lectureAdministered)) {
-            Flash::error('Lecture Administered not found');
-
-            return redirect(route('lectureAdministereds.index'));
-        }
-
-        return view('lecture_administereds.edit')->with('lectureAdministered', $lectureAdministered);
-    }
+      $lecturers = \App\Models\Lecturer::where('user_id', Auth::id())->pluck('name', 'id');
+    $classes = \App\Models\Classs::where('user_id', Auth::id())->pluck('name', 'id');
+    return view('lecture_administereds.edit', compact('lectureAdministered', 'lecturers', 'classes'));
+}
 
     /**
      * Update the specified LectureAdministered in storage.
      */
   public function update($id, UpdateLectureAdministeredRequest $request)
-{
-    $request->validate([
-        'lecturer_id' => 'required|exists:lecturers,id',
-        'classs_id' => 'required|exists:classses,id',
-        'lecture_date' => 'required|date',
-        'lecture_time' => 'required'
-    ]);
+    {
+        $request->validate([
+            'lecturer_id' => 'required|exists:lecturers,id',
+            'classs_id' => 'required|exists:classses,id',
+            'lecture_date' => 'required|date',
+            'start_time' => 'required|date_format:H:i',
+            'end_time' => 'required|date_format:H:i|after:start_time'
+        ]);
 
-    $lectureAdministered = $this->lectureAdministeredRepository->find($id);
+        $lectureAdministered = $this->lectureAdministeredRepository->find($id);
 
-    if (empty($lectureAdministered)) {
-        Flash::error('Lecture Administered not found');
-        return redirect(route('lectureAdministereds.index'));
+        
+
+        if (empty($lectureAdministered)) {
+            Flash::error('Lecture Administered not found');
+            return redirect(route('lecture-administereds.index'));
+        }
+
+        $lectureAdministered->update([
+            'lecturer_id' => $request->lecturer_id,
+            'classs_id' => $request->classs_id,
+            'lecture_date' => $request->lecture_date,
+            'start_time' => $request->start_time,
+            'end_time' => $request->end_time,
+        ]);
+
+        Flash::success('Lecture Administered updated successfully.');
+        return redirect(route('lecture-administereds.index'));
     }
-
-    $lectureAdministered->update([
-        'lecturer_id' => $request->lecturer_id,
-        'classs_id' => $request->classs_id,
-        'lecture_date' => $request->lecture_date,
-        'lecture_time' => $request->lecture_time,
-    ]);
-
-    Flash::success('Lecture Administered updated successfully.');
-    return redirect(route('lecture-administereds.index'));
-}
-
 
     /**
      * Remove the specified LectureAdministered from storage.
@@ -175,4 +198,25 @@ class LectureAdministeredController extends AppBaseController
 
         return redirect(route('lectureAdministereds.index'));
     }
+      public function downloadTemplate()
+    {
+        return Excel::download(new LectureTemplateExport, 'lecture_template.xlsx');
+    }
+
+    public function import(Request $request)
+    {
+        $request->validate([
+            'excel_file' => 'required|file|mimes:xlsx,xls',
+        ]);
+
+        try {
+            Excel::import(new LectureImport, $request->file('excel_file'));
+            Flash::success('Lecture schedule imported successfully.');
+        } catch (\Exception $e) {
+            Flash::error('Error importing file: ' . $e->getMessage());
+        }
+
+        return redirect(route('lecture-administereds.index'));
+    }
+    
 }

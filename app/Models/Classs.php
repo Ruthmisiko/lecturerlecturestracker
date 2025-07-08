@@ -9,6 +9,7 @@ class Classs extends Model
     public $table = 'classses';
 
     public $fillable = [
+        'user_id',
         'name',
         'code',
         'desciription',        
@@ -22,5 +23,8 @@ class Classs extends Model
         
     ];
 
-    
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 }

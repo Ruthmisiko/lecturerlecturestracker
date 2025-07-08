@@ -9,6 +9,7 @@ use App\Http\Requests\UpdateLecturerRequest;
 use App\Http\Controllers\AppBaseController;
 use App\Repositories\LecturerRepository;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Flash;
 
 class LecturerController extends AppBaseController
@@ -26,7 +27,7 @@ class LecturerController extends AppBaseController
      */
     public function index(Request $request)
     {
-        $lecturers = $this->lecturerRepository->paginate(10);
+        $lecturers = Lecturer::where('user_id', Auth::id())->paginate(10);
 
         return view('lecturers.index')
             ->with('lecturers', $lecturers);
@@ -46,6 +47,8 @@ class LecturerController extends AppBaseController
     public function store(CreateLecturerRequest $request)
     {
         $input = $request->all();
+
+        $input['user_id'] = Auth::id();
 
         $lecturer = $this->lecturerRepository->create($input);
 
@@ -71,7 +74,7 @@ class LecturerController extends AppBaseController
     // }
 public function show($id)
 {
-    $lecturer = Lecturer::with('lectureAdministereds.classs')->findOrFail($id);
+    $lecturer = Lecturer::where('user_id', Auth::id())->with('lectureAdministereds.classs')->findOrFail($id);
     return view('lecturers.show', compact('lecturer'));
 }
 

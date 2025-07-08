@@ -18,12 +18,14 @@ return new class extends Migration
             $table->unsignedBigInteger('lecturer_id');
             $table->unsignedBigInteger('classs_id');
             $table->date('lecture_date');
-            $table->time('lecture_time');
-
+            $table->time('start_time');
+            $table->time('end_time');
+            $table->unsignedBigInteger('user_id')->nullable();
             $table->timestamps();
 
             $table->foreign('lecturer_id')->references('id')->on('lecturers')->onDelete('cascade');
             $table->foreign('classs_id')->references('id')->on('classses')->onDelete('cascade');
+            $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
                     
         });
     }

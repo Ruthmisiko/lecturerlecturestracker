@@ -7,7 +7,9 @@ use App\Http\Requests\UpdateClasssRequest;
 use App\Http\Controllers\AppBaseController;
 use App\Repositories\ClasssRepository;
 use Illuminate\Http\Request;
+use App\Models\Classs;
 use Flash;
+use Illuminate\Support\Facades\Auth;
 
 class ClasssController extends AppBaseController
 {
@@ -24,7 +26,7 @@ class ClasssController extends AppBaseController
      */
     public function index(Request $request)
     {
-        $classses = $this->classsRepository->paginate(10);
+        $classses = Classs::where('user_id', Auth::id())->paginate(10);
 
         return view('classses.index')
             ->with('classses', $classses);
@@ -45,6 +47,8 @@ class ClasssController extends AppBaseController
     {
         $input = $request->all();
 
+         $input['user_id'] = Auth::id();
+         
         $classs = $this->classsRepository->create($input);
 
         Flash::success('Classs saved successfully.');
