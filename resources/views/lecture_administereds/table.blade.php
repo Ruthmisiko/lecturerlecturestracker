@@ -16,7 +16,7 @@
                 <input type="date" name="lecture_date" class="form-control" value="{{ request('lecture_date') }}">
             </div>
             <div class="col-md-3 d-flex gap-2">
-                <button type="submit" class="btn btn-primary mr-2">Search</button>
+                <button type="submit" class="btn btn-success mr-2">Search</button>
                 <a href="{{ route('lecture-administereds.index') }}" class="btn btn-secondary">Reset</a>
             </div>
         </div>
@@ -32,8 +32,8 @@
 
         @if($matchesLecturer && $matchesClass && $matchesDate)
             <div class="alert alert-warning">
-                <strong>LECTURER:</strong> {{ $dup->lecturer->name }} has <strong>double entry</strong> 
-                for class <strong>{{ $dup->classs->name }}</strong> on 
+                <strong>LECTURER:</strong> {{ $dup->lecturer->name }} has <strong>double entry</strong>
+                for class <strong>{{ $dup->classs->name }}</strong> on
                 <strong>{{ \Carbon\Carbon::parse($dup->lecture_date)->format('Y-m-d') }}</strong>.
             </div>
         @endif
@@ -48,8 +48,8 @@
 
                             @if($matchesClass && $matchesDate)
                                 <div class="alert alert-danger">
-                                    <strong>CLASH:</strong> Class <strong>{{ $clash->classs->name }}</strong> has multiple lecturers 
-                                    scheduled on <strong>{{ \Carbon\Carbon::parse($clash->lecture_date)->format('Y-m-d') }}</strong> 
+                                    <strong>CLASH:</strong> Class <strong>{{ $clash->classs->name }}</strong> has multiple lecturers
+                                    scheduled on <strong>{{ \Carbon\Carbon::parse($clash->lecture_date)->format('Y-m-d') }}</strong>
                                     at <strong>{{ $clash->start_time }} - {{ $clash->end_time }}</strong>.
                                 </div>
                             @endif
@@ -58,7 +58,7 @@
 
 
         <table class="table table-bordered" id="lecturers-table">
-            
+
             <thead>
                 <tr>
                     <th>Lecturer</th>

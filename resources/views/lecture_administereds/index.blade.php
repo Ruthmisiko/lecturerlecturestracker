@@ -5,14 +5,14 @@
         <div class="container-fluid">
             <div class="row mb-2">
                 <div class="col-sm-6">
-                    <h1>Lecture Administereds</h1>
+                    <h1 class="font-weight-bold">Lecture Administereds</h1>
                 </div>
                 <div class="col-sm-6">
                     <div class="float-right">
-                        <a class="btn btn-primary mr-2" href="{{ route('lecture-administereds.create') }}">
+                        <a class="btn btn-success mr-2" href="{{ route('lecture-administereds.create') }}">
                             Add New
                         </a>
-                        <button class="btn btn-success" data-toggle="modal" data-target="#uploadModal">
+                        <button class="btn btn-primary" data-toggle="modal" data-target="#uploadModal">
                             Upload Excel
                         </button>
                     </div>
@@ -51,7 +51,7 @@
                             <label for="excel_file">Upload Excel File</label>
                             <input type="file" name="excel_file" class="form-control" accept=".xlsx,.xls" required>
                         </div>
-                        <button type="submit" class="btn btn-primary">Upload</button>
+                        <button type="submit" class="btn btn-success">Upload</button>
                     </form>
                 </div>
             </div>

@@ -30,7 +30,7 @@
             </div>
 
             <div class="card-footer">
-                {!! Form::submit('Save', ['class' => 'btn btn-primary']) !!}
+                {!! Form::submit('Save', ['class' => 'btn btn-success']) !!}
                 <a href="{{ route('classses.index') }}" class="btn btn-default"> Cancel </a>
             </div>
 

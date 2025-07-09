@@ -44,9 +44,10 @@
                 {{ __('Already registered?') }}
             </a>
 
-            <x-primary-button class="ms-4">
+            <x-primary-button class="ms-4 bg-blue-600 hover:bg-blue-700 text-white">
                 {{ __('Register') }}
             </x-primary-button>
+
         </div>
     </form>
 </x-guest-layout>

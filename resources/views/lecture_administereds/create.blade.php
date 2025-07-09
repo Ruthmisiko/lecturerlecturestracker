@@ -58,7 +58,7 @@ function addDateField() {
 }
 </script>
     <div class="card-footer">
-        {!! Form::submit('Save', ['class' => 'btn btn-primary']) !!}
+        {!! Form::submit('Save', ['class' => 'btn btn-success']) !!}
         <a href="{{ route('lecture-administereds.index') }}" class="btn btn-default"> Cancel </a>
     </div>
 

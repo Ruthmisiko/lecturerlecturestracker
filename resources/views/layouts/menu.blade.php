@@ -1,20 +1,23 @@
 
 
-    <a href="{{ route('lecturers.index') }}" class="nav-link {{ Request::is('lecturers*') ? 'active' : '' }}">
-        <i class="nav-icon fas fa-home"></i>
-        <p>Lecturers</p>
-    </a>
-        <a href="{{ route('classses.index') }}" class="nav-link {{ Request::is('classses*') ? 'active' : '' }}">
-            <i class="nav-icon fas fa-home"></i>
-            <p>Classses</p>
-        </a>
-        <a href="{{ route('lecture-administereds.index') }}" class="nav-link {{ Request::is('lecture-administereds*') ? 'active' : '' }}">
-            <i class="nav-icon fas fa-home"></i>
-            <p>Lecture Administereds</p>
-        </a>
-<a href="{{ route('logout') }}" class="nav-link"
+<a href="{{ route('lecturers.index') }}" class="nav-link text-white font-weight-bold {{ Request::is('lecturers*') ? 'active' : '' }}">
+
+    <p>Lecturers</p>
+</a>
+
+<a href="{{ route('classses.index') }}" class="nav-link text-white font-weight-bold {{ Request::is('classses*') ? 'active' : '' }}">
+
+    <p>Classes</p>
+</a>
+
+<a href="{{ route('lecture-administereds.index') }}" class="nav-link text-white font-weight-bold {{ Request::is('lecture-administereds*') ? 'active' : '' }}">
+
+    <p>Lecture Administereds</p>
+</a>
+
+<a href="{{ route('logout') }}" class="nav-link text-white font-weight-bold"
    onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
-    <i class="nav-icon fas fa-sign-out-alt text-danger"></i>
+
     <p>Logout</p>
 </a>
 
