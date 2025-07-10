@@ -22,9 +22,8 @@
     .nav-link:hover {
         background-color: #218838 !important; /* Darker green on hover */
     }
-
     .nav-link.active {
-        background-color: #1e7e34 !important; /* Even darker green when active */
+        background-color: #1e7e34 !important;
     }
 </style>
     @stack('styles')
