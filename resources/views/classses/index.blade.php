@@ -7,12 +7,14 @@
                 <div class="col-sm-6">
                     <h1 class="font-weight-bold">Classes</h1>
                 </div>
+                @can('class.create')
                 <div class="col-sm-6">
                     <a class="btn btn-success float-right"
                        href="{{ route('classses.create') }}">
                         Add New
                     </a>
                 </div>
+                @endcan
             </div>
         </div>
     </section>

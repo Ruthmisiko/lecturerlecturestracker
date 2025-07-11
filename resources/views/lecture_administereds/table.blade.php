@@ -76,44 +76,42 @@
                         <td>{{ $lectureAdministered->lecturer->name }}</td>
                         <td>{{ $lectureAdministered->classs->name }}</td>
                         <td>{{ $lectureAdministered->start_time }}</td>
-                         <td>{{ $lectureAdministered->end_time }}</td>
-                       <td>
-                @php $date = $lectureAdministered->lecture_date; @endphp
+                        <td>{{ $lectureAdministered->end_time }}</td>
+                        <td>
+                            @php $date = $lectureAdministered->lecture_date; @endphp
 
-                @if($dateCounts[$date] > 1)
-                    <span class="badge badge-danger">{{ $date }}</span> {{-- duplicate date --}}
-                @else
-                    <span class="badge badge-info">{{ $date }}</span>
-                @endif
-            </td>
-            <td>
-                                        @php
-                                            $isDoubleEntry = $duplicates->contains(function ($dup) use ($lectureAdministered) {
-                                                return $dup->lecturer_id == $lectureAdministered->lecturer_id &&
-                                                       $dup->classs_id == $lectureAdministered->classs_id &&
-                                                       $dup->lecture_date == $lectureAdministered->lecture_date &&
-                                                       $dup->start_time == $lectureAdministered->start_time &&
-                                                       $dup->end_time == $lectureAdministered->end_time;
-                                            });
+                            @if($dateCounts[$date] > 1)
+                                <span class="badge badge-danger">{{ $date }}</span> {{-- duplicate date --}}
+                            @else
+                                <span class="badge badge-info">{{ $date }}</span>
+                            @endif
+                        </td>
+                        <td>
+                            @php
+                                $isDoubleEntry = $duplicates->contains(function ($dup) use ($lectureAdministered) {
+                                    return $dup->lecturer_id == $lectureAdministered->lecturer_id &&
+                                            $dup->classs_id == $lectureAdministered->classs_id &&
+                                            $dup->lecture_date == $lectureAdministered->lecture_date &&
+                                            $dup->start_time == $lectureAdministered->start_time &&
+                                            $dup->end_time == $lectureAdministered->end_time;
+                                });
 
-                                            $isClash = $clashes->contains(function ($clash) use ($lectureAdministered) {
-                                                return $clash->classs_id == $lectureAdministered->classs_id &&
-                                                       $clash->lecture_date == $lectureAdministered->lecture_date &&
-                                                       $clash->start_time == $lectureAdministered->start_time &&
-                                                       $clash->end_time == $lectureAdministered->end_time;
-                                            });
-                                        @endphp
+                                $isClash = $clashes->contains(function ($clash) use ($lectureAdministered) {
+                                    return $clash->classs_id == $lectureAdministered->classs_id &&
+                                            $clash->lecture_date == $lectureAdministered->lecture_date &&
+                                            $clash->start_time == $lectureAdministered->start_time &&
+                                            $clash->end_time == $lectureAdministered->end_time;
+                                });
+                            @endphp
 
-                                        @if($isDoubleEntry)
-                                            <span class="badge badge-danger">Double Entry</span>
-                                        @elseif($isClash)
-                                            <span class="badge badge-warning">Clash</span>
-                                        @else
-                                            <span class="badge badge-success">OK</span>
-                                        @endif
-                                    </td>
-
-
+                            @if($isDoubleEntry)
+                                <span class="badge badge-danger">Double Entry</span>
+                            @elseif($isClash)
+                                <span class="badge badge-warning">Clash</span>
+                            @else
+                                <span class="badge badge-success">OK</span>
+                            @endif
+                        </td>
                        <td style="width: 120px">
                         <div class="dropdown">
                             <button class="btn btn-light btn-sm dropdown-toggle" type="button" id="dropdownMenuButton{{ $lectureAdministered->id }}"
@@ -121,16 +119,22 @@
                                 <i class="fas fa-ellipsis-v"></i>
                             </button>
                             <div class="dropdown-menu" aria-labelledby="dropdownMenuButton{{ $lectureAdministered->id }}">
+                                @can('lecture.view')
                                 <a class="dropdown-item" href="{{ route('lecture-administereds.show', $lectureAdministered->id) }}">
                                     <i class="far fa-eye mr-2 text-primary"></i> View
                                 </a>
+                                @endcan
+                                @can('lecture.edit')
                                 <a class="dropdown-item" href="{{ route('lecture-administereds.edit', $lectureAdministered->id) }}">
                                     <i class="far fa-edit mr-2 text-success"></i> Edit
                                 </a>
+                                @endcan
                                 {!! Form::open(['route' => ['lecture-administereds.destroy', $lectureAdministered->id], 'method' => 'delete']) !!}
+                                @can('lecture.delete')
                                     <button class="dropdown-item text-danger" type="submit" onclick="return confirm('Are you sure?')">
                                         <i class="far fa-trash-alt mr-2"></i> Delete
                                     </button>
+                                @endcan
                                 {!! Form::close() !!}
                             </div>
                         </div>

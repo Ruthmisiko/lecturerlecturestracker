@@ -1,6 +1,7 @@
 <?php
 namespace App\Exports;
 
+use Illuminate\Support\Facades\Auth;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithEvents;
@@ -10,6 +11,13 @@ use App\Models\Lecturer;
 
 class LectureTemplateExport implements FromCollection, WithHeadings, WithEvents
 {
+    protected $userId;
+
+    public function __construct($userId)
+    {
+        $this->userId = $userId;
+    }
+
     public function collection()
     {
         return collect([[]]); // Just one empty row for template
@@ -32,9 +40,9 @@ class LectureTemplateExport implements FromCollection, WithHeadings, WithEvents
             AfterSheet::class => function(AfterSheet $event) {
                 $sheet = $event->sheet->getDelegate();
 
-                // Get class names and lecturer names
-                $classes = Classs::pluck('name')->toArray();
-                $lecturers = Lecturer::pluck('name')->toArray();
+                // Filtered by user_id
+                $classes = Classs::where('user_id', $this->userId)->pluck('name')->toArray();
+                $lecturers = Lecturer::where('user_id', $this->userId)->pluck('name')->toArray();
 
                 // Time options (08:00 to 18:00)
                 $timeOptions = [];

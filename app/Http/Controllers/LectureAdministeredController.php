@@ -29,7 +29,9 @@ class LectureAdministeredController extends AppBaseController
      */
    public function index(Request $request)
 {
-   $query = LectureAdministered::with(['lecturer', 'classs']);
+   $query = LectureAdministered::with(['lecturer', 'classs'])
+    ->where('user_id', Auth::id());
+
 
     if ($request->filled('lecturer')) {
         $query->whereHas('lecturer', function ($q) use ($request) {
@@ -198,9 +200,11 @@ class LectureAdministeredController extends AppBaseController
 
         return redirect(route('lectureAdministereds.index'));
     }
-      public function downloadTemplate()
+    
+    public function downloadTemplate()
     {
-        return Excel::download(new LectureTemplateExport, 'lecture_template.xlsx');
+        $userId = Auth::id(); // Get current authenticated user
+        return Excel::download(new LectureTemplateExport($userId), 'lecture_template.xlsx');
     }
 
     public function import(Request $request)

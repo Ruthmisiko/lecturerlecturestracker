@@ -8,6 +8,7 @@
                     <h1 class="font-weight-bold">Lecture Administereds</h1>
                 </div>
                 <div class="col-sm-6">
+                    @can('lecture.create')
                     <div class="float-right">
                         <a class="btn btn-success mr-2" href="{{ route('lecture-administereds.create') }}">
                             Add New
@@ -16,6 +17,7 @@
                             Upload Excel
                         </button>
                     </div>
+                    @endcan
                 </div>
             </div>
         </div>

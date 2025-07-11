@@ -19,16 +19,22 @@
                                 <i class="fas fa-ellipsis-v"></i>
                             </button>
                             <div class="dropdown-menu" aria-labelledby="dropdownMenuButton{{ $classs->id }}">
+                                @can('class.view')
                                 <a class="dropdown-item" href="{{ route('classses.show', $classs->id) }}">
                                     <i class="far fa-eye mr-2 text-primary"></i> View
                                 </a>
+                                @endcan
+                                @can('class.edit')
                                 <a class="dropdown-item" href="{{ route('classses.edit', $classs->id) }}">
                                     <i class="far fa-edit mr-2 text-success"></i> Edit
                                 </a>
+                                @endcan
                                 {!! Form::open(['route' => ['classses.destroy', $classs->id], 'method' => 'delete']) !!}
+                                @can('class.delete')
                                     <button class="dropdown-item text-danger" type="submit" onclick="return confirm('Are you sure?')">
                                         <i class="far fa-trash-alt mr-2"></i> Delete
                                     </button>
+                                @endcan
                                 {!! Form::close() !!}
                             </div>
                         </div>

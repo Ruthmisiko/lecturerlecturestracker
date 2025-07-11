@@ -36,3 +36,5 @@ Route::get('lecture-administereds/download-template', [LectureAdministeredContro
 Route::post('lecture-administereds/import', [LectureAdministeredController::class, 'import'])->name('lecture-administereds.import');
 Route::resource('classses', App\Http\Controllers\ClasssController::class);
 Route::resource('lecture-administereds', App\Http\Controllers\LectureAdministeredController::class);
+Route::resource('roles', App\Http\Controllers\RoleController::class);
+Route::resource('users', App\Http\Controllers\UserController::class);
