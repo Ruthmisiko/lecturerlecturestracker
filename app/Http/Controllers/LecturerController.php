@@ -27,7 +27,12 @@ class LecturerController extends AppBaseController
      */
     public function index(Request $request)
     {
-        $lecturers = Lecturer::where('user_id', Auth::id())->paginate(10);
+        $user = Auth::user();
+
+        $ownerId = $user->user_id ?? $user->id;
+
+
+        $lecturers = Lecturer::where('user_id', $ownerId)->paginate(10);
 
         return view('lecturers.index')
             ->with('lecturers', $lecturers);
@@ -48,7 +53,9 @@ class LecturerController extends AppBaseController
     {
         $input = $request->all();
 
-        $input['user_id'] = Auth::id();
+        $user = Auth::user();
+
+        $input['user_id'] = $user->user_id ?? $user->id;
 
         $lecturer = $this->lecturerRepository->create($input);
 

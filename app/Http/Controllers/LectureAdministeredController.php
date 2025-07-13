@@ -29,8 +29,13 @@ class LectureAdministeredController extends AppBaseController
      */
    public function index(Request $request)
 {
+
+    $user = Auth::user();
+
+    $ownerId = $user->user_id ?? $user->id;
+
    $query = LectureAdministered::with(['lecturer', 'classs'])
-    ->where('user_id', Auth::id());
+    ->where('user_id', $ownerId);
 
 
     if ($request->filled('lecturer')) {
@@ -51,7 +56,7 @@ class LectureAdministeredController extends AppBaseController
 
     $lectureAdministereds = $query->paginate(10)->appends($request->all());
 
-   
+
        $duplicates = LectureAdministered::where('user_id', Auth::id())
             ->select('lecturer_id', 'classs_id', 'lecture_date', 'start_time', 'end_time')
             ->groupBy('lecturer_id', 'classs_id', 'lecture_date', 'start_time', 'end_time')
@@ -100,10 +105,13 @@ class LectureAdministeredController extends AppBaseController
             'lecture_dates' => 'required|array',
             'lecture_dates.*' => 'date',
         ]);
+        $user = Auth::user();
+
+        $ownerId = $user->user_id ?? $user->id;
 
         foreach ($request->lecture_dates as $date) {
             LectureAdministered::create([
-                'user_id' => Auth::id(),
+                 'user_id' => $ownerId,
                 'lecturer_id' => $request->lecturer_id,
                 'classs_id' => $request->classs_id,
                 'lecture_date' => $date,
@@ -160,7 +168,7 @@ class LectureAdministeredController extends AppBaseController
 
         $lectureAdministered = $this->lectureAdministeredRepository->find($id);
 
-        
+
 
         if (empty($lectureAdministered)) {
             Flash::error('Lecture Administered not found');
@@ -200,10 +208,10 @@ class LectureAdministeredController extends AppBaseController
 
         return redirect(route('lectureAdministereds.index'));
     }
-    
+
     public function downloadTemplate()
     {
-        $userId = Auth::id(); // Get current authenticated user
+        $userId = Auth::id();
         return Excel::download(new LectureTemplateExport($userId), 'lecture_template.xlsx');
     }
 
@@ -212,15 +220,13 @@ class LectureAdministeredController extends AppBaseController
         $request->validate([
             'excel_file' => 'required|file|mimes:xlsx,xls',
         ]);
-
         try {
             Excel::import(new LectureImport, $request->file('excel_file'));
             Flash::success('Lecture schedule imported successfully.');
         } catch (\Exception $e) {
             Flash::error('Error importing file: ' . $e->getMessage());
         }
-
         return redirect(route('lecture-administereds.index'));
     }
-    
+
 }

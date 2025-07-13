@@ -37,8 +37,8 @@
 <div class="col-sm-12">
     {!! Form::label('kra_pin', 'KRA PIN:') !!}
     <p>{{ $lecturer->kra_pin }}</p>
-</div>      
-             
+</div>
+
 <div class="mt-4">
     <h4>Lectures Administered</h4>
     @if($lecturer->lectureAdministereds->isEmpty())
@@ -49,7 +49,8 @@
                 <tr>
                     <th>Class</th>
                     <th>Lecture Date</th>
-                    <th>Lecture Time</th>
+                    <th>Start Time</th>
+                    <th>End Time</th>
                 </tr>
             </thead>
             <tbody>
@@ -57,7 +58,8 @@
                     <tr>
                         <td>{{ $record->classs->name ?? 'N/A' }}</td>
                         <td>{{ $record->lecture_date }}</td>
-                        <td>{{ $record->lecture_time }}</td>
+                        <td>{{ $record->start_time }}</td>
+                        <td>{{ $record->end_time }}</td>
                     </tr>
                 @endforeach
             </tbody>

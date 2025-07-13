@@ -12,7 +12,11 @@ class UserController extends Controller
 {
     public function index()
 {
-    $users = User::where('user_id', Auth::id())->with('roles')->get();
+    $user = Auth::user();
+
+    $ownerId = $user->user_id ?? $user->id;
+
+    $users = User::where('user_id', $ownerId)->with('roles')->get();
     return view('users.index', compact('users'));
 }
 

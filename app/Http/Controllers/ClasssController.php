@@ -26,7 +26,11 @@ class ClasssController extends AppBaseController
      */
     public function index(Request $request)
     {
-        $classses = Classs::where('user_id', Auth::id())->paginate(10);
+        $user = Auth::user();
+
+        $ownerId = $user->user_id ?? $user->id;
+
+        $classses = Classs::where('user_id', $ownerId)->paginate(10);
 
         return view('classses.index')
             ->with('classses', $classses);
@@ -47,8 +51,10 @@ class ClasssController extends AppBaseController
     {
         $input = $request->all();
 
-         $input['user_id'] = Auth::id();
-         
+        $user = Auth::user();
+
+        $input['user_id'] = $user->user_id ?? $user->id;
+
         $classs = $this->classsRepository->create($input);
 
         Flash::success('Classs saved successfully.');
