@@ -68,14 +68,26 @@ class LectureAdministeredController extends AppBaseController
             }])
             ->get();
 
+        // $clashes = LectureAdministered::where('user_id', Auth::id())
+        //     ->select('classs_id', 'lecture_date', 'start_time', 'end_time')
+        //     ->groupBy('classs_id', 'lecture_date', 'start_time', 'end_time')
+        //     ->havingRaw('COUNT(DISTINCT lecturer_id) > 1')
+        //     ->with(['classs' => function ($q) {
+        //         $q->where('user_id', Auth::id());
+        //     }])
+        //     ->get();
         $clashes = LectureAdministered::where('user_id', Auth::id())
-            ->select('classs_id', 'lecture_date', 'start_time', 'end_time')
-            ->groupBy('classs_id', 'lecture_date', 'start_time', 'end_time')
-            ->havingRaw('COUNT(DISTINCT lecturer_id) > 1')
-            ->with(['classs' => function ($q) {
-                $q->where('user_id', Auth::id());
-            }])
-            ->get();
+        ->with(['lecturer', 'classs'])
+        ->get()
+        ->groupBy(function ($item) {
+            return $item->classs_id . '_' . $item->lecture_date . '_' . $item->start_time . '_' . $item->end_time;
+        })
+        ->filter(function ($group) {
+            return $group->count() > 1; // only groups with multiple lecturers
+        })
+        ->flatMap(function ($group) {
+            return $group; // flatten so each item is a model, not a collection
+        });
 
     return view('lecture_administereds.index', compact('lectureAdministereds', 'duplicates','clashes'))
         ->with('lectureAdministereds', $lectureAdministereds);

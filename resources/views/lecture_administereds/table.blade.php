@@ -81,37 +81,34 @@
                             @php $date = $lectureAdministered->lecture_date; @endphp
 
                             @if($dateCounts[$date] > 1)
-                                <span class="badge badge-danger">{{ $date }}</span> {{-- duplicate date --}}
+                                <span class="badge badge-success">{{ $date }}</span> {{-- duplicate date --}}
                             @else
                                 <span class="badge badge-info">{{ $date }}</span>
                             @endif
                         </td>
                         <td>
-                            @php
-                                $isDoubleEntry = $duplicates->contains(function ($dup) use ($lectureAdministered) {
-                                    return $dup->lecturer_id == $lectureAdministered->lecturer_id &&
-                                            $dup->classs_id == $lectureAdministered->classs_id &&
-                                            $dup->lecture_date == $lectureAdministered->lecture_date &&
-                                            $dup->start_time == $lectureAdministered->start_time &&
-                                            $dup->end_time == $lectureAdministered->end_time;
-                                });
+    @php
+        $clashRecord = $clashes->first(function ($c) use ($lectureAdministered) {
+            return $c->classs_id === $lectureAdministered->classs_id &&
+                   $c->lecture_date === $lectureAdministered->lecture_date &&
+                   $c->lecturer_id !== $lectureAdministered->lecturer_id &&
+                   !(
+                       $lectureAdministered->end_time <= $c->start_time ||
+                       $lectureAdministered->start_time >= $c->end_time
+                   );
+        });
+    @endphp
 
-                                $isClash = $clashes->contains(function ($clash) use ($lectureAdministered) {
-                                    return $clash->classs_id == $lectureAdministered->classs_id &&
-                                            $clash->lecture_date == $lectureAdministered->lecture_date &&
-                                            $clash->start_time == $lectureAdministered->start_time &&
-                                            $clash->end_time == $lectureAdministered->end_time;
-                                });
-                            @endphp
+    @if($clashRecord)
+        <span class="badge badge-warning">
+            Clash with {{ $clashRecord->lecturer->name ?? 'Unknown Lecturer' }}
+        </span>
+    @else
+        <span class="badge badge-success">OK</span>
+    @endif
+</td>
 
-                            @if($isDoubleEntry)
-                                <span class="badge badge-danger">Double Entry</span>
-                            @elseif($isClash)
-                                <span class="badge badge-warning">Clash</span>
-                            @else
-                                <span class="badge badge-success">OK</span>
-                            @endif
-                        </td>
+       
                        <td style="width: 120px">
                         <div class="dropdown">
                             <button class="btn btn-light btn-sm dropdown-toggle" type="button" id="dropdownMenuButton{{ $lectureAdministered->id }}"
