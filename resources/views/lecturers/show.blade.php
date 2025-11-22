@@ -80,6 +80,27 @@
                         <p class="text-muted">No lectures recorded for this lecturer.</p>
                     @else
                         <div class="table-responsive">
+                        <div class="mb-3">
+    <form action="{{ route('lecturers.show', $lecturer->id) }}" method="GET" class="row g-2">
+
+        <div class="col-md-4">
+            <label for="from_date" class="form-label">From Date</label>
+            <input type="date" name="from_date" class="form-control"
+                   value="{{ request('from_date') }}">
+        </div>
+
+        <div class="col-md-4">
+            <label for="to_date" class="form-label">To Date</label>
+            <input type="date" name="to_date" class="form-control"
+                   value="{{ request('to_date') }}">
+        </div>
+
+        <div class="col-md-4 d-flex align-items-end">
+            <button class="btn btn-success w-100">Filter</button>
+        </div>
+    </form>
+</div>
+
                         <table class="table table-striped table-hover table-bordered">
     <thead class="table-dark">
         <tr>

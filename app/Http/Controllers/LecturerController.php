@@ -67,31 +67,85 @@ class LecturerController extends AppBaseController
     /**
      * Display the specified Lecturer.
      */
+
     // public function show($id)
     // {
-    //     $lecturer = $this->lecturerRepository->find($id);
+    //     $lecturer = Lecturer::with('lectureAdministereds.classs')->findOrFail($id);
 
-    //     if (empty($lecturer)) {
-    //         Flash::error('Lecturer not found');
+    //     // Load ALL lectures for global clash checking
+    //     $allLectures = LectureAdministered::with('lecturer', 'classs')->get();
 
-    //         return redirect(route('lecturers.index'));
+    //     foreach ($lecturer->lectureAdministereds as $record) {
+
+    //         // Default status
+    //         $record->status = 'OK';
+
+    //         // Own clash
+    //         $ownClash = $lecturer->lectureAdministereds->filter(function ($r) use ($record) {
+    //             return $r->id !== $record->id &&
+    //                    $r->lecture_date == $record->lecture_date &&
+    //                    $r->start_time == $record->start_time &&
+    //                    $r->end_time == $record->end_time;
+    //         });
+
+    //         if ($ownClash->count() > 0) {
+    //             $record->status = 'Own Clash';
+    //         }
+
+    //         // Clash with other lecturers
+    //         $otherClash = $allLectures->filter(function ($r) use ($record, $lecturer) {
+    //             return $r->lecturer_id !== $lecturer->id &&
+    //                    $r->lecture_date == $record->lecture_date &&
+    //                    $r->start_time == $record->start_time &&
+    //                    $r->end_time == $record->end_time &&
+    //                    $r->class_id == $record->class_id;
+    //         });
+
+    //         if ($otherClash->count() > 0) {
+    //             $names = $otherClash->pluck('lecturer.name')->unique()->join(', ');
+
+    //             $record->status = $record->status === 'Own Clash'
+    //                 ? 'Own Clash & Clash with ' . $names
+    //                 : 'Clash with ' . $names;
+    //         }
     //     }
 
-    //     return view('lecturers.show')->with('lecturer', $lecturer);
+    //     return view('lecturers.show', compact('lecturer'));
     // }
-    public function show($id)
+    public function show(Request $request, $id)
     {
         $lecturer = Lecturer::with('lectureAdministereds.classs')->findOrFail($id);
 
-        // Load ALL lectures for global clash checking
+        // ---- DATE FILTERS ----
+        $from = $request->from_date;
+        $to   = $request->to_date;
+
+        // Filter lecturer lectures by date range
+        $lectures = $lecturer->lectureAdministereds;
+
+        if ($from) {
+            $lectures = $lectures->filter(function ($rec) use ($from) {
+                return $rec->lecture_date >= $from;
+            });
+        }
+
+        if ($to) {
+            $lectures = $lectures->filter(function ($rec) use ($to) {
+                return $rec->lecture_date <= $to;
+            });
+        }
+
+        // Reassign filtered list back
+        $lecturer->lectureAdministereds = $lectures->values();
+
+        // Load ALL lectures for clash checking
         $allLectures = LectureAdministered::with('lecturer', 'classs')->get();
 
         foreach ($lecturer->lectureAdministereds as $record) {
 
-            // Default status
             $record->status = 'OK';
 
-            // Own clash
+            // ---- OWN CLASH ----
             $ownClash = $lecturer->lectureAdministereds->filter(function ($r) use ($record) {
                 return $r->id !== $record->id &&
                        $r->lecture_date == $record->lecture_date &&
@@ -103,7 +157,7 @@ class LecturerController extends AppBaseController
                 $record->status = 'Own Clash';
             }
 
-            // Clash with other lecturers
+            // ---- CLASH WITH OTHER LECTURERS ----
             $otherClash = $allLectures->filter(function ($r) use ($record, $lecturer) {
                 return $r->lecturer_id !== $lecturer->id &&
                        $r->lecture_date == $record->lecture_date &&
@@ -121,7 +175,7 @@ class LecturerController extends AppBaseController
             }
         }
 
-        return view('lecturers.show', compact('lecturer'));
+        return view('lecturers.show', compact('lecturer', 'from', 'to'));
     }
 
     /**
