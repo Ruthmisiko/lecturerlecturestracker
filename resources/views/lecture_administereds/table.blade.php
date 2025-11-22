@@ -87,28 +87,46 @@
                             @endif
                         </td>
                         <td>
-    @php
-        $clashRecord = $clashes->first(function ($c) use ($lectureAdministered) {
-            return $c->classs_id === $lectureAdministered->classs_id &&
-                   $c->lecture_date === $lectureAdministered->lecture_date &&
-                   $c->lecturer_id !== $lectureAdministered->lecturer_id &&
-                   !(
-                       $lectureAdministered->end_time <= $c->start_time ||
-                       $lectureAdministered->start_time >= $c->end_time
-                   );
-        });
-    @endphp
+@php
+    // OWN CLASH — same lecturer, same class, same date, same time
+    $ownClash = $clashes->first(function ($c) use ($lectureAdministered) {
+        return $c->classs_id === $lectureAdministered->classs_id &&
+               $c->lecturer_id === $lectureAdministered->lecturer_id &&
+               $c->lecture_date === $lectureAdministered->lecture_date &&
+               $c->start_time === $lectureAdministered->start_time &&
+               $c->end_time === $lectureAdministered->end_time;
+    });
 
-    @if($clashRecord)
-        <span class="badge badge-warning">
-            Clash with {{ $clashRecord->lecturer->name ?? 'Unknown Lecturer' }}
-        </span>
-    @else
-        <span class="badge badge-success">OK</span>
-    @endif
+    // CLASH WITH OTHER LECTURER — overlapping session
+    $clashRecord = $clashes->first(function ($c) use ($lectureAdministered) {
+        return $c->classs_id === $lectureAdministered->classs_id &&
+               $c->lecture_date === $lectureAdministered->lecture_date &&
+               $c->lecturer_id !== $lectureAdministered->lecturer_id &&
+               !(
+                   $lectureAdministered->end_time <= $c->start_time ||
+                   $lectureAdministered->start_time >= $c->end_time
+               );
+    });
+@endphp
+
+{{-- OWN CLASH --}}
+@if($ownClash)
+    <span class="badge badge-danger d-block mb-1">Own Clash</span>
+@endif
+
+{{-- CLASH WITH OTHER LECTURER --}}
+@if($clashRecord)
+    <span class="badge badge-warning d-block mb-1">
+        Clash with {{ $clashRecord->lecturer->name ?? 'Unknown Lecturer' }}
+    </span>
+@endif
+
+{{-- OK STATUS (only if neither of the above exists) --}}
+@if(!$ownClash && !$clashRecord)
+    <span class="badge badge-success">OK</span>
+@endif
 </td>
 
-       
                        <td style="width: 120px">
                         <div class="dropdown">
                             <button class="btn btn-light btn-sm dropdown-toggle" type="button" id="dropdownMenuButton{{ $lectureAdministered->id }}"
