@@ -79,11 +79,50 @@ class LecturerController extends AppBaseController
 
     //     return view('lecturers.show')->with('lecturer', $lecturer);
     // }
-public function show($id)
-{
-    $lecturer = Lecturer::where('user_id', Auth::id())->with('lectureAdministereds.classs')->findOrFail($id);
-    return view('lecturers.show', compact('lecturer'));
-}
+    public function show($id)
+    {
+        $lecturer = Lecturer::with('lectureAdministereds.classs')->findOrFail($id);
+
+        // Load ALL lectures for global clash checking
+        $allLectures = LectureAdministered::with('lecturer', 'classs')->get();
+
+        foreach ($lecturer->lectureAdministereds as $record) {
+
+            // Default status
+            $record->status = 'OK';
+
+            // Own clash
+            $ownClash = $lecturer->lectureAdministereds->filter(function ($r) use ($record) {
+                return $r->id !== $record->id &&
+                       $r->lecture_date == $record->lecture_date &&
+                       $r->start_time == $record->start_time &&
+                       $r->end_time == $record->end_time;
+            });
+
+            if ($ownClash->count() > 0) {
+                $record->status = 'Own Clash';
+            }
+
+            // Clash with other lecturers
+            $otherClash = $allLectures->filter(function ($r) use ($record, $lecturer) {
+                return $r->lecturer_id !== $lecturer->id &&
+                       $r->lecture_date == $record->lecture_date &&
+                       $r->start_time == $record->start_time &&
+                       $r->end_time == $record->end_time &&
+                       $r->class_id == $record->class_id;
+            });
+
+            if ($otherClash->count() > 0) {
+                $names = $otherClash->pluck('lecturer.name')->unique()->join(', ');
+
+                $record->status = $record->status === 'Own Clash'
+                    ? 'Own Clash & Clash with ' . $names
+                    : 'Clash with ' . $names;
+            }
+        }
+
+        return view('lecturers.show', compact('lecturer'));
+    }
 
     /**
      * Show the form for editing the specified Lecturer.
