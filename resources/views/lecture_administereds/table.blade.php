@@ -88,20 +88,22 @@
                         </td>
                         <td>
 @php
-    // OWN CLASH — same lecturer, same class, same date, same time
-    $ownClash = $clashes->first(function ($c) use ($lectureAdministered) {
-        return $c->classs_id === $lectureAdministered->classs_id &&
+    // OWN CLASH — same lecturer, same class, same date, same time, NOT same row
+    $ownClash = $clashes->first(function ($c) use ($lectureAdministereds, $lectureAdministered) {
+        return $c->id !== $lectureAdministered->id &&                 // prevent self-match
+               $c->classs_id === $lectureAdministered->classs_id &&
                $c->lecturer_id === $lectureAdministered->lecturer_id &&
                $c->lecture_date === $lectureAdministered->lecture_date &&
                $c->start_time === $lectureAdministered->start_time &&
                $c->end_time === $lectureAdministered->end_time;
     });
 
-    // CLASH WITH OTHER LECTURER — overlapping session
+    // CLASH WITH OTHER LECTURER — overlapping time, same date, same class, NOT same row
     $clashRecord = $clashes->first(function ($c) use ($lectureAdministered) {
-        return $c->classs_id === $lectureAdministered->classs_id &&
+        return $c->id !== $lectureAdministered->id &&                 // prevent self-match
+               $c->classs_id === $lectureAdministered->classs_id &&
                $c->lecture_date === $lectureAdministered->lecture_date &&
-               $c->lecturer_id !== $lectureAdministered->lecturer_id &&
+               $c->lecturer_id !== $lectureAdministered->lecturer_id && // different lecturer
                !(
                    $lectureAdministered->end_time <= $c->start_time ||
                    $lectureAdministered->start_time >= $c->end_time
@@ -121,11 +123,12 @@
     </span>
 @endif
 
-{{-- OK STATUS (only if neither of the above exists) --}}
+{{-- OK --}}
 @if(!$ownClash && !$clashRecord)
     <span class="badge badge-success">OK</span>
 @endif
 </td>
+
 
                        <td style="width: 120px">
                         <div class="dropdown">
