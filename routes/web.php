@@ -38,3 +38,4 @@ Route::resource('classses', App\Http\Controllers\ClasssController::class);
 Route::resource('lecture-administereds', App\Http\Controllers\LectureAdministeredController::class);
 Route::resource('roles', App\Http\Controllers\RoleController::class);
 Route::resource('users', App\Http\Controllers\UserController::class);
+Route::resource('units', App\Http\Controllers\UnitController::class);

@@ -89,14 +89,14 @@
                         <td>
 @php
     // OWN CLASH — same lecturer, same class, same date, same time, NOT same row
-    $ownClash = $clashes->first(function ($c) use ($lectureAdministereds, $lectureAdministered) {
-        return $c->id !== $lectureAdministered->id &&                 // prevent self-match
-               $c->classs_id === $lectureAdministered->classs_id &&
-               $c->lecturer_id === $lectureAdministered->lecturer_id &&
-               $c->lecture_date === $lectureAdministered->lecture_date &&
-               $c->start_time === $lectureAdministered->start_time &&
-               $c->end_time === $lectureAdministered->end_time;
-    });
+    $ownClash = $clashes->first(function ($c) use ($lectureAdministered) {
+    return $c->id !== $lectureAdministered->id &&                     // not same row
+           $c->lecturer_id === $lectureAdministered->lecturer_id &&   // same lecturer
+           $c->lecture_date === $lectureAdministered->lecture_date && // same date
+           $c->start_time === $lectureAdministered->start_time &&     // same start
+           $c->end_time === $lectureAdministered->end_time;           // same end
+});
+
 
     // CLASH WITH OTHER LECTURER — overlapping time, same date, same class, NOT same row
     $clashRecord = $clashes->first(function ($c) use ($lectureAdministered) {

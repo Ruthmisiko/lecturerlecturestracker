@@ -5,6 +5,10 @@
 </a>
 @endcan
 
+    <a href="{{ route('units.index') }}" class="nav-link text-white font-weight-bold  {{ Request::is('units*') ? 'active' : '' }}">
+        <p>Units</p>
+    </a>
+
 @can('class.manage')
 <a href="{{ route('classses.index') }}" class="nav-link text-white font-weight-bold {{ Request::is('classses*') ? 'active' : '' }}">
     <p>Classes</p>
@@ -38,3 +42,4 @@
 <form id="logout-form" action="{{ route('logout') }}" method="POST" style="display: none;">
     @csrf
 </form>
+

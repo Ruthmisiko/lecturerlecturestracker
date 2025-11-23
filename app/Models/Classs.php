@@ -12,19 +12,25 @@ class Classs extends Model
         'user_id',
         'name',
         'code',
-        'desciription',        
+        'desciription',
     ];
 
     protected $casts = [
-        
+
     ];
 
     public static array $rules = [
-        
+
     ];
 
     public function user()
     {
         return $this->belongsTo(User::class);
     }
+    public function units()
+    {
+        return $this->belongsToMany(Unit::class, 'class_unit', 'classs_id', 'unit_id');
+    }
+
+
 }

@@ -2,14 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use Flash;
+use App\Models\Unit;
+use App\Models\Classs;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use App\Repositories\ClasssRepository;
 use App\Http\Requests\CreateClasssRequest;
 use App\Http\Requests\UpdateClasssRequest;
 use App\Http\Controllers\AppBaseController;
-use App\Repositories\ClasssRepository;
-use Illuminate\Http\Request;
-use App\Models\Classs;
-use Flash;
-use Illuminate\Support\Facades\Auth;
 
 class ClasssController extends AppBaseController
 {
@@ -41,9 +42,14 @@ class ClasssController extends AppBaseController
      */
     public function create()
     {
-        return view('classses.create');
-    }
+        $user = Auth::user();
+        $ownerId = $user->user_id ?? $user->id;
 
+        // Only fetch units that belong to this tenant
+        $units = Unit::where('user_id', $ownerId)->get();
+
+        return view('classses.create', compact('units'));
+    }
     /**
      * Store a newly created Classs in storage.
      */
@@ -53,9 +59,20 @@ class ClasssController extends AppBaseController
 
         $user = Auth::user();
 
+        $ownerId = $user->user_id ?? $user->id;
+
         $input['user_id'] = $user->user_id ?? $user->id;
 
         $classs = $this->classsRepository->create($input);
+
+        if ($request->has('units')) {
+            $validUnitIds = Unit::where('user_id', $ownerId)
+                                ->whereIn('id', $request->units)
+                                ->pluck('id')
+                                ->toArray();
+
+            $classs->units()->sync($validUnitIds);
+        }
 
         Flash::success('Classs saved successfully.');
 
@@ -83,15 +100,20 @@ class ClasssController extends AppBaseController
      */
     public function edit($id)
     {
-        $classs = $this->classsRepository->find($id);
+        $user = Auth::user();
+        $ownerId = $user->user_id ?? $user->id;
 
+        $classs = $this->classsRepository->find($id);
         if (empty($classs)) {
             Flash::error('Classs not found');
-
             return redirect(route('classses.index'));
         }
 
-        return view('classses.edit')->with('classs', $classs);
+        // Only fetch units that belong to this tenant
+        $units = Unit::where('user_id', $ownerId)->get();
+        $selectedUnits = $classs->units->pluck('id')->toArray();
+
+        return view('classses.edit', compact('classs', 'units', 'selectedUnits'));
     }
 
     /**
