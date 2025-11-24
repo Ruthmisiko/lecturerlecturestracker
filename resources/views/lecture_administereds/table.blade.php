@@ -5,21 +5,49 @@
 @endphp
 <div class="card card-body mb-3">
     <form method="GET" action="{{ route('lecture-administereds.index') }}">
-        <div class="row">
-            <div class="col-md-3">
-                <input type="text" name="lecturer" class="form-control" placeholder="Lecturer name" value="{{ request('lecturer') }}">
-            </div>
-            <div class="col-md-3">
-                <input type="text" name="class" class="form-control" placeholder="Class name" value="{{ request('class') }}">
-            </div>
-            <div class="col-md-3">
-                <input type="date" name="lecture_date" class="form-control" value="{{ request('lecture_date') }}">
-            </div>
-            <div class="col-md-3 d-flex gap-2">
-                <button type="submit" class="btn btn-success mr-2">Search</button>
-                <a href="{{ route('lecture-administereds.index') }}" class="btn btn-secondary">Reset</a>
-            </div>
-        </div>
+    <div class="row align-items-end">
+
+<div class="col-md-2">
+    <input type="text" name="lecturer" class="form-control" placeholder="Lecturer" value="{{ request('lecturer') }}">
+</div>
+
+<div class="col-md-2">
+    <input type="text" name="class" class="form-control" placeholder="Class" value="{{ request('class') }}">
+</div>
+
+<div class="col-md-2">
+    <input type="date" name="lecture_date" class="form-control" value="{{ request('lecture_date') }}">
+</div>
+<div class="col-md-2">
+    <select name="status" class="form-control">
+        <option value="">Status</option>
+        <option value="own_clash" {{ request('status')=='own_clash' ? 'selected':'' }}>Own Clash</option>
+        <option value="clash_with" {{ request('status')=='clash_with' ? 'selected':'' }}>Clash With Other Lecturer</option>
+        <option value="ok" {{ request('status')=='ok' ? 'selected':'' }}>OK</option>
+    </select>
+</div>
+
+<!-- BUTTONS (placed in same row) -->
+<div class="col-md-4 d-flex gap-2">
+    <button type="submit" class="btn btn-success mr-2">Search</button>
+
+    <a href="{{ route('lecture-administereds.index') }}" class="btn btn-secondary mr-2">
+        Reset
+    </a>
+
+    <a href="{{ route('lecture-administereds.export.pdf', request()->all()) }}"
+       class="btn btn-danger mr-2">
+        PDF
+    </a>
+
+    <a href="{{ route('lecture-administereds.export.excel', request()->all()) }}"
+       class="btn btn-primary mr-2">
+        Excel
+    </a>
+</div>
+
+</div>
+
     </form>
 </div>
 @if((request('lecturer') || request('class') || request('lecture_date')) && $duplicates->isNotEmpty())

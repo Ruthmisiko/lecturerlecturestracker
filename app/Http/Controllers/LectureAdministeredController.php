@@ -2,17 +2,19 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\LectureAdministered;
-use App\Http\Requests\CreateLectureAdministeredRequest;
-use App\Http\Requests\UpdateLectureAdministeredRequest;
-use App\Http\Controllers\AppBaseController;
-use App\Repositories\LectureAdministeredRepository;
+use PDF;
+use Flash;
 use Illuminate\Http\Request;
+use App\Exports\LectureExport;
+use App\Imports\LectureImport;
+use App\Models\LectureAdministered;
+use Illuminate\Support\Facades\Auth;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\LectureTemplateExport;
-use App\Imports\LectureImport;
-use Illuminate\Support\Facades\Auth;
-use Flash;
+use App\Http\Controllers\AppBaseController;
+use App\Repositories\LectureAdministeredRepository;
+use App\Http\Requests\CreateLectureAdministeredRequest;
+use App\Http\Requests\UpdateLectureAdministeredRequest;
 
 class LectureAdministeredController extends AppBaseController
 {
@@ -89,10 +91,70 @@ class LectureAdministeredController extends AppBaseController
             return $group; // flatten so each item is a model, not a collection
         });
 
+        if ($request->filled('status')) {
+
+            $lectureAdministereds = $query->get(); // temporary fetch whole list to evaluate status
+
+            $filtered = $lectureAdministereds->filter(function ($item) use ($clashes, $request) {
+
+                $ownClash = $clashes->contains(function ($c) use ($item) {
+                    return $c->id != $item->id &&
+                           $c->lecturer_id == $item->lecturer_id &&
+                           $c->lecture_date == $item->lecture_date &&
+                           $c->start_time == $item->start_time &&
+                           $c->end_time == $item->end_time;
+                           $c->status == $item->status;
+                });
+
+                $clashWith = $clashes->contains(function ($c) use ($item) {
+                    return $c->id != $item->id &&
+                           $c->classs_id == $item->classs_id &&
+                           $c->lecture_date == $item->lecture_date &&
+                           $c->lecturer_id != $item->lecturer_id &&
+                           $c->status == $item->status &&
+                           !(
+                               $item->end_time <= $c->start_time ||
+                               $item->start_time >= $c->end_time
+                           );
+                });
+
+                $ok = !$ownClash && !$clashWith;
+
+                return match ($request->status) {
+                    'own_clash' => $ownClash,
+                    'clash_with' => $clashWith,
+                    'ok' => $ok,
+                };
+            });
+
+            // manual pagination for filtered results
+            $lectureAdministereds = new \Illuminate\Pagination\LengthAwarePaginator(
+                $filtered->forPage(\request()->get('page', 1), 10),
+                $filtered->count(),
+                10,
+                \request()->get('page', 1)
+            );
+        }
+
     return view('lecture_administereds.index', compact('lectureAdministereds', 'duplicates','clashes'))
         ->with('lectureAdministereds', $lectureAdministereds);
 }
 
+public function exportExcel(Request $request)
+{
+    $data = $this->index($request)->getData()['lectureAdministereds'];
+
+    return Excel::download(new LectureExport($data), 'lecture_data.xlsx');
+}
+
+public function exportPdf(Request $request)
+{
+    $data = $this->index($request)->getData()['lectureAdministereds'];
+
+    $pdf = PDF::loadView('lecture_administereds.pdf', ['data' => $data]);
+
+    return $pdf->download('lecture_data.pdf');
+}
 
     /**
      * Show the form for creating a new LectureAdministered.
