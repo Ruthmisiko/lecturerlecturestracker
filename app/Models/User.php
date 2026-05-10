@@ -21,8 +21,9 @@ class User extends Authenticatable
     protected $fillable = [
         'name',
         'email',
-        'password', 
-         'user_id',
+        'password',
+        'user_id',
+        'department_id',
     ];
 
     /**
@@ -45,13 +46,24 @@ class User extends Authenticatable
     ];
 
     // User.php
-public function createdBy()
-{
-    return $this->belongsTo(User::class, 'user_id');
-}
+    public function createdBy()
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
 
- public function createdUsers()
+    public function createdUsers()
     {
         return $this->hasMany(User::class, 'user_id');
+    }
+
+    public function department()
+    {
+        return $this->belongsTo(\App\Models\Department::class);
+    }
+
+    /** Returns the department_id this user is restricted to, or null for no restriction. */
+    public function scopedDepartmentId(): ?int
+    {
+        return $this->department_id ?? null;
     }
 }

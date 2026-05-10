@@ -12,7 +12,9 @@ class LectureAdministered extends Model
         'user_id',
         'lecturer_id',
         'classs_id',
-         'start_time',
+        'department_id',
+        'unit_id',
+        'start_time',
         'end_time',
         'lecture_date',
     ];
@@ -40,5 +42,15 @@ class LectureAdministered extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function department()
+    {
+        return $this->belongsTo(Department::class);
+    }
+
+    public function unit()
+    {
+        return $this->belongsTo(Unit::class);
     }
 }

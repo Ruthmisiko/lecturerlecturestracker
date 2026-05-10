@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Flash;
 use App\Models\Unit;
+use App\Models\Department;
 use Illuminate\Http\Request;
 use App\Repositories\UnitRepository;
 use Illuminate\Support\Facades\Auth;
@@ -31,7 +32,11 @@ class UnitController extends AppBaseController
 
          $ownerId = $user->user_id ?? $user->id;
 
-        $units = Unit::where('user_id', $ownerId)->paginate(10);
+        $query = Unit::where('user_id', $ownerId);
+        if ($user->scopedDepartmentId()) {
+            $query->where('department_id', $user->scopedDepartmentId());
+        }
+        $units = $query->paginate(10);
 
         return view('units.index')
             ->with('units', $units);
@@ -42,8 +47,13 @@ class UnitController extends AppBaseController
      */
     public function create()
     {
+        $user    = Auth::user();
+        $ownerId = $user->user_id ?? $user->id;
+        $dq      = Department::where('user_id', $ownerId);
+        if ($user->scopedDepartmentId()) $dq->where('id', $user->scopedDepartmentId());
+        $departments = $dq->pluck('name', 'id')->prepend('-- Select Department --', '');
 
-        return view('units.create');
+        return view('units.create', compact('departments'));
     }
 
     /**
@@ -93,7 +103,13 @@ class UnitController extends AppBaseController
             return redirect(route('units.index'));
         }
 
-        return view('units.edit')->with('unit', $unit);
+        $user    = Auth::user();
+        $ownerId = $user->user_id ?? $user->id;
+        $dq      = Department::where('user_id', $ownerId);
+        if ($user->scopedDepartmentId()) $dq->where('id', $user->scopedDepartmentId());
+        $departments = $dq->pluck('name', 'id')->prepend('-- Select Department --', '');
+
+        return view('units.edit', compact('unit', 'departments'));
     }
 
     /**

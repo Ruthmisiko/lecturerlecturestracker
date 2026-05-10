@@ -2,19 +2,20 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Department;
 use App\Models\LectureAdministered;
 use App\Models\Lecturer;
-use App\Http\Requests\CreateLecturerRequest;
+use App\Models\Unit;
 use App\Http\Requests\UpdateLecturerRequest;
 use App\Http\Controllers\AppBaseController;
 use App\Repositories\LecturerRepository;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Flash;
 
 class LecturerController extends AppBaseController
 {
-    /** @var LecturerRepository $lecturerRepository*/
     private $lecturerRepository;
 
     public function __construct(LecturerRepository $lecturerRepo)
@@ -22,130 +23,102 @@ class LecturerController extends AppBaseController
         $this->lecturerRepository = $lecturerRepo;
     }
 
-    /**
-     * Display a listing of the Lecturer.
-     */
     public function index(Request $request)
     {
         $user = Auth::user();
-
         $ownerId = $user->user_id ?? $user->id;
 
+        $query = Lecturer::where('user_id', $ownerId)->with('department');
+        if ($user->scopedDepartmentId()) {
+            $query->where('department_id', $user->scopedDepartmentId());
+        }
+        $lecturers = $query->paginate(10);
 
-        $lecturers = Lecturer::where('user_id', $ownerId)->paginate(10);
-
-        return view('lecturers.index')
-            ->with('lecturers', $lecturers);
+        return view('lecturers.index')->with('lecturers', $lecturers);
     }
 
-    /**
-     * Show the form for creating a new Lecturer.
-     */
     public function create()
     {
-        return view('lecturers.create');
+        $user = Auth::user();
+        $ownerId = $user->user_id ?? $user->id;
+
+        $deptScope   = $user->scopedDepartmentId();
+        $deptQuery   = Department::where('user_id', $ownerId);
+        if ($deptScope) $deptQuery->where('id', $deptScope);
+        $departments = $deptQuery->get();
+
+        $unitsQuery = Unit::where('user_id', $ownerId);
+        if ($deptScope) $unitsQuery->where('department_id', $deptScope);
+        $units = $unitsQuery->get();
+
+        return view('lecturers.create', compact('departments', 'units'));
     }
 
-    /**
-     * Store a newly created Lecturer in storage.
-     */
-    public function store(CreateLecturerRequest $request)
+    public function store(Request $request)
     {
-        $input = $request->all();
-
         $user = Auth::user();
+        $ownerId = $user->user_id ?? $user->id;
 
-        $input['user_id'] = $user->user_id ?? $user->id;
+        $request->validate([
+            'department_id' => 'nullable|exists:departments,id',
+            'lecturers' => 'required|array|min:1',
+            'lecturers.*.name' => 'required|string|max:255',
+            'lecturers.*.email' => 'nullable|email|max:255',
+            'lecturers.*.phone' => 'nullable|string|max:50',
+            'lecturers.*.id_number' => 'nullable|string|max:50',
+            'lecturers.*.kra_pin' => 'nullable|string|max:50',
+            'lecturers.*.specialization' => 'nullable|string|max:255',
+        ]);
 
-        $lecturer = $this->lecturerRepository->create($input);
+        $departmentId = $request->department_id;
 
-        Flash::success('Lecturer saved successfully.');
+        DB::transaction(function () use ($request, $ownerId, $departmentId) {
+            foreach ($request->lecturers as $data) {
+                $lecturer = Lecturer::create([
+                    'user_id'        => $ownerId,
+                    'department_id'  => $departmentId,
+                    'name'           => $data['name'],
+                    'email'          => $data['email'] ?? null,
+                    'phone'          => $data['phone'] ?? null,
+                    'id_number'      => $data['id_number'] ?? null,
+                    'kra_pin'        => $data['kra_pin'] ?? null,
+                    'specialization' => $data['specialization'] ?? null,
+                ]);
+
+                if (!empty($data['units'])) {
+                    $lecturer->units()->sync($data['units']);
+                }
+            }
+        });
+
+        Flash::success('Lecturer(s) saved successfully.');
 
         return redirect(route('lecturers.index'));
     }
 
-    /**
-     * Display the specified Lecturer.
-     */
-
-    // public function show($id)
-    // {
-    //     $lecturer = Lecturer::with('lectureAdministereds.classs')->findOrFail($id);
-
-    //     // Load ALL lectures for global clash checking
-    //     $allLectures = LectureAdministered::with('lecturer', 'classs')->get();
-
-    //     foreach ($lecturer->lectureAdministereds as $record) {
-
-    //         // Default status
-    //         $record->status = 'OK';
-
-    //         // Own clash
-    //         $ownClash = $lecturer->lectureAdministereds->filter(function ($r) use ($record) {
-    //             return $r->id !== $record->id &&
-    //                    $r->lecture_date == $record->lecture_date &&
-    //                    $r->start_time == $record->start_time &&
-    //                    $r->end_time == $record->end_time;
-    //         });
-
-    //         if ($ownClash->count() > 0) {
-    //             $record->status = 'Own Clash';
-    //         }
-
-    //         // Clash with other lecturers
-    //         $otherClash = $allLectures->filter(function ($r) use ($record, $lecturer) {
-    //             return $r->lecturer_id !== $lecturer->id &&
-    //                    $r->lecture_date == $record->lecture_date &&
-    //                    $r->start_time == $record->start_time &&
-    //                    $r->end_time == $record->end_time &&
-    //                    $r->class_id == $record->class_id;
-    //         });
-
-    //         if ($otherClash->count() > 0) {
-    //             $names = $otherClash->pluck('lecturer.name')->unique()->join(', ');
-
-    //             $record->status = $record->status === 'Own Clash'
-    //                 ? 'Own Clash & Clash with ' . $names
-    //                 : 'Clash with ' . $names;
-    //         }
-    //     }
-
-    //     return view('lecturers.show', compact('lecturer'));
-    // }
     public function show(Request $request, $id)
     {
-        $lecturer = Lecturer::with('lectureAdministereds.classs')->findOrFail($id);
+        $lecturer = Lecturer::with('lectureAdministereds.classs', 'department', 'units')->findOrFail($id);
 
-        // ---- DATE FILTERS ----
         $from = $request->from_date;
         $to   = $request->to_date;
 
-        // Filter lecturer lectures by date range
         $lectures = $lecturer->lectureAdministereds;
 
         if ($from) {
-            $lectures = $lectures->filter(function ($rec) use ($from) {
-                return $rec->lecture_date >= $from;
-            });
+            $lectures = $lectures->filter(fn($rec) => $rec->lecture_date >= $from);
         }
-
         if ($to) {
-            $lectures = $lectures->filter(function ($rec) use ($to) {
-                return $rec->lecture_date <= $to;
-            });
+            $lectures = $lectures->filter(fn($rec) => $rec->lecture_date <= $to);
         }
 
-        // Reassign filtered list back
         $lecturer->lectureAdministereds = $lectures->values();
 
-        // Load ALL lectures for clash checking
         $allLectures = LectureAdministered::with('lecturer', 'classs')->get();
 
         foreach ($lecturer->lectureAdministereds as $record) {
-
             $record->status = 'OK';
 
-            // ---- OWN CLASH ----
             $ownClash = $lecturer->lectureAdministereds->filter(function ($r) use ($record) {
                 return $r->id !== $record->id &&
                        $r->lecture_date == $record->lecture_date &&
@@ -157,7 +130,6 @@ class LecturerController extends AppBaseController
                 $record->status = 'Own Clash';
             }
 
-            // ---- CLASH WITH OTHER LECTURERS ----
             $otherClash = $allLectures->filter(function ($r) use ($record, $lecturer) {
                 return $r->lecturer_id !== $lecturer->id &&
                        $r->lecture_date == $record->lecture_date &&
@@ -168,7 +140,6 @@ class LecturerController extends AppBaseController
 
             if ($otherClash->count() > 0) {
                 $names = $otherClash->pluck('lecturer.name')->unique()->join(', ');
-
                 $record->status = $record->status === 'Own Clash'
                     ? 'Own Clash & Clash with ' . $names
                     : 'Clash with ' . $names;
@@ -178,54 +149,50 @@ class LecturerController extends AppBaseController
         return view('lecturers.show', compact('lecturer', 'from', 'to'));
     }
 
-    /**
-     * Show the form for editing the specified Lecturer.
-     */
     public function edit($id)
     {
         $lecturer = $this->lecturerRepository->find($id);
 
         if (empty($lecturer)) {
             Flash::error('Lecturer not found');
-
             return redirect(route('lecturers.index'));
         }
 
-        return view('lecturers.edit')->with('lecturer', $lecturer);
+        $user = Auth::user();
+        $ownerId = $user->user_id ?? $user->id;
+
+        $departments = Department::where('user_id', $ownerId)->pluck('name', 'id')->prepend('-- Select Department --', '');
+        $units = Unit::where('user_id', $ownerId)->pluck('name', 'id');
+        $selectedUnits = $lecturer->units()->pluck('units.id')->toArray();
+
+        return view('lecturers.edit', compact('lecturer', 'departments', 'units', 'selectedUnits'));
     }
 
-    /**
-     * Update the specified Lecturer in storage.
-     */
     public function update($id, UpdateLecturerRequest $request)
     {
         $lecturer = $this->lecturerRepository->find($id);
 
         if (empty($lecturer)) {
             Flash::error('Lecturer not found');
-
             return redirect(route('lecturers.index'));
         }
 
-        $lecturer = $this->lecturerRepository->update($request->all(), $id);
+        $data = $request->except('units');
+        $lecturer = $this->lecturerRepository->update($data, $id);
+
+        $lecturer->units()->sync($request->input('units', []));
 
         Flash::success('Lecturer updated successfully.');
 
         return redirect(route('lecturers.index'));
     }
 
-    /**
-     * Remove the specified Lecturer from storage.
-     *
-     * @throws \Exception
-     */
     public function destroy($id)
     {
         $lecturer = $this->lecturerRepository->find($id);
 
         if (empty($lecturer)) {
             Flash::error('Lecturer not found');
-
             return redirect(route('lecturers.index'));
         }
 

@@ -1,4 +1,9 @@
 <div class="form-group col-md-6">
+    {!! Form::label('department_id', 'Department:') !!}
+    {!! Form::select('department_id', $departments ?? [], null, ['class' => 'form-control']) !!}
+</div>
+
+<div class="form-group col-md-6">
     {!! Form::label('name', 'Name:') !!}
     {!! Form::text('name', null, ['class' => 'form-control']) !!}
 </div>
@@ -27,4 +32,18 @@
     {!! Form::label('specialization', 'Specialization:') !!}
     {!! Form::text('specialization', null, ['class' => 'form-control']) !!}
 </div>
-  
+
+<div class="form-group col-md-12">
+    <label>Units</label>
+    <div class="d-flex flex-wrap" style="gap:8px 24px;">
+        @foreach($units ?? [] as $id => $name)
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox"
+                       name="units[]" value="{{ $id }}"
+                       id="edit_unit_{{ $id }}"
+                       {{ in_array($id, $selectedUnits ?? []) ? 'checked' : '' }}>
+                <label class="form-check-label" for="edit_unit_{{ $id }}">{{ $name }}</label>
+            </div>
+        @endforeach
+    </div>
+</div>

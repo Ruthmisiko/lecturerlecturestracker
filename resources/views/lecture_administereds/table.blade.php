@@ -18,14 +18,20 @@
 <div class="col-md-2">
     <input type="date" name="lecture_date" class="form-control" value="{{ request('lecture_date') }}">
 </div>
+@if(auth()->user()->can('clash.own') || auth()->user()->can('clash.all'))
 <div class="col-md-2">
     <select name="status" class="form-control">
         <option value="">Status</option>
+        @can('clash.own')
         <option value="own_clash" {{ request('status')=='own_clash' ? 'selected':'' }}>Own Clash</option>
+        @endcan
+        @can('clash.all')
         <option value="clash_with" {{ request('status')=='clash_with' ? 'selected':'' }}>Clash With Other Lecturer</option>
+        @endcan
         <option value="ok" {{ request('status')=='ok' ? 'selected':'' }}>OK</option>
     </select>
 </div>
+@endif
 
 <!-- BUTTONS (placed in same row) -->
 <div class="col-md-4 d-flex gap-2">
@@ -50,6 +56,7 @@
 
     </form>
 </div>
+@can('clash.own')
 @if((request('lecturer') || request('class') || request('lecture_date')) && $duplicates->isNotEmpty())
     @foreach($duplicates as $dup)
         @php
@@ -67,6 +74,9 @@
         @endif
     @endforeach
 @endif
+@endcan
+
+@can('clash.all')
  @if((request('lecturer') || request('class') || request('lecture_date')) && $clashes->isNotEmpty())
                         @foreach($clashes as $clash)
                             @php
@@ -83,6 +93,7 @@
                             @endif
                         @endforeach
                     @endif
+@endcan
 
 
         <table class="table table-bordered" id="lecturers-table">
@@ -91,18 +102,20 @@
                 <tr>
                     <th>Lecturer</th>
                     <th>Class</th>
-                    <th>Lecture Start Time</th>
-                    <th> Lecture End Time</th>
+                    <th>Unit</th>
+                    <th>Start Time</th>
+                    <th>End Time</th>
                     <th>Lecture Date</th>
-                     <th>Status</th>
+                    <th>Status</th>
                     <th>Action</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach($lectureAdministereds as $lectureAdministered)
                     <tr>
-                        <td>{{ $lectureAdministered->lecturer->name }}</td>
-                        <td>{{ $lectureAdministered->classs->name }}</td>
+                        <td>{{ $lectureAdministered->lecturer->name ?? '-' }}</td>
+                        <td>{{ $lectureAdministered->classs->name ?? '-' }}</td>
+                        <td>{{ $lectureAdministered->unit->name ?? '-' }}</td>
                         <td>{{ $lectureAdministered->start_time }}</td>
                         <td>{{ $lectureAdministered->end_time }}</td>
                         <td>
@@ -140,20 +153,26 @@
 @endphp
 
 {{-- OWN CLASH --}}
-@if($ownClash)
-    <span class="badge badge-danger d-block mb-1">Own Clash</span>
-@endif
+@can('clash.own')
+    @if($ownClash)
+        <span class="badge badge-danger d-block mb-1">Own Clash</span>
+    @endif
+@endcan
 
 {{-- CLASH WITH OTHER LECTURER --}}
-@if($clashRecord)
-    <span class="badge badge-warning d-block mb-1">
-        Clash with {{ $clashRecord->lecturer->name ?? 'Unknown Lecturer' }}
-    </span>
-@endif
+@can('clash.all')
+    @if($clashRecord)
+        <span class="badge badge-warning d-block mb-1">
+            Clash with {{ $clashRecord->lecturer->name ?? 'Unknown Lecturer' }}
+        </span>
+    @endif
+@endcan
 
-{{-- OK --}}
+{{-- OK — only when user can see at least one clash type --}}
 @if(!$ownClash && !$clashRecord)
     <span class="badge badge-success">OK</span>
+@elseif(!auth()->user()->can('clash.own') && !auth()->user()->can('clash.all'))
+    <span class="text-muted">—</span>
 @endif
 </td>
 

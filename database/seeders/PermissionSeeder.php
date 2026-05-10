@@ -15,6 +15,8 @@ class PermissionSeeder extends Seeder
             'lecturer.create', 'lecturer.edit', 'lecturer.delete', 'lecturer.view', 'lecturer.manage',
             'lecture.create', 'lecture.edit', 'lecture.delete', 'lecture.view', 'lecture.manage',
             'role.create', 'role.edit', 'role.delete', 'role.view', 'role.manage',
+            'clash.own',   // can see own-clash status (same lecturer double-booked)
+            'clash.all',   // can see all clash types (clash with other lecturers)
         ];
 
         foreach ($permissions as $permission) {

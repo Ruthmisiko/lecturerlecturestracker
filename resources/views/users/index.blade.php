@@ -16,6 +16,7 @@
             <tr>
                 <th>Name</th>
                 <th>Email</th>
+                <th>Department</th>
                 <th>Roles</th>
                 <th>Actions</th>
             </tr>
@@ -25,6 +26,7 @@
                 <tr>
                     <td>{{ $user->name }}</td>
                     <td>{{ $user->email }}</td>
+                    <td>{{ $user->department->name ?? '—' }}</td>
                     <td>
                         @foreach ($user->roles as $role)
                             <span class="badge bg-info text-dark">{{ $role->name }}</span>

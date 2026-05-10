@@ -5,6 +5,10 @@
 </a>
 @endcan
 
+    <a href="{{ route('departments.index') }}" class="nav-link text-white font-weight-bold {{ Request::is('departments*') ? 'active' : '' }}">
+        <p>Departments</p>
+    </a>
+
     <a href="{{ route('units.index') }}" class="nav-link text-white font-weight-bold  {{ Request::is('units*') ? 'active' : '' }}">
         <p>Units</p>
     </a>

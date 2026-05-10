@@ -29,6 +29,18 @@
             </select>
         </div>
 
+        <div class="mb-3">
+            <label>Department <small class="text-muted">(optional — restricts user to this department's data)</small></label>
+            <select name="department_id" class="form-control">
+                <option value="">-- No Department Restriction --</option>
+                @foreach ($departments as $dept)
+                    <option value="{{ $dept->id }}" {{ $user->department_id == $dept->id ? 'selected' : '' }}>
+                        {{ $dept->name }}
+                    </option>
+                @endforeach
+            </select>
+        </div>
+
         <button type="submit" class="btn btn-success">Update</button>
         <a href="{{ route('users.index') }}" class="btn btn-secondary">Cancel</a>
     </form>

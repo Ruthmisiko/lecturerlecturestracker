@@ -11,7 +11,8 @@ class Unit extends Model
     public $fillable = [
         'user_id',
         'name',
-        'unit_id'
+        'unitCode',
+        'department_id',
     ];
 
     protected $casts = [
@@ -23,8 +24,18 @@ class Unit extends Model
     ];
 
     public function classses()
-{
-    return $this->belongsToMany(Classs::class, 'class_unit', 'unit_id', 'classs_id');
-}
+    {
+        return $this->belongsToMany(Classs::class, 'class_unit', 'unit_id', 'classs_id');
+    }
+
+    public function department()
+    {
+        return $this->belongsTo(Department::class);
+    }
+
+    public function lecturers()
+    {
+        return $this->belongsToMany(Lecturer::class, 'lecturer_unit');
+    }
 
 }

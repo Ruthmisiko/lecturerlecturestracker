@@ -39,6 +39,7 @@ Route::resource('lecture-administereds', App\Http\Controllers\LectureAdministere
 Route::resource('roles', App\Http\Controllers\RoleController::class);
 Route::resource('users', App\Http\Controllers\UserController::class);
 Route::resource('units', App\Http\Controllers\UnitController::class);
+Route::resource('departments', App\Http\Controllers\DepartmentController::class);
 Route::get('lecture-administereds/export/pdf', [LectureAdministeredController::class, 'exportPdf'])
     ->name('lecture-administereds.export.pdf');
 

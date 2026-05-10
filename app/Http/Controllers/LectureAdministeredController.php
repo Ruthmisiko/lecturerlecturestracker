@@ -7,8 +7,12 @@ use Flash;
 use Illuminate\Http\Request;
 use App\Exports\LectureExport;
 use App\Imports\LectureImport;
+use App\Models\Classs;
+use App\Models\Department;
+use App\Models\Lecturer;
 use App\Models\LectureAdministered;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\LectureTemplateExport;
 use App\Http\Controllers\AppBaseController;
@@ -36,8 +40,11 @@ class LectureAdministeredController extends AppBaseController
 
     $ownerId = $user->user_id ?? $user->id;
 
-   $query = LectureAdministered::with(['lecturer', 'classs'])
+   $query = LectureAdministered::with(['lecturer', 'classs', 'unit'])
     ->where('user_id', $ownerId);
+    if ($user->scopedDepartmentId()) {
+        $query->where('department_id', $user->scopedDepartmentId());
+    }
 
 
     if ($request->filled('lecturer')) {
@@ -59,26 +66,18 @@ class LectureAdministeredController extends AppBaseController
     $lectureAdministereds = $query->paginate(10)->appends($request->all());
 
 
-       $duplicates = LectureAdministered::where('user_id', Auth::id())
+       $duplicates = LectureAdministered::where('user_id', $ownerId)
             ->select('lecturer_id', 'classs_id', 'lecture_date', 'start_time', 'end_time')
             ->groupBy('lecturer_id', 'classs_id', 'lecture_date', 'start_time', 'end_time')
             ->havingRaw('COUNT(*) > 1')
-            ->with(['lecturer' => function ($q) {
-                $q->where('user_id', Auth::id());
-            }, 'classs' => function ($q) {
-                $q->where('user_id', Auth::id());
+            ->with(['lecturer' => function ($q) use ($ownerId) {
+                $q->where('user_id', $ownerId);
+            }, 'classs' => function ($q) use ($ownerId) {
+                $q->where('user_id', $ownerId);
             }])
             ->get();
 
-        // $clashes = LectureAdministered::where('user_id', Auth::id())
-        //     ->select('classs_id', 'lecture_date', 'start_time', 'end_time')
-        //     ->groupBy('classs_id', 'lecture_date', 'start_time', 'end_time')
-        //     ->havingRaw('COUNT(DISTINCT lecturer_id) > 1')
-        //     ->with(['classs' => function ($q) {
-        //         $q->where('user_id', Auth::id());
-        //     }])
-        //     ->get();
-        $clashes = LectureAdministered::where('user_id', Auth::id())
+        $clashes = LectureAdministered::where('user_id', $ownerId)
         ->with(['lecturer', 'classs'])
         ->get()
         ->groupBy(function ($item) {
@@ -161,38 +160,64 @@ public function exportPdf(Request $request)
      */
     public function create()
     {
-       $lecturers = \App\Models\Lecturer::where('user_id', Auth::id())->pluck('name', 'id');
-    $classes = \App\Models\Classs::where('user_id', Auth::id())->pluck('name', 'id');
-    return view('lecture_administereds.create', compact('lecturers', 'classes'));
+        $user = Auth::user();
+        $ownerId = $user->user_id ?? $user->id;
+
+        $deptScope   = $user->scopedDepartmentId();
+
+        $dq          = Department::where('user_id', $ownerId);
+        if ($deptScope) $dq->where('id', $deptScope);
+        $departments = $dq->get();
+
+        $lq        = Lecturer::where('user_id', $ownerId);
+        if ($deptScope) $lq->where('department_id', $deptScope);
+        $lecturers = $lq->get(['id', 'name', 'department_id']);
+
+        $classes   = Classs::where('user_id', $ownerId)->pluck('name', 'id');
+
+        $uq    = \App\Models\Unit::where('user_id', $ownerId);
+        if ($deptScope) $uq->where('department_id', $deptScope);
+        $units = $uq->get(['id', 'name', 'unitCode', 'department_id']);
+
+        return view('lecture_administereds.create', compact('departments', 'lecturers', 'classes', 'units'));
     }
 
     /**
      * Store a newly created LectureAdministered in storage.
      */
-  public function store(Request $request)
+    public function store(Request $request)
     {
         $request->validate([
-          'lecturer_id' => 'required|exists:lecturers,id,user_id,' . Auth::id(),
-            'classs_id' => 'required|exists:classses,id,user_id,' . Auth::id(),
-            'start_time' => 'required|date_format:H:i',
-            'end_time' => 'required|date_format:H:i|after:start_time',
-            'lecture_dates' => 'required|array',
-            'lecture_dates.*' => 'date',
+            'department_id'         => 'nullable|exists:departments,id',
+            'records'               => 'required|array|min:1',
+            'records.*.lecturer_id' => 'required|exists:lecturers,id',
+            'records.*.classs_id'   => 'required|exists:classses,id',
+            'records.*.start_time'  => 'required|date_format:H:i',
+            'records.*.end_time'    => 'required|date_format:H:i|after:records.*.start_time',
+            'records.*.dates'       => 'required|array|min:1',
+            'records.*.dates.*'     => 'date',
         ]);
-        $user = Auth::user();
 
+        $user    = Auth::user();
         $ownerId = $user->user_id ?? $user->id;
+        $deptId  = $request->department_id;
 
-        foreach ($request->lecture_dates as $date) {
-            LectureAdministered::create([
-                 'user_id' => $ownerId,
-                'lecturer_id' => $request->lecturer_id,
-                'classs_id' => $request->classs_id,
-                'lecture_date' => $date,
-                'start_time' => $request->start_time,
-                'end_time' => $request->end_time,
-            ]);
-        }
+        DB::transaction(function () use ($request, $ownerId, $deptId) {
+            foreach ($request->records as $record) {
+                foreach ($record['dates'] as $date) {
+                    LectureAdministered::create([
+                        'user_id'       => $ownerId,
+                        'department_id' => $deptId,
+                        'lecturer_id'   => $record['lecturer_id'],
+                        'classs_id'     => $record['classs_id'],
+                        'unit_id'       => $record['unit_id'] ?? null,
+                        'lecture_date'  => $date,
+                        'start_time'    => $record['start_time'],
+                        'end_time'      => $record['end_time'],
+                    ]);
+                }
+            }
+        });
 
         Flash::success('Lecture(s) recorded successfully.');
         return redirect(route('lecture-administereds.index'));
