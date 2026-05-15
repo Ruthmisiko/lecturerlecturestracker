@@ -77,6 +77,7 @@ class LectureAdministeredController extends AppBaseController
             }])
             ->get();
 
+        // Clash with other lecturer — same class, same date, overlapping time, different lecturer
         $clashes = LectureAdministered::where('user_id', $ownerId)
         ->with(['lecturer', 'classs'])
         ->get()
@@ -84,25 +85,52 @@ class LectureAdministeredController extends AppBaseController
             return $item->classs_id . '_' . $item->lecture_date . '_' . $item->start_time . '_' . $item->end_time;
         })
         ->filter(function ($group) {
-            return $group->count() > 1; // only groups with multiple lecturers
+            return $group->count() > 1;
         })
         ->flatMap(function ($group) {
-            return $group; // flatten so each item is a model, not a collection
+            return $group;
         });
+
+        // Own clash — same lecturer, same date, overlapping time (any class/unit)
+        $allRecords = LectureAdministered::where('user_id', $ownerId)
+            ->with(['lecturer', 'classs'])
+            ->get();
+
+        $ownClashPool = $allRecords
+            ->groupBy(function ($item) {
+                return $item->lecturer_id . '_' . $item->lecture_date;
+            })
+            ->filter(function ($group) {
+                $items = $group->values();
+                for ($i = 0; $i < $items->count(); $i++) {
+                    for ($j = $i + 1; $j < $items->count(); $j++) {
+                        $a = $items[$i];
+                        $b = $items[$j];
+                        if (!($a->end_time <= $b->start_time || $a->start_time >= $b->end_time)) {
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            })
+            ->flatMap(function ($group) {
+                return $group;
+            });
 
         if ($request->filled('status')) {
 
-            $lectureAdministereds = $query->get(); // temporary fetch whole list to evaluate status
+            $lectureAdministereds = $query->get();
 
-            $filtered = $lectureAdministereds->filter(function ($item) use ($clashes, $request) {
+            $filtered = $lectureAdministereds->filter(function ($item) use ($ownClashPool, $clashes, $request) {
 
-                $ownClash = $clashes->contains(function ($c) use ($item) {
+                $ownClash = $ownClashPool->contains(function ($c) use ($item) {
                     return $c->id != $item->id &&
                            $c->lecturer_id == $item->lecturer_id &&
                            $c->lecture_date == $item->lecture_date &&
-                           $c->start_time == $item->start_time &&
-                           $c->end_time == $item->end_time;
-                           $c->status == $item->status;
+                           !(
+                               $item->end_time <= $c->start_time ||
+                               $item->start_time >= $c->end_time
+                           );
                 });
 
                 $clashWith = $clashes->contains(function ($c) use ($item) {
@@ -110,7 +138,6 @@ class LectureAdministeredController extends AppBaseController
                            $c->classs_id == $item->classs_id &&
                            $c->lecture_date == $item->lecture_date &&
                            $c->lecturer_id != $item->lecturer_id &&
-                           $c->status == $item->status &&
                            !(
                                $item->end_time <= $c->start_time ||
                                $item->start_time >= $c->end_time
@@ -135,7 +162,7 @@ class LectureAdministeredController extends AppBaseController
             );
         }
 
-    return view('lecture_administereds.index', compact('lectureAdministereds', 'duplicates','clashes'))
+    return view('lecture_administereds.index', compact('lectureAdministereds', 'duplicates', 'clashes', 'ownClashPool'))
         ->with('lectureAdministereds', $lectureAdministereds);
 }
 
