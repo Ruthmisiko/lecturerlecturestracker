@@ -6,9 +6,13 @@
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: DejaVu Sans, sans-serif; font-size: 10px; color: #222; }
 
-    .header { text-align: center; margin-bottom: 14px; border-bottom: 2px solid #333; padding-bottom: 8px; }
-    .header h2 { font-size: 15px; font-weight: bold; margin-bottom: 3px; }
-    .header p  { font-size: 10px; color: #555; }
+    .header { margin-bottom: 14px; border-bottom: 2px solid #6b1a2b; padding-bottom: 8px; }
+    .header-inner { display: flex; align-items: center; }
+    .header-logo { width: 70px; height: 70px; margin-right: 14px; }
+    .header-text { text-align: center; flex: 1; }
+    .header-text h2 { font-size: 15px; font-weight: bold; margin-bottom: 2px; color: #6b1a2b; }
+    .header-text h3 { font-size: 11px; font-weight: normal; color: #444; margin-bottom: 2px; }
+    .header-text p  { font-size: 9px; color: #777; }
 
     .meta { margin-bottom: 10px; font-size: 9.5px; }
     .meta span { margin-right: 18px; }
@@ -43,8 +47,16 @@
 
 {{-- HEADER --}}
 <div class="header">
-    <h2>Lecturer Tracker &mdash; Lecture Administered Report</h2>
-    <p>Generated: {{ now()->format('d M Y, H:i') }}</p>
+    <div class="header-inner">
+        <img class="header-logo" src="{{ public_path('images/logo.png') }}" alt="Logo">
+        <div class="header-text">
+            <h2>Kenya Medical Training College</h2>
+            <h3>Lecture Administered Report</h3>
+            <p>Generated: {{ now()->format('d M Y, H:i') }}</p>
+        </div>
+        {{-- spacer to balance logo --}}
+        <div style="width:70px"></div>
+    </div>
 </div>
 
 {{-- FILTER META --}}

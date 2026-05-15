@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Flash;
 use App\Models\Unit;
 use App\Models\Department;
+use App\Models\Lecturer;
 use Illuminate\Http\Request;
 use App\Repositories\UnitRepository;
 use Illuminate\Support\Facades\Auth;
@@ -32,14 +33,20 @@ class UnitController extends AppBaseController
 
          $ownerId = $user->user_id ?? $user->id;
 
-        $query = Unit::where('user_id', $ownerId);
+        $query = Unit::with('department')->where('user_id', $ownerId);
         if ($user->scopedDepartmentId()) {
             $query->where('department_id', $user->scopedDepartmentId());
         }
-        $units = $query->paginate(10);
 
-        return view('units.index')
-            ->with('units', $units);
+        if ($request->filled('lecturer_id')) {
+            $query->whereHas('lecturers', fn($q) => $q->where('lecturers.id', $request->lecturer_id));
+        }
+
+        $units = $query->paginate(10)->appends($request->all());
+
+        $lecturers = Lecturer::where('user_id', $ownerId)->orderBy('name')->get(['id', 'name']);
+
+        return view('units.index', compact('units', 'lecturers'));
     }
 
     /**
@@ -87,7 +94,14 @@ class UnitController extends AppBaseController
             return redirect(route('units.index'));
         }
 
-        return view('units.show')->with('unit', $unit);
+        $unit->load('department');
+
+        $lectureAdministereds = \App\Models\LectureAdministered::with(['lecturer', 'classs'])
+            ->where('unit_id', $id)
+            ->orderBy('lecture_date', 'desc')
+            ->get();
+
+        return view('units.show', compact('unit', 'lectureAdministereds'));
     }
 
     /**
