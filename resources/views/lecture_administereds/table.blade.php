@@ -5,7 +5,8 @@
 @endphp
 <div class="card card-body mb-3">
     <form method="GET" action="{{ route('lecture-administereds.index') }}">
-    <div class="row align-items-end">
+    <input type="hidden" name="per_page" value="{{ request('per_page', 10) }}">
+    <div class="row align-items-end g-2">
 
 <div class="col-md-2">
     <input type="text" name="lecturer" class="form-control" placeholder="Lecturer" value="{{ request('lecturer') }}">
@@ -18,6 +19,18 @@
 <div class="col-md-2">
     <input type="date" name="lecture_date" class="form-control" value="{{ request('lecture_date') }}">
 </div>
+
+<div class="col-md-2">
+    <select name="department_id" class="form-control">
+        <option value="">All Departments</option>
+        @foreach($departments as $dept)
+            <option value="{{ $dept->id }}" {{ request('department_id') == $dept->id ? 'selected' : '' }}>
+                {{ $dept->name }}
+            </option>
+        @endforeach
+    </select>
+</div>
+
 @if(auth()->user()->can('clash.own') || auth()->user()->can('clash.all'))
 <div class="col-md-2">
     <select name="status" class="form-control">
@@ -33,27 +46,15 @@
 </div>
 @endif
 
-<!-- BUTTONS (placed in same row) -->
-<div class="col-md-4 d-flex gap-2">
-    <button type="submit" class="btn btn-success mr-2">Search</button>
-
-    <a href="{{ route('lecture-administereds.index') }}" class="btn btn-secondary mr-2">
-        Reset
-    </a>
-
-    <a href="{{ route('lecture-administereds.export.pdf', request()->all()) }}"
-       class="btn btn-danger mr-2">
-        PDF
-    </a>
-
-    <a href="{{ route('lecture-administereds.export.excel', request()->all()) }}"
-       class="btn btn-primary mr-2">
-        Excel
-    </a>
+<!-- BUTTONS -->
+<div class="col-md-2 d-flex flex-wrap gap-1">
+    <button type="submit" class="btn btn-success btn-sm mr-1">Search</button>
+    <a href="{{ route('lecture-administereds.index') }}" class="btn btn-secondary btn-sm mr-1">Reset</a>
+    <a href="{{ route('lecture-administereds.export.pdf', request()->all()) }}" class="btn btn-danger btn-sm mr-1">PDF</a>
+    <a href="{{ route('lecture-administereds.export.excel', request()->all()) }}" class="btn btn-primary btn-sm">Excel</a>
 </div>
 
 </div>
-
     </form>
 </div>
 @can('clash.own')
@@ -95,6 +96,17 @@
                     @endif
 @endcan
 
+
+        <div class="d-flex align-items-center mb-2">
+            <label class="mr-2 mb-0 text-nowrap">Show</label>
+            <select class="form-control form-control-sm" style="width:90px"
+                    onchange="window.location.href='{{ route('lecture-administereds.index') }}?' + new URLSearchParams({...Object.fromEntries(new URLSearchParams(window.location.search)), per_page: this.value, page: 1})">
+                @foreach([10, 50, 100, 150, 200] as $opt)
+                    <option value="{{ $opt }}" {{ request('per_page', 10) == $opt ? 'selected' : '' }}>{{ $opt }}</option>
+                @endforeach
+            </select>
+            <span class="ml-2 mb-0 text-nowrap">records per page</span>
+        </div>
 
         <table class="table table-bordered" id="lecturers-table">
 

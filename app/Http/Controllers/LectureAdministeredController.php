@@ -35,151 +35,182 @@ class LectureAdministeredController extends AppBaseController
      */
    public function index(Request $request)
 {
-
-    $user = Auth::user();
-
+    $user    = Auth::user();
     $ownerId = $user->user_id ?? $user->id;
 
-   $query = LectureAdministered::with(['lecturer', 'classs', 'unit'])
-    ->where('user_id', $ownerId);
-    if ($user->scopedDepartmentId()) {
-        $query->where('department_id', $user->scopedDepartmentId());
-    }
+    // Fetch ALL owner records once — used for clash detection and filtering
+    $allRecords = LectureAdministered::with(['lecturer', 'classs', 'unit', 'department'])
+        ->where('user_id', $ownerId)
+        ->when($user->scopedDepartmentId(), fn($q) => $q->where('department_id', $user->scopedDepartmentId()))
+        ->get();
 
+    // Build clash pools from unfiltered records
+    [$ownClashPool, $clashes] = $this->buildClashPools($allRecords);
 
-    if ($request->filled('lecturer')) {
-        $query->whereHas('lecturer', function ($q) use ($request) {
-            $q->where('name', 'like', '%' . $request->lecturer . '%');
-        });
-    }
-
-    if ($request->filled('class')) {
-        $query->whereHas('classs', function ($q) use ($request) {
-            $q->where('name', 'like', '%' . $request->class . '%');
-        });
-    }
-
-    if ($request->filled('lecture_date')) {
-        $query->where('lecture_date', $request->lecture_date);
-    }
-
-    $lectureAdministereds = $query->paginate(10)->appends($request->all());
-
-
-       $duplicates = LectureAdministered::where('user_id', $ownerId)
-            ->select('lecturer_id', 'classs_id', 'lecture_date', 'start_time', 'end_time')
-            ->groupBy('lecturer_id', 'classs_id', 'lecture_date', 'start_time', 'end_time')
-            ->havingRaw('COUNT(*) > 1')
-            ->with(['lecturer' => function ($q) use ($ownerId) {
-                $q->where('user_id', $ownerId);
-            }, 'classs' => function ($q) use ($ownerId) {
-                $q->where('user_id', $ownerId);
-            }])
-            ->get();
-
-        // Clash with other lecturer — same class, same date, overlapping time, different lecturer
-        $clashes = LectureAdministered::where('user_id', $ownerId)
+    $duplicates = LectureAdministered::where('user_id', $ownerId)
+        ->select('lecturer_id', 'classs_id', 'lecture_date', 'start_time', 'end_time')
+        ->groupBy('lecturer_id', 'classs_id', 'lecture_date', 'start_time', 'end_time')
+        ->havingRaw('COUNT(*) > 1')
         ->with(['lecturer', 'classs'])
-        ->get()
-        ->groupBy(function ($item) {
-            return $item->classs_id . '_' . $item->lecture_date . '_' . $item->start_time . '_' . $item->end_time;
-        })
+        ->get();
+
+    // Apply filters in PHP so status filter works consistently
+    $filtered = $allRecords->filter(function ($item) use ($request, $ownClashPool, $clashes) {
+        if ($request->filled('lecturer') &&
+            !str_contains(strtolower($item->lecturer->name ?? ''), strtolower($request->lecturer))) {
+            return false;
+        }
+        if ($request->filled('class') &&
+            !str_contains(strtolower($item->classs->name ?? ''), strtolower($request->class))) {
+            return false;
+        }
+        if ($request->filled('lecture_date') && $item->lecture_date !== $request->lecture_date) {
+            return false;
+        }
+        if ($request->filled('department_id') && $item->department_id != $request->department_id) {
+            return false;
+        }
+        if ($request->filled('status')) {
+            $ownClash  = $this->isOwnClash($item, $ownClashPool);
+            $clashWith = $this->isClashWith($item, $clashes);
+            return match ($request->status) {
+                'own_clash'  => $ownClash,
+                'clash_with' => $clashWith,
+                'ok'         => !$ownClash && !$clashWith,
+                default      => true,
+            };
+        }
+        return true;
+    });
+
+    $perPage = in_array((int) $request->get('per_page', 10), [10, 50, 100, 150, 200])
+        ? (int) $request->get('per_page', 10)
+        : 10;
+
+    $page = $request->get('page', 1);
+    $lectureAdministereds = new \Illuminate\Pagination\LengthAwarePaginator(
+        $filtered->values()->forPage($page, $perPage),
+        $filtered->count(),
+        $perPage,
+        $page,
+        ['path' => $request->url(), 'query' => $request->query()]
+    );
+
+    $departments = Department::where('user_id', $ownerId)->orderBy('name')->get();
+
+    return view('lecture_administereds.index',
+        compact('lectureAdministereds', 'duplicates', 'clashes', 'ownClashPool', 'departments'));
+}
+
+private function buildClashPools($allRecords): array
+{
+    // Own clash pool — same lecturer, same date, overlapping time (any class/unit)
+    $ownClashPool = $allRecords
+        ->groupBy(fn($i) => $i->lecturer_id . '_' . $i->lecture_date)
         ->filter(function ($group) {
-            return $group->count() > 1;
-        })
-        ->flatMap(function ($group) {
-            return $group;
-        });
-
-        // Own clash — same lecturer, same date, overlapping time (any class/unit)
-        $allRecords = LectureAdministered::where('user_id', $ownerId)
-            ->with(['lecturer', 'classs'])
-            ->get();
-
-        $ownClashPool = $allRecords
-            ->groupBy(function ($item) {
-                return $item->lecturer_id . '_' . $item->lecture_date;
-            })
-            ->filter(function ($group) {
-                $items = $group->values();
-                for ($i = 0; $i < $items->count(); $i++) {
-                    for ($j = $i + 1; $j < $items->count(); $j++) {
-                        $a = $items[$i];
-                        $b = $items[$j];
-                        if (!($a->end_time <= $b->start_time || $a->start_time >= $b->end_time)) {
-                            return true;
-                        }
+            $items = $group->values();
+            for ($i = 0; $i < $items->count(); $i++) {
+                for ($j = $i + 1; $j < $items->count(); $j++) {
+                    if (!($items[$i]->end_time <= $items[$j]->start_time ||
+                          $items[$i]->start_time >= $items[$j]->end_time)) {
+                        return true;
                     }
                 }
-                return false;
-            })
-            ->flatMap(function ($group) {
-                return $group;
-            });
+            }
+            return false;
+        })
+        ->flatMap(fn($g) => $g);
 
-        if ($request->filled('status')) {
+    // Clash with other lecturer — same class, same date, overlapping time, different lecturer
+    $clashes = $allRecords
+        ->groupBy(fn($i) => $i->classs_id . '_' . $i->lecture_date . '_' . $i->start_time . '_' . $i->end_time)
+        ->filter(fn($g) => $g->count() > 1)
+        ->flatMap(fn($g) => $g);
 
-            $lectureAdministereds = $query->get();
+    return [$ownClashPool, $clashes];
+}
 
-            $filtered = $lectureAdministereds->filter(function ($item) use ($ownClashPool, $clashes, $request) {
+private function isOwnClash($item, $ownClashPool): bool
+{
+    return $ownClashPool->contains(fn($c) =>
+        $c->id != $item->id &&
+        $c->lecturer_id == $item->lecturer_id &&
+        $c->lecture_date == $item->lecture_date &&
+        !($item->end_time <= $c->start_time || $item->start_time >= $c->end_time)
+    );
+}
 
-                $ownClash = $ownClashPool->contains(function ($c) use ($item) {
-                    return $c->id != $item->id &&
-                           $c->lecturer_id == $item->lecturer_id &&
-                           $c->lecture_date == $item->lecture_date &&
-                           !(
-                               $item->end_time <= $c->start_time ||
-                               $item->start_time >= $c->end_time
-                           );
-                });
-
-                $clashWith = $clashes->contains(function ($c) use ($item) {
-                    return $c->id != $item->id &&
-                           $c->classs_id == $item->classs_id &&
-                           $c->lecture_date == $item->lecture_date &&
-                           $c->lecturer_id != $item->lecturer_id &&
-                           !(
-                               $item->end_time <= $c->start_time ||
-                               $item->start_time >= $c->end_time
-                           );
-                });
-
-                $ok = !$ownClash && !$clashWith;
-
-                return match ($request->status) {
-                    'own_clash' => $ownClash,
-                    'clash_with' => $clashWith,
-                    'ok' => $ok,
-                };
-            });
-
-            // manual pagination for filtered results
-            $lectureAdministereds = new \Illuminate\Pagination\LengthAwarePaginator(
-                $filtered->forPage(\request()->get('page', 1), 10),
-                $filtered->count(),
-                10,
-                \request()->get('page', 1)
-            );
-        }
-
-    return view('lecture_administereds.index', compact('lectureAdministereds', 'duplicates', 'clashes', 'ownClashPool'))
-        ->with('lectureAdministereds', $lectureAdministereds);
+private function isClashWith($item, $clashes): bool
+{
+    return $clashes->contains(fn($c) =>
+        $c->id != $item->id &&
+        $c->classs_id == $item->classs_id &&
+        $c->lecture_date == $item->lecture_date &&
+        $c->lecturer_id != $item->lecturer_id &&
+        !($item->end_time <= $c->start_time || $item->start_time >= $c->end_time)
+    );
 }
 
 public function exportExcel(Request $request)
 {
-    $data = $this->index($request)->getData()['lectureAdministereds'];
-
-    return Excel::download(new LectureExport($data), 'lecture_data.xlsx');
+    [$records, $ownClashPool, $clashes] = $this->fetchExportData($request);
+    return Excel::download(new LectureExport($records, $ownClashPool, $clashes), 'lecture_report.xlsx');
 }
 
 public function exportPdf(Request $request)
 {
-    $data = $this->index($request)->getData()['lectureAdministereds'];
+    [$records, $ownClashPool, $clashes] = $this->fetchExportData($request);
 
-    $pdf = PDF::loadView('lecture_administereds.pdf', ['data' => $data]);
+    $department = null;
+    if ($request->filled('department_id')) {
+        $department = Department::find($request->department_id);
+    }
 
-    return $pdf->download('lecture_data.pdf');
+    $pdf = PDF::loadView('lecture_administereds.pdf', [
+        'records'      => $records,
+        'ownClashPool' => $ownClashPool,
+        'clashes'      => $clashes,
+        'status'       => $request->status,
+        'department'   => $department,
+        'filters'      => $request->only('lecturer', 'class', 'lecture_date', 'department_id', 'status'),
+    ])->setPaper('a4', 'landscape');
+
+    return $pdf->download('lecture_report.pdf');
+}
+
+private function fetchExportData(Request $request): array
+{
+    $user    = Auth::user();
+    $ownerId = $user->user_id ?? $user->id;
+
+    $allRecords = LectureAdministered::with(['lecturer', 'classs', 'unit', 'department'])
+        ->where('user_id', $ownerId)
+        ->when($user->scopedDepartmentId(), fn($q) => $q->where('department_id', $user->scopedDepartmentId()))
+        ->get();
+
+    [$ownClashPool, $clashes] = $this->buildClashPools($allRecords);
+
+    $records = $allRecords->filter(function ($item) use ($request, $ownClashPool, $clashes) {
+        if ($request->filled('lecturer') &&
+            !str_contains(strtolower($item->lecturer->name ?? ''), strtolower($request->lecturer))) return false;
+        if ($request->filled('class') &&
+            !str_contains(strtolower($item->classs->name ?? ''), strtolower($request->class))) return false;
+        if ($request->filled('lecture_date') && $item->lecture_date !== $request->lecture_date) return false;
+        if ($request->filled('department_id') && $item->department_id != $request->department_id) return false;
+        if ($request->filled('status')) {
+            $ownClash  = $this->isOwnClash($item, $ownClashPool);
+            $clashWith = $this->isClashWith($item, $clashes);
+            return match ($request->status) {
+                'own_clash'  => $ownClash,
+                'clash_with' => $clashWith,
+                'ok'         => !$ownClash && !$clashWith,
+                default      => true,
+            };
+        }
+        return true;
+    })->values();
+
+    return [$records, $ownClashPool, $clashes];
 }
 
     /**
