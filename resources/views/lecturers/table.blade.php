@@ -1,4 +1,29 @@
 <div class="card-body p-0">
+    <div class="card card-body mb-3">
+        <form method="GET" action="{{ route('lecturers.index') }}">
+            <div class="row align-items-end g-2">
+                <div class="col-md-4">
+                    <input type="text" name="name" class="form-control" placeholder="Search by name"
+                           value="{{ request('name') }}">
+                </div>
+                <div class="col-md-4">
+                    <select name="department_id" class="form-control">
+                        <option value="">All Departments</option>
+                        @foreach($departments as $dept)
+                            <option value="{{ $dept->id }}" {{ request('department_id') == $dept->id ? 'selected' : '' }}>
+                                {{ $dept->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-4 d-flex">
+                    <button type="submit" class="btn btn-success btn-sm mr-1">Search</button>
+                    <a href="{{ route('lecturers.index') }}" class="btn btn-secondary btn-sm">Reset</a>
+                </div>
+            </div>
+        </form>
+    </div>
+
     <div class="table-responsive">
         <table class="table table-bordered" id="lecturers-table">
             <thead>

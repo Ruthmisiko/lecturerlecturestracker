@@ -56,8 +56,7 @@ class LectureAdministeredController extends AppBaseController
 
     // Apply filters in PHP so status filter works consistently
     $filtered = $allRecords->filter(function ($item) use ($request, $ownClashPool, $clashes) {
-        if ($request->filled('lecturer') &&
-            !str_contains(strtolower($item->lecturer->name ?? ''), strtolower($request->lecturer))) {
+        if ($request->filled('lecturer_id') && $item->lecturer_id != $request->lecturer_id) {
             return false;
         }
         if ($request->filled('class') &&
@@ -83,6 +82,14 @@ class LectureAdministeredController extends AppBaseController
         return true;
     });
 
+    // Total hours for the filtered result set
+    $totalMinutes = $filtered->sum(function ($item) {
+        $start = \Carbon\Carbon::parse($item->start_time);
+        $end   = \Carbon\Carbon::parse($item->end_time);
+        return max(0, $end->diffInMinutes($start));
+    });
+    $totalHours = round($totalMinutes / 60, 1);
+
     $perPage = in_array((int) $request->get('per_page', 10), [10, 50, 100, 150, 200])
         ? (int) $request->get('per_page', 10)
         : 10;
@@ -96,10 +103,14 @@ class LectureAdministeredController extends AppBaseController
         ['path' => $request->url(), 'query' => $request->query()]
     );
 
-    $departments = Department::where('user_id', $ownerId)->orderBy('name')->get();
+    $departments = $user->isSuperAdmin()
+        ? Department::orderBy('name')->get()
+        : Department::where('user_id', $ownerId)->orderBy('name')->get();
+
+    $allLecturers = Lecturer::where('user_id', $ownerId)->orderBy('name')->get();
 
     return view('lecture_administereds.index',
-        compact('lectureAdministereds', 'duplicates', 'clashes', 'ownClashPool', 'departments'));
+        compact('lectureAdministereds', 'duplicates', 'clashes', 'ownClashPool', 'departments', 'allLecturers', 'totalHours'));
 }
 
 private function buildClashPools($allRecords, $ownerId): array
@@ -202,8 +213,7 @@ private function fetchExportData(Request $request): array
     [$ownClashPool, $clashes] = $this->buildClashPools($allRecords, $ownerId);
 
     $records = $allRecords->filter(function ($item) use ($request, $ownClashPool, $clashes) {
-        if ($request->filled('lecturer') &&
-            !str_contains(strtolower($item->lecturer->name ?? ''), strtolower($request->lecturer))) return false;
+        if ($request->filled('lecturer_id') && $item->lecturer_id != $request->lecturer_id) return false;
         if ($request->filled('class') &&
             !str_contains(strtolower($item->classs->name ?? ''), strtolower($request->class))) return false;
         if ($request->filled('lecture_date') && $item->lecture_date !== $request->lecture_date) return false;

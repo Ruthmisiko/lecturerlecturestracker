@@ -9,7 +9,14 @@
     <div class="row align-items-end g-2">
 
 <div class="col-md-2">
-    <input type="text" name="lecturer" class="form-control" placeholder="Lecturer" value="{{ request('lecturer') }}">
+    <select name="lecturer_id" class="form-control">
+        <option value="">All Lecturers</option>
+        @foreach($allLecturers as $lec)
+            <option value="{{ $lec->id }}" {{ request('lecturer_id') == $lec->id ? 'selected' : '' }}>
+                {{ $lec->name }}
+            </option>
+        @endforeach
+    </select>
 </div>
 
 <div class="col-md-2">
@@ -96,6 +103,19 @@
                     @endif
 @endcan
 
+
+        {{-- Total hours banner — updates with every filter --}}
+        <div class="alert alert-success py-2 px-3 mb-2 d-flex align-items-center justify-content-between">
+            <span>
+                <i class="fas fa-clock mr-1"></i>
+                <strong>Total Hours Lectured:</strong>
+                {{ $totalHours }} hr{{ $totalHours == 1 ? '' : 's' }}
+                @if(request('lecturer_id'))
+                    &nbsp;<span class="badge badge-light">{{ $allLecturers->firstWhere('id', request('lecturer_id'))?->name ?? '' }}</span>
+                @endif
+            </span>
+            <span class="text-muted small">{{ $lectureAdministereds->total() }} record(s) matched</span>
+        </div>
 
         <div class="d-flex align-items-center mb-2">
             <label class="mr-2 mb-0 text-nowrap">Show</label>

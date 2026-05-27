@@ -61,6 +61,12 @@ class User extends Authenticatable
         return $this->belongsTo(\App\Models\Department::class);
     }
 
+    /** Super admin has no parent user (user_id IS NULL) or holds the superuser role. */
+    public function isSuperAdmin(): bool
+    {
+        return is_null($this->user_id) || $this->hasRole('superuser');
+    }
+
     /** Returns the active department scope: session switcher takes priority, then DB assignment. */
     public function scopedDepartmentId(): ?int
     {

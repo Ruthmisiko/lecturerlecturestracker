@@ -47,7 +47,7 @@
                 @php
                     $navUser     = Auth::user();
                     $navOwnerId  = $navUser->user_id ?? $navUser->id;
-                    $navDepts    = $navUser->hasRole('superuser')
+                    $navDepts    = $navUser->isSuperAdmin()
                         ? \App\Models\Department::orderBy('name')->get()
                         : \App\Models\Department::where('user_id', $navOwnerId)->orderBy('name')->get();
                     $navActiveDeptId = session()->has('active_department_id')

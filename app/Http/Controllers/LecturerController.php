@@ -25,16 +25,30 @@ class LecturerController extends AppBaseController
 
     public function index(Request $request)
     {
-        $user = Auth::user();
+        $user    = Auth::user();
         $ownerId = $user->user_id ?? $user->id;
 
         $query = Lecturer::where('user_id', $ownerId)->with('department');
+
         if ($user->scopedDepartmentId()) {
             $query->where('department_id', $user->scopedDepartmentId());
         }
-        $lecturers = $query->paginate(10);
 
-        return view('lecturers.index')->with('lecturers', $lecturers);
+        if ($request->filled('name')) {
+            $query->where('name', 'like', '%' . $request->name . '%');
+        }
+
+        if ($request->filled('department_id')) {
+            $query->where('department_id', $request->department_id);
+        }
+
+        $lecturers = $query->paginate(10)->withQueryString();
+
+        $departments = $user->isSuperAdmin()
+            ? Department::orderBy('name')->get()
+            : Department::where('user_id', $ownerId)->orderBy('name')->get();
+
+        return view('lecturers.index', compact('lecturers', 'departments'));
     }
 
     public function create()
@@ -98,55 +112,169 @@ class LecturerController extends AppBaseController
 
     public function show(Request $request, $id)
     {
-        $lecturer = Lecturer::with('lectureAdministereds.classs', 'department', 'units')->findOrFail($id);
+        $lecturer = Lecturer::with([
+            'lectureAdministereds.classs',
+            'lectureAdministereds.unit',
+            'department',
+            'units',
+        ])->findOrFail($id);
 
-        $from = $request->from_date;
-        $to   = $request->to_date;
+        // All records for this lecturer — used for own-clash detection
+        $allOwn = $lecturer->lectureAdministereds;
 
-        $lectures = $lecturer->lectureAdministereds;
+        // All OTHER lecturers' records — used for clash-with detection
+        $allOthers = LectureAdministered::with('lecturer', 'classs')
+            ->where('lecturer_id', '!=', $lecturer->id)
+            ->get();
 
-        if ($from) {
-            $lectures = $lectures->filter(fn($rec) => $rec->lecture_date >= $from);
-        }
-        if ($to) {
-            $lectures = $lectures->filter(fn($rec) => $rec->lecture_date <= $to);
-        }
+        // Compute clash status on every record using proper time-overlap logic
+        foreach ($allOwn as $record) {
+            $ownClash = $allOwn->contains(fn($r) =>
+                $r->id !== $record->id &&
+                $r->lecture_date === $record->lecture_date &&
+                !($record->end_time <= $r->start_time || $record->start_time >= $r->end_time)
+            );
 
-        $lecturer->lectureAdministereds = $lectures->values();
+            $otherClash = $allOthers->filter(fn($r) =>
+                $r->classs_id === $record->classs_id &&
+                $r->lecture_date === $record->lecture_date &&
+                !($record->end_time <= $r->start_time || $record->start_time >= $r->end_time)
+            );
 
-        $allLectures = LectureAdministered::with('lecturer', 'classs')->get();
-
-        foreach ($lecturer->lectureAdministereds as $record) {
-            $record->status = 'OK';
-
-            $ownClash = $lecturer->lectureAdministereds->filter(function ($r) use ($record) {
-                return $r->id !== $record->id &&
-                       $r->lecture_date == $record->lecture_date &&
-                       $r->start_time == $record->start_time &&
-                       $r->end_time == $record->end_time;
-            });
-
-            if ($ownClash->count() > 0) {
-                $record->status = 'Own Clash';
-            }
-
-            $otherClash = $allLectures->filter(function ($r) use ($record, $lecturer) {
-                return $r->lecturer_id !== $lecturer->id &&
-                       $r->lecture_date == $record->lecture_date &&
-                       $r->start_time == $record->start_time &&
-                       $r->end_time == $record->end_time &&
-                       $r->class_id == $record->class_id;
-            });
-
-            if ($otherClash->count() > 0) {
-                $names = $otherClash->pluck('lecturer.name')->unique()->join(', ');
-                $record->status = $record->status === 'Own Clash'
-                    ? 'Own Clash & Clash with ' . $names
-                    : 'Clash with ' . $names;
+            if ($ownClash && $otherClash->isNotEmpty()) {
+                $record->computed_status   = 'both';
+                $record->clash_with_names  = $otherClash->pluck('lecturer.name')->filter()->unique()->join(', ');
+            } elseif ($ownClash) {
+                $record->computed_status   = 'own_clash';
+                $record->clash_with_names  = null;
+            } elseif ($otherClash->isNotEmpty()) {
+                $record->computed_status   = 'clash_with';
+                $record->clash_with_names  = $otherClash->pluck('lecturer.name')->filter()->unique()->join(', ');
+            } else {
+                $record->computed_status   = 'ok';
+                $record->clash_with_names  = null;
             }
         }
 
-        return view('lecturers.show', compact('lecturer', 'from', 'to'));
+        // Apply filters
+        $lectures = $this->applyLecturerShowFilters($allOwn, $request);
+
+        $lecturerUnits = $lecturer->units;
+
+        return view('lecturers.show', compact('lecturer', 'lectures', 'lecturerUnits'));
+    }
+
+    private function applyLecturerShowFilters($records, Request $request)
+    {
+        if ($request->filled('from_date')) {
+            $records = $records->filter(fn($r) => $r->lecture_date >= $request->from_date);
+        }
+        if ($request->filled('to_date')) {
+            $records = $records->filter(fn($r) => $r->lecture_date <= $request->to_date);
+        }
+        if ($request->filled('class')) {
+            $records = $records->filter(fn($r) =>
+                str_contains(strtolower($r->classs->name ?? ''), strtolower($request->class))
+            );
+        }
+        if ($request->filled('unit_id')) {
+            $records = $records->filter(fn($r) => $r->unit_id == $request->unit_id);
+        }
+        if ($request->filled('status')) {
+            $records = $records->filter(fn($r) => match($request->status) {
+                'own_clash'  => in_array($r->computed_status, ['own_clash', 'both']),
+                'clash_with' => in_array($r->computed_status, ['clash_with', 'both']),
+                'ok'         => $r->computed_status === 'ok',
+                default      => true,
+            });
+        }
+        return $records->values();
+    }
+
+    public function exportPdf(Request $request, $id)
+    {
+        $lecturer = Lecturer::with([
+            'lectureAdministereds.classs',
+            'lectureAdministereds.unit',
+            'department',
+            'units',
+        ])->findOrFail($id);
+
+        $allOwn    = $lecturer->lectureAdministereds;
+        $allOthers = LectureAdministered::with('lecturer', 'classs')
+            ->where('lecturer_id', '!=', $lecturer->id)->get();
+
+        foreach ($allOwn as $record) {
+            $ownClash   = $allOwn->contains(fn($r) =>
+                $r->id !== $record->id &&
+                $r->lecture_date === $record->lecture_date &&
+                !($record->end_time <= $r->start_time || $record->start_time >= $r->end_time)
+            );
+            $otherClash = $allOthers->filter(fn($r) =>
+                $r->classs_id === $record->classs_id &&
+                $r->lecture_date === $record->lecture_date &&
+                !($record->end_time <= $r->start_time || $record->start_time >= $r->end_time)
+            );
+            $record->computed_status  = $ownClash && $otherClash->isNotEmpty() ? 'both'
+                : ($ownClash ? 'own_clash' : ($otherClash->isNotEmpty() ? 'clash_with' : 'ok'));
+            $record->clash_with_names = $otherClash->pluck('lecturer.name')->filter()->unique()->join(', ');
+        }
+
+        $lectures = $this->applyLecturerShowFilters($allOwn, $request);
+
+        $pdf = PDF::loadView('lecturers.export_pdf', compact('lecturer', 'lectures'))
+                  ->setPaper('a4', 'landscape');
+        return $pdf->download('lecturer_' . $lecturer->id . '_lectures.pdf');
+    }
+
+    public function exportExcel(Request $request, $id)
+    {
+        $lecturer = Lecturer::with([
+            'lectureAdministereds.classs',
+            'lectureAdministereds.unit',
+            'department',
+            'units',
+        ])->findOrFail($id);
+
+        $allOwn    = $lecturer->lectureAdministereds;
+        $allOthers = LectureAdministered::with('lecturer', 'classs')
+            ->where('lecturer_id', '!=', $lecturer->id)->get();
+
+        foreach ($allOwn as $record) {
+            $ownClash   = $allOwn->contains(fn($r) =>
+                $r->id !== $record->id &&
+                $r->lecture_date === $record->lecture_date &&
+                !($record->end_time <= $r->start_time || $record->start_time >= $r->end_time)
+            );
+            $otherClash = $allOthers->filter(fn($r) =>
+                $r->classs_id === $record->classs_id &&
+                $r->lecture_date === $record->lecture_date &&
+                !($record->end_time <= $r->start_time || $record->start_time >= $r->end_time)
+            );
+            $record->computed_status  = $ownClash && $otherClash->isNotEmpty() ? 'both'
+                : ($ownClash ? 'own_clash' : ($otherClash->isNotEmpty() ? 'clash_with' : 'ok'));
+            $record->clash_with_names = $otherClash->pluck('lecturer.name')->filter()->unique()->join(', ');
+        }
+
+        $lectures = $this->applyLecturerShowFilters($allOwn, $request);
+
+        $rows = $lectures->map(fn($r) => [
+            'Class'        => $r->classs->name ?? '-',
+            'Unit'         => $r->unit->name ?? '-',
+            'Lecture Date' => $r->lecture_date,
+            'Start Time'   => $r->start_time,
+            'End Time'     => $r->end_time,
+            'Status'       => match($r->computed_status) {
+                'own_clash'  => 'Own Clash',
+                'clash_with' => 'Clash with: ' . $r->clash_with_names,
+                'both'       => 'Own Clash & Clash with: ' . $r->clash_with_names,
+                default      => 'OK',
+            },
+        ]);
+
+        return Excel::download(new \App\Exports\CollectionExport(
+            collect([['Class','Unit','Lecture Date','Start Time','End Time','Status']])->merge($rows->toArray())
+        ), 'lecturer_' . $lecturer->id . '_lectures.xlsx');
     }
 
     public function edit($id)

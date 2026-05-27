@@ -101,7 +101,7 @@ class DepartmentController extends AppBaseController
         $ownerId      = $user->user_id ?? $user->id;
 
         if ($departmentId) {
-            $accessible = $user->hasRole('superuser')
+            $accessible = $user->isSuperAdmin()
                 ? Department::where('id', $departmentId)->exists()
                 : Department::where('id', $departmentId)->where('user_id', $ownerId)->exists();
 
