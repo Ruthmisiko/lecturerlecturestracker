@@ -45,7 +45,7 @@ class LectureAdministeredController extends AppBaseController
         ->get();
 
     // Build clash pools from unfiltered records
-    [$ownClashPool, $clashes] = $this->buildClashPools($allRecords);
+    [$ownClashPool, $clashes] = $this->buildClashPools($allRecords, $ownerId);
 
     $duplicates = LectureAdministered::where('user_id', $ownerId)
         ->select('lecturer_id', 'classs_id', 'lecture_date', 'start_time', 'end_time')
@@ -102,10 +102,21 @@ class LectureAdministeredController extends AppBaseController
         compact('lectureAdministereds', 'duplicates', 'clashes', 'ownClashPool', 'departments'));
 }
 
-private function buildClashPools($allRecords): array
+private function buildClashPools($allRecords, $ownerId): array
 {
-    // Own clash pool — same lecturer, same date, overlapping time (any class/unit)
-    $ownClashPool = $allRecords
+    // Fetch all records for the same lecturers across ALL departments so cross-department
+    // own clashes (same lecturer, same date/time, different department) are detected.
+    $lecturerIds = $allRecords->pluck('lecturer_id')->unique()->filter()->values();
+
+    $crossDeptRecords = $lecturerIds->isNotEmpty()
+        ? LectureAdministered::with(['lecturer', 'classs', 'unit', 'department'])
+            ->where('user_id', $ownerId)
+            ->whereIn('lecturer_id', $lecturerIds)
+            ->get()
+        : collect();
+
+    // Own clash pool — same lecturer, same date, overlapping time (any class/unit/department)
+    $ownClashPool = $crossDeptRecords
         ->groupBy(fn($i) => $i->lecturer_id . '_' . $i->lecture_date)
         ->filter(function ($group) {
             $items = $group->values();
@@ -188,7 +199,7 @@ private function fetchExportData(Request $request): array
         ->when($user->scopedDepartmentId(), fn($q) => $q->where('department_id', $user->scopedDepartmentId()))
         ->get();
 
-    [$ownClashPool, $clashes] = $this->buildClashPools($allRecords);
+    [$ownClashPool, $clashes] = $this->buildClashPools($allRecords, $ownerId);
 
     $records = $allRecords->filter(function ($item) use ($request, $ownClashPool, $clashes) {
         if ($request->filled('lecturer') &&
