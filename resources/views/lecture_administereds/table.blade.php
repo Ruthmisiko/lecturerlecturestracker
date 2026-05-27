@@ -113,6 +113,7 @@
             <thead>
                 <tr>
                     <th>Lecturer</th>
+                    <th>Department</th>
                     <th>Class</th>
                     <th>Unit</th>
                     <th>Start Time</th>
@@ -126,6 +127,7 @@
                 @foreach($lectureAdministereds as $lectureAdministered)
                     <tr>
                         <td>{{ $lectureAdministered->lecturer->name ?? '-' }}</td>
+                        <td>{{ $lectureAdministered->department->name ?? '-' }}</td>
                         <td>{{ $lectureAdministered->classs->name ?? '-' }}</td>
                         <td>{{ $lectureAdministered->unit->name ?? '-' }}</td>
                         <td>{{ $lectureAdministered->start_time }}</td>

@@ -45,3 +45,7 @@ Route::get('lecture-administereds/export/pdf', [LectureAdministeredController::c
 
 Route::get('lecture-administereds/export/excel', [LectureAdministeredController::class, 'exportExcel'])
     ->name('lecture-administereds.export.excel');
+
+Route::post('/department/switch', [App\Http\Controllers\DepartmentController::class, 'switchDepartment'])
+    ->name('department.switch')
+    ->middleware('auth');

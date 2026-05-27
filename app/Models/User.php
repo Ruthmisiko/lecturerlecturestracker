@@ -61,9 +61,13 @@ class User extends Authenticatable
         return $this->belongsTo(\App\Models\Department::class);
     }
 
-    /** Returns the department_id this user is restricted to, or null for no restriction. */
+    /** Returns the active department scope: session switcher takes priority, then DB assignment. */
     public function scopedDepartmentId(): ?int
     {
+        if (session()->has('active_department_id')) {
+            $id = session('active_department_id');
+            return $id ? (int) $id : null;
+        }
         return $this->department_id ?? null;
     }
 }

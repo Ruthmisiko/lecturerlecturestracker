@@ -39,6 +39,49 @@
                 <a class="nav-link" data-widget="pushmenu" href="#" role="button"><i class="fas fa-bars"></i></a>
             </li>
         </ul>
+
+        <!-- Right: Department Switcher -->
+        @auth
+        <ul class="navbar-nav ml-auto">
+            <li class="nav-item dropdown">
+                @php
+                    $navUser     = Auth::user();
+                    $navOwnerId  = $navUser->user_id ?? $navUser->id;
+                    $navDepts    = $navUser->hasRole('superuser')
+                        ? \App\Models\Department::orderBy('name')->get()
+                        : \App\Models\Department::where('user_id', $navOwnerId)->orderBy('name')->get();
+                    $navActiveDeptId = session()->has('active_department_id')
+                        ? session('active_department_id')
+                        : ($navUser->department_id ?? null);
+                    $navActiveDept = $navActiveDeptId ? $navDepts->firstWhere('id', $navActiveDeptId) : null;
+                @endphp
+                <a class="nav-link dropdown-toggle" href="#" data-toggle="dropdown" aria-expanded="false">
+                    <i class="fas fa-building mr-1"></i>
+                    {{ $navActiveDept ? $navActiveDept->name : 'All Departments' }}
+                </a>
+                <div class="dropdown-menu dropdown-menu-right">
+                    <form method="POST" action="{{ route('department.switch') }}" id="deptSwitchForm">
+                        @csrf
+                        <input type="hidden" name="department_id" id="deptSwitchInput">
+                        <button type="button" class="dropdown-item {{ !$navActiveDeptId ? 'active font-weight-bold' : '' }}"
+                                onclick="switchDept('')">
+                            All Departments
+                        </button>
+                        @if($navDepts->isNotEmpty())
+                            <div class="dropdown-divider"></div>
+                            @foreach($navDepts as $navDept)
+                                <button type="button"
+                                        class="dropdown-item {{ $navActiveDeptId == $navDept->id ? 'active font-weight-bold' : '' }}"
+                                        onclick="switchDept({{ $navDept->id }})">
+                                    {{ $navDept->name }}
+                                </button>
+                            @endforeach
+                        @endif
+                    </form>
+                </div>
+            </li>
+        </ul>
+        @endauth
     </nav>
     <!-- Sidebar -->
 <aside class="main-sidebar sidebar-dark-success bg-success elevation-4">
@@ -70,5 +113,11 @@
 <script src="{{ asset('https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/js/adminlte.min.js') }}"></script>
 
 @stack('scripts')
+<script>
+function switchDept(id) {
+    document.getElementById('deptSwitchInput').value = id;
+    document.getElementById('deptSwitchForm').submit();
+}
+</script>
 </body>
 </html>

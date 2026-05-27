@@ -94,6 +94,26 @@ class DepartmentController extends AppBaseController
         return redirect(route('departments.index'));
     }
 
+    public function switchDepartment(Request $request)
+    {
+        $departmentId = $request->input('department_id') ?: null;
+        $user         = Auth::user();
+        $ownerId      = $user->user_id ?? $user->id;
+
+        if ($departmentId) {
+            $accessible = $user->hasRole('superuser')
+                ? Department::where('id', $departmentId)->exists()
+                : Department::where('id', $departmentId)->where('user_id', $ownerId)->exists();
+
+            if (!$accessible) {
+                return redirect()->back()->with('error', 'Invalid department selection.');
+            }
+        }
+
+        session(['active_department_id' => $departmentId]);
+        return redirect()->back();
+    }
+
     public function destroy($id)
     {
         $department = $this->departmentRepository->find($id);
