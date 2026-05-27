@@ -59,6 +59,10 @@ class LectureAdministeredController extends AppBaseController
         if ($request->filled('lecturer_id') && $item->lecturer_id != $request->lecturer_id) {
             return false;
         }
+        if ($request->filled('lecturer_name') &&
+            !str_contains(strtolower($item->lecturer->name ?? ''), strtolower($request->lecturer_name))) {
+            return false;
+        }
         if ($request->filled('class') &&
             !str_contains(strtolower($item->classs->name ?? ''), strtolower($request->class))) {
             return false;
@@ -70,13 +74,15 @@ class LectureAdministeredController extends AppBaseController
             return false;
         }
         if ($request->filled('status')) {
-            $ownClash  = $this->isOwnClash($item, $ownClashPool);
-            $clashWith = $this->isClashWith($item, $clashes);
+            $ownClash      = $this->isOwnClash($item, $ownClashPool);
+            $ownClashDept  = $this->isOwnClashDiffDept($item, $ownClashPool);
+            $clashWith     = $this->isClashWith($item, $clashes);
             return match ($request->status) {
-                'own_clash'  => $ownClash,
-                'clash_with' => $clashWith,
-                'ok'         => !$ownClash && !$clashWith,
-                default      => true,
+                'own_clash'           => $ownClash,
+                'own_clash_diff_dept' => $ownClashDept,
+                'clash_with'          => $clashWith,
+                'ok'                  => !$ownClash && !$clashWith,
+                default               => true,
             };
         }
         return true;
@@ -162,6 +168,17 @@ private function isOwnClash($item, $ownClashPool): bool
     );
 }
 
+private function isOwnClashDiffDept($item, $ownClashPool): bool
+{
+    return $ownClashPool->contains(fn($c) =>
+        $c->id != $item->id &&
+        $c->lecturer_id == $item->lecturer_id &&
+        $c->lecture_date == $item->lecture_date &&
+        $c->department_id != $item->department_id &&
+        !($item->end_time <= $c->start_time || $item->start_time >= $c->end_time)
+    );
+}
+
 private function isClashWith($item, $clashes): bool
 {
     return $clashes->contains(fn($c) =>
@@ -214,18 +231,22 @@ private function fetchExportData(Request $request): array
 
     $records = $allRecords->filter(function ($item) use ($request, $ownClashPool, $clashes) {
         if ($request->filled('lecturer_id') && $item->lecturer_id != $request->lecturer_id) return false;
+        if ($request->filled('lecturer_name') &&
+            !str_contains(strtolower($item->lecturer->name ?? ''), strtolower($request->lecturer_name))) return false;
         if ($request->filled('class') &&
             !str_contains(strtolower($item->classs->name ?? ''), strtolower($request->class))) return false;
         if ($request->filled('lecture_date') && $item->lecture_date !== $request->lecture_date) return false;
         if ($request->filled('department_id') && $item->department_id != $request->department_id) return false;
         if ($request->filled('status')) {
-            $ownClash  = $this->isOwnClash($item, $ownClashPool);
-            $clashWith = $this->isClashWith($item, $clashes);
+            $ownClash     = $this->isOwnClash($item, $ownClashPool);
+            $ownClashDept = $this->isOwnClashDiffDept($item, $ownClashPool);
+            $clashWith    = $this->isClashWith($item, $clashes);
             return match ($request->status) {
-                'own_clash'  => $ownClash,
-                'clash_with' => $clashWith,
-                'ok'         => !$ownClash && !$clashWith,
-                default      => true,
+                'own_clash'           => $ownClash,
+                'own_clash_diff_dept' => $ownClashDept,
+                'clash_with'          => $clashWith,
+                'ok'                  => !$ownClash && !$clashWith,
+                default               => true,
             };
         }
         return true;

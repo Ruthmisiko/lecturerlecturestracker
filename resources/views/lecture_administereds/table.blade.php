@@ -20,6 +20,11 @@
 </div>
 
 <div class="col-md-2">
+    <input type="text" name="lecturer_name" class="form-control" placeholder="Search lecturer name"
+           value="{{ request('lecturer_name') }}">
+</div>
+
+<div class="col-md-2">
     <input type="text" name="class" class="form-control" placeholder="Class" value="{{ request('class') }}">
 </div>
 
@@ -44,6 +49,7 @@
         <option value="">Status</option>
         @can('clash.own')
         <option value="own_clash" {{ request('status')=='own_clash' ? 'selected':'' }}>Own Clash</option>
+        <option value="own_clash_diff_dept" {{ request('status')=='own_clash_diff_dept' ? 'selected':'' }}>Own Clash - Diff Department</option>
         @endcan
         @can('clash.all')
         <option value="clash_with" {{ request('status')=='clash_with' ? 'selected':'' }}>Clash With Other Lecturer</option>
