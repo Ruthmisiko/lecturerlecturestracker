@@ -1,25 +1,29 @@
 FROM php:8.2-fpm-alpine
 
-# Install dependencies
-RUN apk add --no-cache nginx supervisor \
-    && docker-php-ext-install pdo pdo_mysql bcmath
+# Install system dependencies + PHP extensions
+RUN apk add --no-cache \
+    nginx \
+    libpng-dev \
+    libjpeg-turbo-dev \
+    freetype-dev \
+    oniguruma-dev \
+    libxml2-dev \
+    zip \
+    unzip \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install pdo pdo_mysql bcmath mbstring xml gd
 
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Set working directory
 WORKDIR /var/www
 
-# Copy project files
 COPY . .
 
-# Install Laravel dependencies
 RUN composer install --no-dev --optimize-autoloader
 
-# Set permissions
 RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
 
-# Copy nginx config
 COPY docker/nginx.conf /etc/nginx/nginx.conf
 
 EXPOSE 10000
