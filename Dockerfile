@@ -1,6 +1,6 @@
 FROM php:8.2-fpm-alpine
 
-# Install system dependencies + PHP extensions
+# Install all required system libs and PHP extensions
 RUN apk add --no-cache \
     nginx \
     libpng-dev \
@@ -8,10 +8,21 @@ RUN apk add --no-cache \
     freetype-dev \
     oniguruma-dev \
     libxml2-dev \
+    libzip-dev \
     zip \
     unzip \
+    curl \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install pdo pdo_mysql bcmath mbstring xml gd
+    && docker-php-ext-install \
+        pdo \
+        pdo_mysql \
+        pdo_pgsql \
+        bcmath \
+        mbstring \
+        xml \
+        gd \
+        zip \
+        opcache
 
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
