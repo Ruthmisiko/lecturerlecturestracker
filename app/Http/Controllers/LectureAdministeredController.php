@@ -36,7 +36,7 @@ class LectureAdministeredController extends AppBaseController
    public function index(Request $request)
 {
     $user    = Auth::user();
-    $ownerId = $user->user_id ?? $user->id;
+    $ownerId = $user->ownerId();
 
     // Fetch ALL owner records once — used for clash detection and filtering
     $allRecords = LectureAdministered::with(['lecturer', 'classs', 'unit', 'department'])
@@ -220,7 +220,7 @@ public function exportPdf(Request $request)
 private function fetchExportData(Request $request): array
 {
     $user    = Auth::user();
-    $ownerId = $user->user_id ?? $user->id;
+    $ownerId = $user->ownerId();
 
     $allRecords = LectureAdministered::with(['lecturer', 'classs', 'unit', 'department'])
         ->where('user_id', $ownerId)
@@ -261,7 +261,7 @@ private function fetchExportData(Request $request): array
     public function create()
     {
         $user = Auth::user();
-        $ownerId = $user->user_id ?? $user->id;
+        $ownerId = $user->ownerId();
 
         $deptScope   = $user->scopedDepartmentId();
 
@@ -299,7 +299,7 @@ private function fetchExportData(Request $request): array
         ]);
 
         $user    = Auth::user();
-        $ownerId = $user->user_id ?? $user->id;
+        $ownerId = $user->ownerId();
         $deptId  = $request->department_id;
 
         DB::transaction(function () use ($request, $ownerId, $deptId) {
@@ -347,8 +347,8 @@ private function fetchExportData(Request $request): array
 {
     $lectureAdministered = $this->lectureAdministeredRepository->find($id);
 
-      $lecturers = \App\Models\Lecturer::where('user_id', Auth::id())->pluck('name', 'id');
-    $classes = \App\Models\Classs::where('user_id', Auth::id())->pluck('name', 'id');
+      $lecturers = \App\Models\Lecturer::where('user_id', Auth::user()->ownerId())->pluck('name', 'id');
+    $classes = \App\Models\Classs::where('user_id', Auth::user()->ownerId())->pluck('name', 'id');
     return view('lecture_administereds.edit', compact('lectureAdministered', 'lecturers', 'classes'));
 }
 

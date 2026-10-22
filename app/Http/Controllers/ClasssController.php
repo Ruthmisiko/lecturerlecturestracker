@@ -29,7 +29,7 @@ class ClasssController extends AppBaseController
     {
         $user = Auth::user();
 
-        $ownerId = $user->user_id ?? $user->id;
+        $ownerId = $user->ownerId();
 
         $classses = Classs::where('user_id', $ownerId)->paginate(10);
 
@@ -43,7 +43,7 @@ class ClasssController extends AppBaseController
     public function create()
     {
         $user = Auth::user();
-        $ownerId = $user->user_id ?? $user->id;
+        $ownerId = $user->ownerId();
 
         // Only fetch units that belong to this tenant
         $units = Unit::where('user_id', $ownerId)->get();
@@ -59,9 +59,9 @@ class ClasssController extends AppBaseController
 
         $user = Auth::user();
 
-        $ownerId = $user->user_id ?? $user->id;
+        $ownerId = $user->ownerId();
 
-        $input['user_id'] = $user->user_id ?? $user->id;
+        $input['user_id'] = $user->ownerId();
 
         $classs = $this->classsRepository->create($input);
 
@@ -101,7 +101,7 @@ class ClasssController extends AppBaseController
     public function edit($id)
     {
         $user = Auth::user();
-        $ownerId = $user->user_id ?? $user->id;
+        $ownerId = $user->ownerId();
 
         $classs = $this->classsRepository->find($id);
         if (empty($classs)) {

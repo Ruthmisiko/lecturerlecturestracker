@@ -18,7 +18,7 @@ class LectureTemplateExport implements FromCollection, WithHeadings, WithEvents
 
     public function __construct($userId)
     {
-        $ownerId = \App\Models\User::find($userId)?->user_id ?? $userId;
+        $ownerId = \App\Models\User::find($userId)?->ownerId() ?? $userId;
 
         $this->classes = Classs::where('user_id', $ownerId)->pluck('name')->toArray();
         $this->lecturers = Lecturer::where('user_id', $ownerId)->pluck('name')->toArray();

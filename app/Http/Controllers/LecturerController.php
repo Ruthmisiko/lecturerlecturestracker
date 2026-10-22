@@ -29,7 +29,7 @@ class LecturerController extends AppBaseController
     public function index(Request $request)
     {
         $user    = Auth::user();
-        $ownerId = $user->user_id ?? $user->id;
+        $ownerId = $user->ownerId();
 
         $query = Lecturer::where('user_id', $ownerId)->with('department');
 
@@ -57,7 +57,7 @@ class LecturerController extends AppBaseController
     public function create()
     {
         $user = Auth::user();
-        $ownerId = $user->user_id ?? $user->id;
+        $ownerId = $user->ownerId();
 
         $deptScope   = $user->scopedDepartmentId();
         $deptQuery   = Department::where('user_id', $ownerId);
@@ -74,7 +74,7 @@ class LecturerController extends AppBaseController
     public function store(Request $request)
     {
         $user = Auth::user();
-        $ownerId = $user->user_id ?? $user->id;
+        $ownerId = $user->ownerId();
 
         $request->validate([
             'department_id' => 'nullable|exists:departments,id',
@@ -290,7 +290,7 @@ class LecturerController extends AppBaseController
         }
 
         $user = Auth::user();
-        $ownerId = $user->user_id ?? $user->id;
+        $ownerId = $user->ownerId();
 
         $departments = Department::where('user_id', $ownerId)->pluck('name', 'id')->prepend('-- Select Department --', '');
         $units = Unit::where('user_id', $ownerId)->pluck('name', 'id');

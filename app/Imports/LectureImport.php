@@ -16,7 +16,7 @@ class LectureImport implements ToCollection, WithHeadingRow
     {
         $user = Auth::user();
 
-        $userId = $user->user_id ?? $user->id;
+        $userId = $user->ownerId();
 
         foreach ($rows as $row) {
             // Skip if required fields are missing

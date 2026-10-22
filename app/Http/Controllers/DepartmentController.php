@@ -23,7 +23,7 @@ class DepartmentController extends AppBaseController
     public function index(Request $request)
     {
         $user = Auth::user();
-        $ownerId = $user->user_id ?? $user->id;
+        $ownerId = $user->ownerId();
 
         $query = Department::where('user_id', $ownerId);
         if ($user->scopedDepartmentId()) {
@@ -43,7 +43,7 @@ class DepartmentController extends AppBaseController
     {
         $input = $request->all();
         $user = Auth::user();
-        $input['user_id'] = $user->user_id ?? $user->id;
+        $input['user_id'] = $user->ownerId();
 
         $this->departmentRepository->create($input);
 
@@ -98,7 +98,7 @@ class DepartmentController extends AppBaseController
     {
         $departmentId = $request->input('department_id') ?: null;
         $user         = Auth::user();
-        $ownerId      = $user->user_id ?? $user->id;
+        $ownerId      = $user->ownerId();
 
         if ($departmentId) {
             $accessible = $user->isSuperAdmin()

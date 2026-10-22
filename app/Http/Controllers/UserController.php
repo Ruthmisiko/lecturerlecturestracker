@@ -14,7 +14,7 @@ class UserController extends Controller
     public function index()
     {
         $user    = Auth::user();
-        $ownerId = $user->user_id ?? $user->id;
+        $ownerId = $user->ownerId();
 
         $users = User::whereIn('user_id', array_unique([$ownerId, $user->id]))
             ->with('roles', 'department')
@@ -25,7 +25,7 @@ class UserController extends Controller
     public function create()
     {
         $roles       = Role::all();
-        $departments = Department::where('user_id', Auth::id())->orWhere('user_id', Auth::user()->user_id ?? Auth::id())->get();
+        $departments = Department::where('user_id', Auth::user()->ownerId())->get();
         return view('users.create', compact('roles', 'departments'));
     }
 
@@ -42,7 +42,7 @@ class UserController extends Controller
             'name'          => $request->name,
             'email'         => $request->email,
             'password'      => Hash::make($request->password),
-            'user_id'       => Auth::user()->user_id ?? Auth::id(),
+            'user_id'       => Auth::user()->ownerId(),
             'department_id' => $request->department_id ?: null,
         ]);
 
@@ -55,7 +55,7 @@ class UserController extends Controller
     {
         $user        = User::findOrFail($id);
         $roles       = Role::all();
-        $departments = Department::where('user_id', Auth::id())->orWhere('user_id', Auth::user()->user_id ?? Auth::id())->get();
+        $departments = Department::where('user_id', Auth::user()->ownerId())->get();
         return view('users.edit', compact('user', 'roles', 'departments'));
     }
 

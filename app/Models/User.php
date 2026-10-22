@@ -67,6 +67,22 @@ class User extends Authenticatable
         return is_null($this->user_id) || $this->hasRole('superuser');
     }
 
+    /** Walks up the created-by chain to the top-level account that owns all the data. */
+    public function ownerId(): int
+    {
+        $owner = $this;
+        $seen  = [$owner->id];
+
+        while ($owner->user_id && !in_array($owner->user_id, $seen)) {
+            $parent = User::find($owner->user_id);
+            if (!$parent) break;
+            $seen[] = $parent->id;
+            $owner  = $parent;
+        }
+
+        return $owner->id;
+    }
+
     /** Returns the active department scope: session switcher takes priority, then DB assignment. */
     public function scopedDepartmentId(): ?int
     {

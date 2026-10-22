@@ -31,7 +31,7 @@ class UnitController extends AppBaseController
 
         $user = Auth::user();
 
-         $ownerId = $user->user_id ?? $user->id;
+         $ownerId = $user->ownerId();
 
         $query = Unit::with('department')->where('user_id', $ownerId);
         if ($user->scopedDepartmentId()) {
@@ -55,7 +55,7 @@ class UnitController extends AppBaseController
     public function create()
     {
         $user    = Auth::user();
-        $ownerId = $user->user_id ?? $user->id;
+        $ownerId = $user->ownerId();
         $dq      = Department::where('user_id', $ownerId);
         if ($user->scopedDepartmentId()) $dq->where('id', $user->scopedDepartmentId());
         $departments = $dq->pluck('name', 'id')->prepend('-- Select Department --', '');
@@ -72,7 +72,7 @@ class UnitController extends AppBaseController
 
         $user = Auth::user();
 
-        $input['user_id'] = $user->user_id ?? $user->id;
+        $input['user_id'] = $user->ownerId();
 
         $unit = $this->unitRepository->create($input);
 
@@ -118,7 +118,7 @@ class UnitController extends AppBaseController
         }
 
         $user    = Auth::user();
-        $ownerId = $user->user_id ?? $user->id;
+        $ownerId = $user->ownerId();
         $dq      = Department::where('user_id', $ownerId);
         if ($user->scopedDepartmentId()) $dq->where('id', $user->scopedDepartmentId());
         $departments = $dq->pluck('name', 'id')->prepend('-- Select Department --', '');
