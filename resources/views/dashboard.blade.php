@@ -14,9 +14,10 @@
     .panel { border: 0; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
     .panel .card-header { background: #fff; border-bottom: 1px solid #eef0f2; font-weight: 600; }
     .lecturer-list { max-height: 460px; overflow-y: auto; }
-    .lecturer-item { cursor: pointer; border-left: 3px solid transparent; }
+    .lecturer-item { cursor: pointer; border-left: 3px solid transparent; color: #212529; }
     .lecturer-item:hover { background: #f4f9f5; }
-    .lecturer-item.active { background: #e9f6ec; border-left-color: #28a745; }
+    .lecturer-item.selected { background: #e9f6ec; border-left-color: #28a745; }
+    .lecturer-item.selected .name { color: #1e7e34; }
     .lecturer-item .dept { font-size: 12px; color: #6c757d; }
     .detail-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px dashed #e5e7eb; }
     .detail-row:last-child { border-bottom: 0; }
@@ -137,14 +138,14 @@
                 </div>
                 <div class="list-group list-group-flush lecturer-list" id="lecturerList">
                     @forelse ($rows as $row)
-                        <a class="list-group-item lecturer-item d-flex justify-content-between align-items-center"
-                           data-id="{{ $row->id }}" data-search="{{ strtolower($row->name . ' ' . $row->department) }}">
+                        <div class="list-group-item lecturer-item d-flex justify-content-between align-items-center"
+                             data-id="{{ $row->id }}" data-search="{{ strtolower($row->name . ' ' . $row->department) }}">
                             <div>
-                                <div class="font-weight-bold">{{ $row->name }}</div>
+                                <div class="font-weight-bold name">{{ $row->name }}</div>
                                 <div class="dept">{{ $row->department }}</div>
                             </div>
-                            <span class="badge badge-pill {{ $row->hours > 0 ? 'badge-success' : 'badge-light' }}">{{ number_format($row->hours, 1) }} hrs</span>
-                        </a>
+                            <span class="badge badge-pill {{ $row->hours > 0 ? 'badge-success' : 'badge-secondary' }}">{{ number_format($row->hours, 1) }} hrs</span>
+                        </div>
                     @empty
                         <div class="p-4 text-center text-muted">No lecturers yet.</div>
                     @endforelse
@@ -223,7 +224,7 @@
             (r.last_lecture ? '<p class="small text-muted mt-3 mb-0">Last lecture: ' + esc(r.last_lecture) + '</p>' : '');
 
         document.querySelectorAll('.lecturer-item').forEach(function (el) {
-            el.classList.toggle('active', el.dataset.id == id);
+            el.classList.toggle('selected', el.dataset.id == id);
         });
     }
 
