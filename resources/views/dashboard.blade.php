@@ -95,7 +95,7 @@
         @endforeach
     </div>
 
-    {{-- Payroll totals --}}
+    {{-- Payroll totals (hidden for now)
     <div class="row">
         @foreach ([
             ['Gross Amount', $totals->gross, ''],
@@ -113,6 +113,7 @@
             </div>
         @endforeach
     </div>
+    --}}
 
     @if ($missingRate->isNotEmpty())
         <div class="alert alert-warning d-flex align-items-start">
