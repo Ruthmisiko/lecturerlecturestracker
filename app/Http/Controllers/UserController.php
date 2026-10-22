@@ -16,7 +16,9 @@ class UserController extends Controller
         $user    = Auth::user();
         $ownerId = $user->user_id ?? $user->id;
 
-        $users = User::where('user_id', $ownerId)->with('roles', 'department')->get();
+        $users = User::whereIn('user_id', array_unique([$ownerId, $user->id]))
+            ->with('roles', 'department')
+            ->get();
         return view('users.index', compact('users'));
     }
 
@@ -40,7 +42,7 @@ class UserController extends Controller
             'name'          => $request->name,
             'email'         => $request->email,
             'password'      => Hash::make($request->password),
-            'user_id'       => Auth::id(),
+            'user_id'       => Auth::user()->user_id ?? Auth::id(),
             'department_id' => $request->department_id ?: null,
         ]);
 
