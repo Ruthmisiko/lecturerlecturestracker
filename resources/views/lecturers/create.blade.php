@@ -114,7 +114,7 @@
             buildField(index, 'kra_pin', 'KRA PIN', 'text', false) +
             buildField(index, 'specialization', 'Specialization', 'text', false) +
             (canSetPay
-                ? buildNumberField(index, 'rate_per_hour', 'Rate per Hour (KES)', 0) +
+                ? buildNumberField(index, 'rate_per_hour', 'Rate per Hour (KES)', {{ \App\Models\Lecturer::DEFAULT_RATE_PER_HOUR }}) +
                   buildNumberField(index, 'tax_rate', 'Tax (%)', {{ \App\Models\Lecturer::DEFAULT_TAX_RATE }}) +
                   buildNumberField(index, 'housing_levy_rate', 'Housing Levy (%)', {{ \App\Models\Lecturer::DEFAULT_HOUSING_LEVY_RATE }})
                 : '') +

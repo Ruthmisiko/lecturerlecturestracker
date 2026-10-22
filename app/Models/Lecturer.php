@@ -25,8 +25,16 @@ class Lecturer extends Model
     /** Pay fields only the superuser may set. */
     public const PAY_FIELDS = ['rate_per_hour', 'tax_rate', 'housing_levy_rate'];
 
+    public const DEFAULT_RATE_PER_HOUR     = 1000;
     public const DEFAULT_TAX_RATE          = 30;
     public const DEFAULT_HOUSING_LEVY_RATE = 1.5;
+
+    /** New lecturers get the standard pay settings unless the superuser sets others. */
+    protected $attributes = [
+        'rate_per_hour'     => self::DEFAULT_RATE_PER_HOUR,
+        'tax_rate'          => self::DEFAULT_TAX_RATE,
+        'housing_levy_rate' => self::DEFAULT_HOUSING_LEVY_RATE,
+    ];
 
     protected $casts = [
         'rate_per_hour'     => 'float',

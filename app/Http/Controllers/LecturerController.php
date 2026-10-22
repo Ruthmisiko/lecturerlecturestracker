@@ -95,11 +95,12 @@ class LecturerController extends AppBaseController
 
         DB::transaction(function () use ($request, $ownerId, $departmentId, $canSetPay) {
             foreach ($request->lecturers as $data) {
-                $pay = $canSetPay ? [
-                    'rate_per_hour'     => $data['rate_per_hour'] ?? 0,
-                    'tax_rate'          => $data['tax_rate'] ?? Lecturer::DEFAULT_TAX_RATE,
-                    'housing_levy_rate' => $data['housing_levy_rate'] ?? Lecturer::DEFAULT_HOUSING_LEVY_RATE,
-                ] : [];
+                // Non-superusers always get the defaults; the superuser can adjust later.
+                $pay = [
+                    'rate_per_hour'     => ($canSetPay ? $data['rate_per_hour'] ?? null : null) ?? Lecturer::DEFAULT_RATE_PER_HOUR,
+                    'tax_rate'          => ($canSetPay ? $data['tax_rate'] ?? null : null) ?? Lecturer::DEFAULT_TAX_RATE,
+                    'housing_levy_rate' => ($canSetPay ? $data['housing_levy_rate'] ?? null : null) ?? Lecturer::DEFAULT_HOUSING_LEVY_RATE,
+                ];
 
                 $lecturer = Lecturer::create($pay + [
                     'user_id'        => $ownerId,
