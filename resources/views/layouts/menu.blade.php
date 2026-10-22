@@ -1,4 +1,10 @@
 
+@if (Auth::user()->isSuperAdmin())
+<a href="{{ route('dashboard') }}" class="nav-link text-white font-weight-bold {{ Request::is('dashboard*') ? 'active' : '' }}">
+    <p>Dashboard</p>
+</a>
+@endif
+
 @can('lecturer.manage')
 <a href="{{ route('lecturers.index') }}" class="nav-link text-white font-weight-bold {{ Request::is('lecturers*') ? 'active' : '' }}">
     <p>Lecturers</p>

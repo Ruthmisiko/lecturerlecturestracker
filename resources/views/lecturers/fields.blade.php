@@ -33,6 +33,25 @@
     {!! Form::text('specialization', null, ['class' => 'form-control']) !!}
 </div>
 
+@if (Auth::user()->isSuperAdmin())
+    <div class="col-md-12"><hr><h6 class="font-weight-bold">Payment</h6></div>
+
+    <div class="form-group col-md-4">
+        {!! Form::label('rate_per_hour', 'Rate per Hour (KES):') !!}
+        {!! Form::number('rate_per_hour', null, ['class' => 'form-control', 'step' => '0.01', 'min' => 0]) !!}
+    </div>
+
+    <div class="form-group col-md-4">
+        {!! Form::label('tax_rate', 'Tax (%):') !!}
+        {!! Form::number('tax_rate', null, ['class' => 'form-control', 'step' => '0.01', 'min' => 0, 'max' => 100]) !!}
+    </div>
+
+    <div class="form-group col-md-4">
+        {!! Form::label('housing_levy_rate', 'Housing Levy (%):') !!}
+        {!! Form::number('housing_levy_rate', null, ['class' => 'form-control', 'step' => '0.01', 'min' => 0, 'max' => 100]) !!}
+    </div>
+@endif
+
 <div class="form-group col-md-12">
     <label>Units</label>
     <div class="d-flex flex-wrap" style="gap:8px 24px;">

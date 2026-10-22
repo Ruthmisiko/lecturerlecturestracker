@@ -17,11 +17,21 @@ class Lecturer extends Model
         'kra_pin',
         'specialization',
         'department_id',
+        'rate_per_hour',
+        'tax_rate',
+        'housing_levy_rate',
     ];
 
+    /** Pay fields only the superuser may set. */
+    public const PAY_FIELDS = ['rate_per_hour', 'tax_rate', 'housing_levy_rate'];
+
+    public const DEFAULT_TAX_RATE          = 30;
+    public const DEFAULT_HOUSING_LEVY_RATE = 1.5;
 
     protected $casts = [
-        
+        'rate_per_hour'     => 'float',
+        'tax_rate'          => 'float',
+        'housing_levy_rate' => 'float',
     ];
 
     public static array $rules = [

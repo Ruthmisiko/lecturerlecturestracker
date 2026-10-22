@@ -85,13 +85,23 @@ class LecturerController extends AppBaseController
             'lecturers.*.id_number' => 'nullable|string|max:50',
             'lecturers.*.kra_pin' => 'nullable|string|max:50',
             'lecturers.*.specialization' => 'nullable|string|max:255',
+            'lecturers.*.rate_per_hour' => 'nullable|numeric|min:0',
+            'lecturers.*.tax_rate' => 'nullable|numeric|min:0|max:100',
+            'lecturers.*.housing_levy_rate' => 'nullable|numeric|min:0|max:100',
         ]);
 
         $departmentId = $request->department_id;
+        $canSetPay    = $user->isSuperAdmin();
 
-        DB::transaction(function () use ($request, $ownerId, $departmentId) {
+        DB::transaction(function () use ($request, $ownerId, $departmentId, $canSetPay) {
             foreach ($request->lecturers as $data) {
-                $lecturer = Lecturer::create([
+                $pay = $canSetPay ? [
+                    'rate_per_hour'     => $data['rate_per_hour'] ?? 0,
+                    'tax_rate'          => $data['tax_rate'] ?? Lecturer::DEFAULT_TAX_RATE,
+                    'housing_levy_rate' => $data['housing_levy_rate'] ?? Lecturer::DEFAULT_HOUSING_LEVY_RATE,
+                ] : [];
+
+                $lecturer = Lecturer::create($pay + [
                     'user_id'        => $ownerId,
                     'department_id'  => $departmentId,
                     'name'           => $data['name'],
@@ -308,7 +318,23 @@ class LecturerController extends AppBaseController
             return redirect(route('lecturers.index'));
         }
 
-        $data = $request->except('units');
+        $request->validate([
+            'rate_per_hour'     => 'nullable|numeric|min:0',
+            'tax_rate'          => 'nullable|numeric|min:0|max:100',
+            'housing_levy_rate' => 'nullable|numeric|min:0|max:100',
+        ]);
+
+        // Only the superuser may change pay settings.
+        $data = Auth::user()->isSuperAdmin()
+            ? $request->except('units')
+            : $request->except(array_merge(['units'], Lecturer::PAY_FIELDS));
+
+        foreach (Lecturer::PAY_FIELDS as $field) {
+            if (array_key_exists($field, $data) && $data[$field] === null) {
+                unset($data[$field]);
+            }
+        }
+
         $lecturer = $this->lecturerRepository->update($data, $id);
 
         $lecturer->units()->sync($request->input('units', []));

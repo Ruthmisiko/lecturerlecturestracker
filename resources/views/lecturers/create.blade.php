@@ -94,6 +94,7 @@
 <script>
     var rowCount = 1;
     var unitsData = @json($units);
+    var canSetPay = @json(Auth::user()->isSuperAdmin());
 
     function addRow() {
         var index = rowCount;
@@ -112,6 +113,11 @@
             buildField(index, 'id_number', 'ID Number', 'number', false) +
             buildField(index, 'kra_pin', 'KRA PIN', 'text', false) +
             buildField(index, 'specialization', 'Specialization', 'text', false) +
+            (canSetPay
+                ? buildNumberField(index, 'rate_per_hour', 'Rate per Hour (KES)', 0) +
+                  buildNumberField(index, 'tax_rate', 'Tax (%)', {{ \App\Models\Lecturer::DEFAULT_TAX_RATE }}) +
+                  buildNumberField(index, 'housing_levy_rate', 'Housing Levy (%)', {{ \App\Models\Lecturer::DEFAULT_HOUSING_LEVY_RATE }})
+                : '') +
             buildUnitsField(index, departmentId) +
             '</div></div>';
 
@@ -124,6 +130,13 @@
             '<label>' + label + (required ? ' <span class="text-danger">*</span>' : '') + '</label>' +
             '<input type="' + type + '" name="lecturers[' + index + '][' + name + ']" class="form-control"' +
             (required ? ' required' : '') + '>' +
+            '</div>';
+    }
+
+    function buildNumberField(index, name, label, value) {
+        return '<div class="form-group col-md-4">' +
+            '<label>' + label + '</label>' +
+            '<input type="number" step="0.01" min="0" name="lecturers[' + index + '][' + name + ']" class="form-control" value="' + value + '">' +
             '</div>';
     }
 

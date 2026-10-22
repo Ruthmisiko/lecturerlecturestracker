@@ -29,6 +29,23 @@
         <input type="text" name="lecturers[{{ $index }}][specialization]" class="form-control">
     </div>
 
+    @if (Auth::user()->isSuperAdmin())
+        <div class="form-group col-md-4">
+            <label>Rate per Hour (KES)</label>
+            <input type="number" step="0.01" min="0" name="lecturers[{{ $index }}][rate_per_hour]" class="form-control" value="0">
+        </div>
+
+        <div class="form-group col-md-4">
+            <label>Tax (%)</label>
+            <input type="number" step="0.01" min="0" max="100" name="lecturers[{{ $index }}][tax_rate]" class="form-control" value="{{ \App\Models\Lecturer::DEFAULT_TAX_RATE }}">
+        </div>
+
+        <div class="form-group col-md-4">
+            <label>Housing Levy (%)</label>
+            <input type="number" step="0.01" min="0" max="100" name="lecturers[{{ $index }}][housing_levy_rate]" class="form-control" value="{{ \App\Models\Lecturer::DEFAULT_HOUSING_LEVY_RATE }}">
+        </div>
+    @endif
+
     <div class="form-group col-md-8">
         <label>Units</label>
         <div class="units-checkbox-group border rounded p-2" style="height:100px; overflow-y:auto; background:#fff;">
