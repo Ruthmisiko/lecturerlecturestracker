@@ -46,14 +46,16 @@
             <li class="nav-item dropdown">
                 @php
                     $navUser     = Auth::user();
-                    $navOwnerId  = $navUser->user_id ?? $navUser->id;
-                    $navDepts    = $navUser->isSuperAdmin()
-                        ? \App\Models\Department::orderBy('name')->get()
-                        : \App\Models\Department::where('user_id', $navOwnerId)->orderBy('name')->get();
-                    $navActiveDeptId = session()->has('active_department_id')
-                        ? session('active_department_id')
-                        : ($navUser->department_id ?? null);
-                    $navActiveDept = $navActiveDeptId ? $navDepts->firstWhere('id', $navActiveDeptId) : null;
+                    $navOwnerId  = $navUser->ownerId();
+                    $navAssigned = $navUser->assignedDepartmentIds();
+                    $navDepts    = $navAssigned
+                        ? \App\Models\Department::whereIn('id', $navAssigned)->orderBy('name')->get()
+                        : ($navUser->isSuperAdmin()
+                            ? \App\Models\Department::orderBy('name')->get()
+                            : \App\Models\Department::where('user_id', $navOwnerId)->orderBy('name')->get());
+                    $navScope        = $navUser->scopedDepartmentIds();
+                    $navActiveDeptId = $navScope && count($navScope) === 1 ? $navScope[0] : null;
+                    $navActiveDept   = $navActiveDeptId ? $navDepts->firstWhere('id', $navActiveDeptId) : null;
                 @endphp
                 <a class="nav-link dropdown-toggle" href="#" data-toggle="dropdown" aria-expanded="false">
                     <i class="fas fa-building mr-1"></i>

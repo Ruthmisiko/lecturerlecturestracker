@@ -30,15 +30,17 @@
         </div>
 
         <div class="mb-3">
-            <label>Department <small class="text-muted">(optional — restricts user to this department's data)</small></label>
-            <select name="department_id" class="form-control">
-                <option value="">-- No Department Restriction --</option>
-                @foreach ($departments as $dept)
-                    <option value="{{ $dept->id }}" {{ $user->department_id == $dept->id ? 'selected' : '' }}>
-                        {{ $dept->name }}
-                    </option>
-                @endforeach
-            </select>
+            <label>Departments <small class="text-muted">(optional — restricts user to these departments' data; leave all unticked for no restriction)</small></label>
+            @php $userDeptIds = old('departments', $user->assignedDepartmentIds()); @endphp
+            @forelse ($departments as $dept)
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="departments[]" value="{{ $dept->id }}"
+                           id="dept{{ $dept->id }}" {{ in_array($dept->id, $userDeptIds) ? 'checked' : '' }}>
+                    <label class="form-check-label" for="dept{{ $dept->id }}">{{ $dept->name }}</label>
+                </div>
+            @empty
+                <p class="text-muted mb-0">No departments yet.</p>
+            @endforelse
         </div>
 
         <button type="submit" class="btn btn-success">Update</button>

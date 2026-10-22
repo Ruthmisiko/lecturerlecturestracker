@@ -61,6 +61,22 @@ class User extends Authenticatable
         return $this->belongsTo(\App\Models\Department::class);
     }
 
+    public function departments()
+    {
+        return $this->belongsToMany(\App\Models\Department::class)->withTimestamps();
+    }
+
+    protected ?array $assignedDepartmentIds = null;
+
+    /** IDs of the departments this user is restricted to (empty = no restriction). */
+    public function assignedDepartmentIds(): array
+    {
+        return $this->assignedDepartmentIds ??= $this->departments()
+            ->pluck('departments.id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+    }
+
     /** Super admin has no parent user (user_id IS NULL) or holds the superuser role. */
     public function isSuperAdmin(): bool
     {
@@ -83,13 +99,19 @@ class User extends Authenticatable
         return $owner->id;
     }
 
-    /** Returns the active department scope: session switcher takes priority, then DB assignment. */
-    public function scopedDepartmentId(): ?int
+    /**
+     * Returns the department IDs to filter data by, or null for no restriction.
+     * The header switcher narrows to one department, but never outside the user's assigned ones.
+     */
+    public function scopedDepartmentIds(): ?array
     {
-        if (session()->has('active_department_id')) {
-            $id = session('active_department_id');
-            return $id ? (int) $id : null;
+        $assigned = $this->assignedDepartmentIds();
+        $active   = (int) session('active_department_id');
+
+        if ($active && (empty($assigned) || in_array($active, $assigned))) {
+            return [$active];
         }
-        return $this->department_id ?? null;
+
+        return $assigned ?: null;
     }
 }

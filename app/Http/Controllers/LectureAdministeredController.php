@@ -41,7 +41,7 @@ class LectureAdministeredController extends AppBaseController
     // Fetch ALL owner records once — used for clash detection and filtering
     $allRecords = LectureAdministered::with(['lecturer', 'classs', 'unit', 'department'])
         ->where('user_id', $ownerId)
-        ->when($user->scopedDepartmentId(), fn($q) => $q->where('department_id', $user->scopedDepartmentId()))
+        ->when($user->scopedDepartmentIds(), fn($q) => $q->whereIn('department_id', $user->scopedDepartmentIds()))
         ->get();
 
     // Build clash pools from unfiltered records
@@ -224,7 +224,7 @@ private function fetchExportData(Request $request): array
 
     $allRecords = LectureAdministered::with(['lecturer', 'classs', 'unit', 'department'])
         ->where('user_id', $ownerId)
-        ->when($user->scopedDepartmentId(), fn($q) => $q->where('department_id', $user->scopedDepartmentId()))
+        ->when($user->scopedDepartmentIds(), fn($q) => $q->whereIn('department_id', $user->scopedDepartmentIds()))
         ->get();
 
     [$ownClashPool, $clashes] = $this->buildClashPools($allRecords, $ownerId);
@@ -263,20 +263,20 @@ private function fetchExportData(Request $request): array
         $user = Auth::user();
         $ownerId = $user->ownerId();
 
-        $deptScope   = $user->scopedDepartmentId();
+        $deptScope   = $user->scopedDepartmentIds();
 
         $dq          = Department::where('user_id', $ownerId);
-        if ($deptScope) $dq->where('id', $deptScope);
+        if ($deptScope) $dq->whereIn('id', $deptScope);
         $departments = $dq->get();
 
         $lq        = Lecturer::where('user_id', $ownerId);
-        if ($deptScope) $lq->where('department_id', $deptScope);
+        if ($deptScope) $lq->whereIn('department_id', $deptScope);
         $lecturers = $lq->get(['id', 'name', 'department_id']);
 
         $classes   = Classs::where('user_id', $ownerId)->pluck('name', 'id');
 
         $uq    = \App\Models\Unit::where('user_id', $ownerId);
-        if ($deptScope) $uq->where('department_id', $deptScope);
+        if ($deptScope) $uq->whereIn('department_id', $deptScope);
         $units = $uq->get(['id', 'name', 'unitCode', 'department_id']);
 
         return view('lecture_administereds.create', compact('departments', 'lecturers', 'classes', 'units'));

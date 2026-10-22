@@ -8,6 +8,7 @@ use App\Models\User;
 use Spatie\Permission\Models\Role;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 
 class UserController extends Controller
 {
@@ -17,7 +18,7 @@ class UserController extends Controller
         $ownerId = $user->ownerId();
 
         $users = User::whereIn('user_id', array_unique([$ownerId, $user->id]))
-            ->with('roles', 'department')
+            ->with('roles', 'departments')
             ->get();
         return view('users.index', compact('users'));
     }
@@ -36,6 +37,7 @@ class UserController extends Controller
             'email'    => 'required|email|unique:users,email',
             'password' => 'required|min:6',
             'role'     => 'required',
+            ...$this->departmentRules(),
         ]);
 
         $user = User::create([
@@ -43,10 +45,11 @@ class UserController extends Controller
             'email'         => $request->email,
             'password'      => Hash::make($request->password),
             'user_id'       => Auth::user()->ownerId(),
-            'department_id' => $request->department_id ?: null,
+            'department_id' => null,
         ]);
 
         $user->assignRole($request->role);
+        $user->departments()->sync($request->departments ?? []);
 
         return redirect()->route('users.index')->with('success', 'User created successfully.');
     }
@@ -61,16 +64,28 @@ class UserController extends Controller
 
     public function update(Request $request, $id)
     {
+        $request->validate($this->departmentRules());
+
         $user = User::findOrFail($id);
 
         $user->update([
             'name'          => $request->name,
             'email'         => $request->email,
-            'department_id' => $request->department_id ?: null,
+            'department_id' => null,
         ]);
 
         $user->syncRoles([$request->role]);
+        $user->departments()->sync($request->departments ?? []);
 
         return redirect()->route('users.index')->with('success', 'User updated successfully.');
+    }
+
+    /** Departments may only be picked from the current account's own departments. */
+    private function departmentRules(): array
+    {
+        return [
+            'departments'   => 'nullable|array',
+            'departments.*' => Rule::exists('departments', 'id')->where('user_id', Auth::user()->ownerId()),
+        ];
     }
 }

@@ -26,8 +26,8 @@ class DepartmentController extends AppBaseController
         $ownerId = $user->ownerId();
 
         $query = Department::where('user_id', $ownerId);
-        if ($user->scopedDepartmentId()) {
-            $query->where('id', $user->scopedDepartmentId());
+        if ($user->scopedDepartmentIds()) {
+            $query->whereIn('id', $user->scopedDepartmentIds());
         }
         $departments = $query->paginate(15);
 
@@ -104,6 +104,11 @@ class DepartmentController extends AppBaseController
             $accessible = $user->isSuperAdmin()
                 ? Department::where('id', $departmentId)->exists()
                 : Department::where('id', $departmentId)->where('user_id', $ownerId)->exists();
+
+            $assigned = $user->assignedDepartmentIds();
+            if ($assigned && !in_array((int) $departmentId, $assigned)) {
+                $accessible = false;
+            }
 
             if (!$accessible) {
                 return redirect()->back()->with('error', 'Invalid department selection.');

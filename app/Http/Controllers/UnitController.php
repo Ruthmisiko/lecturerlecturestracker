@@ -34,8 +34,8 @@ class UnitController extends AppBaseController
          $ownerId = $user->ownerId();
 
         $query = Unit::with('department')->where('user_id', $ownerId);
-        if ($user->scopedDepartmentId()) {
-            $query->where('department_id', $user->scopedDepartmentId());
+        if ($user->scopedDepartmentIds()) {
+            $query->whereIn('department_id', $user->scopedDepartmentIds());
         }
 
         if ($request->filled('lecturer_id')) {
@@ -57,7 +57,7 @@ class UnitController extends AppBaseController
         $user    = Auth::user();
         $ownerId = $user->ownerId();
         $dq      = Department::where('user_id', $ownerId);
-        if ($user->scopedDepartmentId()) $dq->where('id', $user->scopedDepartmentId());
+        if ($user->scopedDepartmentIds()) $dq->whereIn('id', $user->scopedDepartmentIds());
         $departments = $dq->pluck('name', 'id')->prepend('-- Select Department --', '');
 
         return view('units.create', compact('departments'));
@@ -120,7 +120,7 @@ class UnitController extends AppBaseController
         $user    = Auth::user();
         $ownerId = $user->ownerId();
         $dq      = Department::where('user_id', $ownerId);
-        if ($user->scopedDepartmentId()) $dq->where('id', $user->scopedDepartmentId());
+        if ($user->scopedDepartmentIds()) $dq->whereIn('id', $user->scopedDepartmentIds());
         $departments = $dq->pluck('name', 'id')->prepend('-- Select Department --', '');
 
         return view('units.edit', compact('unit', 'departments'));

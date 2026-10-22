@@ -33,8 +33,8 @@ class LecturerController extends AppBaseController
 
         $query = Lecturer::where('user_id', $ownerId)->with('department');
 
-        if ($user->scopedDepartmentId()) {
-            $query->where('department_id', $user->scopedDepartmentId());
+        if ($user->scopedDepartmentIds()) {
+            $query->whereIn('department_id', $user->scopedDepartmentIds());
         }
 
         if ($request->filled('name')) {
@@ -59,13 +59,13 @@ class LecturerController extends AppBaseController
         $user = Auth::user();
         $ownerId = $user->ownerId();
 
-        $deptScope   = $user->scopedDepartmentId();
+        $deptScope   = $user->scopedDepartmentIds();
         $deptQuery   = Department::where('user_id', $ownerId);
-        if ($deptScope) $deptQuery->where('id', $deptScope);
+        if ($deptScope) $deptQuery->whereIn('id', $deptScope);
         $departments = $deptQuery->get();
 
         $unitsQuery = Unit::where('user_id', $ownerId);
-        if ($deptScope) $unitsQuery->where('department_id', $deptScope);
+        if ($deptScope) $unitsQuery->whereIn('department_id', $deptScope);
         $units = $unitsQuery->get();
 
         return view('lecturers.create', compact('departments', 'units'));

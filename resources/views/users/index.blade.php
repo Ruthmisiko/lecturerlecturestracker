@@ -26,7 +26,7 @@
                 <tr>
                     <td>{{ $user->name }}</td>
                     <td>{{ $user->email }}</td>
-                    <td>{{ $user->department->name ?? '—' }}</td>
+                    <td>{{ $user->departments->pluck('name')->join(', ') ?: '—' }}</td>
                     <td>
                         @foreach ($user->roles as $role)
                             <span class="badge bg-info text-dark">{{ $role->name }}</span>
