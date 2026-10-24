@@ -66,7 +66,7 @@
         <tr><td>Lecture sessions</td><td class="v">{{ $row->sessions }}</td></tr>
         <tr><td>Total hours</td><td class="v">{{ number_format($row->hours, 4) }} hrs</td></tr>
         <tr><td>Rate per hour</td><td class="v">{{ $money($row->rate) }}</td></tr>
-        <tr class="bold"><td>Gross amount <span class="note">(hours × rate)</span></td><td class="v">{{ $money($row->gross) }}</td></tr>
+        <tr class="bold"><td>Gross amount</td><td class="v">{{ $money($row->gross) }}</td></tr>
         <tr class="ded"><td>Tax ({{ $pct($row->tax_rate) }})</td><td class="v">− {{ $money($row->tax) }}</td></tr>
         <tr class="ded"><td>Housing levy ({{ $pct($row->housing_levy_rate) }})</td><td class="v">− {{ $money($row->housing) }}</td></tr>
         <tr class="net"><td>Net pay</td><td class="v">{{ $money($row->net) }}</td></tr>
