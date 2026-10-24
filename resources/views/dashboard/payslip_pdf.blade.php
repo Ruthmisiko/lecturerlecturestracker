@@ -27,9 +27,9 @@
         .units { width: 100%; border-collapse: collapse; font-size: 7.5px; }
         .units td { padding: 1px 0; }
         .units td.v { text-align: right; white-space: nowrap; }
-        .sign { width: 100%; margin-top: 8px; border-collapse: collapse; }
+        .sign { width: 100%; margin-top: 30px; border-collapse: collapse; }
         .sign td { width: 50%; padding-top: 26px; vertical-align: bottom; font-size: 7.5px; }
-        .line { border-top: 1px solid #555; width: 90%; padding-top: 2px; }
+        .line { border-top: 1px solid #222; width: 90%; padding-top: 3px; font-weight: bold; font-size: 8px; color: #000; }
     </style>
 </head>
 <body>
