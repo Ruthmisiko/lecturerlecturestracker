@@ -328,7 +328,7 @@ class LecturerController extends AppBaseController
         // Only the superuser may change pay settings.
         $data = Auth::user()->isSuperAdmin()
             ? $request->except('units')
-            : $request->except(array_merge(['units'], Lecturer::PAY_FIELDS));
+            : $request->except(array_merge(['units'], Lecturer::PAY_FIELDS, ['account_number', 'bank_name', 'bank_branch']));
 
         foreach (Lecturer::PAY_FIELDS as $field) {
             if (array_key_exists($field, $data) && $data[$field] === null) {

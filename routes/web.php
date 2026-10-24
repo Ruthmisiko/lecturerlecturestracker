@@ -22,6 +22,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [App\Http\Controllers\DashboardController::class, 'index'])->name('dashboard');
     Route::get('/dashboard/report', [App\Http\Controllers\DashboardController::class, 'report'])->name('dashboard.report');
     Route::get('/dashboard/payslip/{lecturer}', [App\Http\Controllers\DashboardController::class, 'payslip'])->name('dashboard.payslip');
+    Route::get('/payment-schedules/amounts', [App\Http\Controllers\PaymentScheduleController::class, 'amounts'])->name('payment-schedules.amounts');
+    Route::get('/payment-schedules/{payment_schedule}/pdf', [App\Http\Controllers\PaymentScheduleController::class, 'pdf'])->name('payment-schedules.pdf');
+    Route::get('/payment-schedules/{payment_schedule}/excel', [App\Http\Controllers\PaymentScheduleController::class, 'excel'])->name('payment-schedules.excel');
+    Route::resource('payment-schedules', App\Http\Controllers\PaymentScheduleController::class);
     Route::post('/institution/switch', [App\Http\Controllers\InstitutionController::class, 'switch'])->name('institution.switch');
     Route::get('/institutions/{institution}/settings', [App\Http\Controllers\InstitutionController::class, 'settings'])->name('institutions.settings');
     Route::put('/institutions/{institution}/settings', [App\Http\Controllers\InstitutionController::class, 'updateSettings'])->name('institutions.settings.update');

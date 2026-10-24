@@ -34,6 +34,23 @@
 </div>
 
 @if (Auth::user()->isSuperAdmin())
+    <div class="col-md-12"><hr><h6 class="font-weight-bold">Bank Details</h6></div>
+
+    <div class="form-group col-md-4">
+        {!! Form::label('account_number', 'Account No.:') !!}
+        {!! Form::text('account_number', null, ['class' => 'form-control', 'maxlength' => 50]) !!}
+    </div>
+
+    <div class="form-group col-md-4">
+        {!! Form::label('bank_name', 'Bank:') !!}
+        {!! Form::text('bank_name', null, ['class' => 'form-control', 'maxlength' => 100, 'placeholder' => 'e.g. KCB']) !!}
+    </div>
+
+    <div class="form-group col-md-4">
+        {!! Form::label('bank_branch', 'Branch:') !!}
+        {!! Form::text('bank_branch', null, ['class' => 'form-control', 'maxlength' => 100]) !!}
+    </div>
+
     <div class="col-md-12"><hr><h6 class="font-weight-bold">Payment</h6></div>
 
     <div class="form-group col-md-4">

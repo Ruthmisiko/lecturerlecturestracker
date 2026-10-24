@@ -35,6 +35,8 @@
     @php $t = \App\Support\Theme::current(); @endphp
     .btn-outline-brand { color: {{ $t->primary }}; border-color: {{ $t->primary }}; background: transparent; }
     .btn-outline-brand:hover, .btn-outline-brand:focus { background: {{ $t->primary }}; color: {{ $t->primaryText() }}; }
+    .btn-brand { background: {{ $t->primary }}; border-color: {{ $t->primary }}; color: {{ $t->primaryText() }}; }
+    .btn-brand:hover, .btn-brand:focus { background: {{ $t->primaryDark() }}; border-color: {{ $t->primaryDark() }}; color: {{ $t->primaryText() }}; }
 </style>
 @endpush
 
@@ -54,9 +56,14 @@
             <h1 class="font-weight-bold mb-0">Dashboard</h1>
             <small class="text-muted">Welcome back, {{ Auth::user()->name }}</small>
         </div>
-        <a href="{{ route('dashboard.report', request()->only('from', 'to', 'statuses')) }}" class="btn btn-success">
-            <i class="fas fa-file-invoice-dollar mr-1"></i> Payment Report
-        </a>
+        <div class="d-flex flex-wrap" style="gap:8px;">
+            <a href="{{ route('payment-schedules.index') }}" class="btn btn-brand">
+                <i class="fas fa-university mr-1"></i> Payment Schedule
+            </a>
+            <a href="{{ route('dashboard.report', request()->only('from', 'to', 'statuses')) }}" class="btn btn-success">
+                <i class="fas fa-file-invoice-dollar mr-1"></i> Payment Report
+            </a>
+        </div>
     </div>
 </section>
 
