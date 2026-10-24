@@ -32,6 +32,9 @@
     /* Dashboard uses the institution's secondary colour to balance the primary-coloured sidebar. */
     {!! \App\Support\Theme::current()->secondaryScope('.dash-theme') !!}
     .dash-theme .detail-row.net { color: #212529; }
+    @php $t = \App\Support\Theme::current(); @endphp
+    .btn-outline-brand { color: {{ $t->primary }}; border-color: {{ $t->primary }}; background: transparent; }
+    .btn-outline-brand:hover, .btn-outline-brand:focus { background: {{ $t->primary }}; color: {{ $t->primaryText() }}; }
 </style>
 @endpush
 
@@ -304,7 +307,7 @@
             '<div class="d-flex justify-content-between align-items-start mb-3">' +
                 '<div><h4 class="mb-0 font-weight-bold">' + esc(r.name) + '</h4><span class="text-muted">' + esc(r.department) + '</span></div>' +
                 '<div class="text-nowrap">' +
-                    '<a href="{{ url('lecturers') }}/' + r.id + '" class="btn btn-sm btn-outline-success mr-1">View lectures</a>' +
+                    '<a href="{{ url('lecturers') }}/' + r.id + '" class="btn btn-sm btn-outline-brand mr-1">View lectures</a>' +
                     '<a href="' + payslipUrl.replace('__ID__', r.id) + '" class="btn btn-sm btn-success"><i class="fas fa-print mr-1"></i>Print Payslip</a>' +
                 '</div>' +
             '</div>' +
