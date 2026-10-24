@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Institution extends Model
 {
-    protected $fillable = ['name', 'owner_id', 'logo_path', 'letterhead_path', 'primary_color', 'secondary_color'];
+    protected $fillable = ['name', 'employer_pin', 'owner_id', 'logo_path', 'letterhead_path', 'primary_color', 'secondary_color'];
 
     public const DEFAULT_PRIMARY_COLOR   = '#28a745';
     public const DEFAULT_SECONDARY_COLOR = '#1e7e34';

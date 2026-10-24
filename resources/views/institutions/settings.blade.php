@@ -35,6 +35,19 @@
         @csrf
         @method('PUT')
 
+        {{-- Employer details --}}
+        <div class="card mb-3">
+            <div class="card-header font-weight-bold"><i class="fas fa-id-card mr-1 text-success"></i> Employer Details</div>
+            <div class="card-body">
+                <div class="form-group mb-0" style="max-width: 360px;">
+                    <label>Employer PIN</label>
+                    <input type="text" name="employer_pin" class="form-control" maxlength="30"
+                           value="{{ old('employer_pin', $institution->employer_pin) }}" placeholder="e.g. P051234567X">
+                    <small class="text-muted">Shown on payslips.</small>
+                </div>
+            </div>
+        </div>
+
         <div class="row">
             {{-- Logo --}}
             <div class="col-lg-4 mb-3">

@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html>
-@php $theme = \App\Support\Theme::for($lecturer->institution); $logoPath = $theme->logoPath(); @endphp
+@php $theme = \App\Support\Theme::for($lecturer->institution); $logoPath = $theme->logoPath(); $letterheadPath = $lecturer->institution?->assetPath('letterhead'); @endphp
 <head>
     <meta charset="UTF-8">
     <title>Payslip — {{ $lecturer->name }}</title>
@@ -8,10 +8,11 @@
         /* Half-width A4 slip (105 × 210 mm) */
         @page { margin: 8mm 7mm; }
         body { font-family: DejaVu Sans, sans-serif; font-size: 8.5px; color: #222; margin: 0; }
-        .header { border-bottom: 2px solid {{ $theme->primary }}; padding-bottom: 6px; margin-bottom: 10px; }
-        .header table { width: 100%; border-collapse: collapse; }
-        .org { font-size: 12px; font-weight: bold; color: {{ $theme->primary }}; }
-        .title { font-size: 10px; font-weight: bold; text-align: right; letter-spacing: 1.5px; vertical-align: top; }
+        .header { margin-bottom: 6px; text-align: center; }
+        .letterhead { width: 100%; }
+        .org { text-align: center; font-size: 12px; font-weight: bold; color: {{ $theme->primary }}; }
+        .title { font-size: 12px; font-weight: bold; text-align: center; letter-spacing: 3px; margin: 4px 0 2px; color: {{ $theme->primary }}; }
+        .employer { text-align: center; font-size: 8px; color: #444; margin-bottom: 8px; }
         .logo { max-height: 46px; max-width: 120px; }
         .muted { color: #666; }
         .box { border: 1px solid #ddd; border-radius: 3px; padding: 5px 6px; margin-bottom: 10px; }
@@ -32,6 +33,7 @@
         .sign { width: 100%; margin-top: 30px; border-collapse: collapse; }
         .sign td { width: 50%; padding-top: 26px; vertical-align: bottom; font-size: 7.5px; }
         .line { border-top: 1px solid #222; width: 90%; padding-top: 3px; font-weight: bold; font-size: 8px; color: #000; }
+        .role { font-size: 7.5px; font-weight: bold; letter-spacing: .5px; margin-top: 2px; color: #444; }
     </style>
 </head>
 <body>
@@ -40,23 +42,21 @@
         $pct   = fn ($v) => rtrim(rtrim(number_format($v, 2), '0'), '.') . '%';
     @endphp
 
+    {{-- Letterhead (or logo / name when no letterhead is uploaded) --}}
     <div class="header">
-        <table>
-            <tr>
-                <td>
-                    @if ($logoPath)
-                        <img src="{{ $logoPath }}" class="logo" alt="Logo">
-                    @else
-                        <div class="org">{{ $lecturer->institution->name ?? 'Lecturer Tracker' }}</div>
-                    @endif
-                </td>
-                <td class="title">
-                    PAYSLIP<br>
-                    <span class="muted" style="font-size:7px;letter-spacing:0;font-weight:normal;">No. {{ $slipNo }}</span>
-                </td>
-            </tr>
-        </table>
+        @if ($letterheadPath)
+            <img src="{{ $letterheadPath }}" class="letterhead" alt="Letterhead">
+        @elseif ($logoPath)
+            <div style="text-align:center;"><img src="{{ $logoPath }}" class="logo" alt="Logo"></div>
+        @else
+            <div class="org">{{ $lecturer->institution->name ?? 'Lecturer Tracker' }}</div>
+        @endif
     </div>
+
+    <div class="title">PAYSLIP</div>
+    @if ($employerPin = $lecturer->institution->employer_pin ?? null)
+        <div class="employer">Employer PIN: <strong>{{ $employerPin }}</strong></div>
+    @endif
 
     <div class="box">
         <table class="grid">
@@ -92,8 +92,8 @@
             <td></td>
         </tr>
         <tr>
-            <td><div class="line">Authorised and Prepared by</div></td>
-            <td><div class="line">Approved by</div></td>
+            <td><div class="line">Authorised and Prepared by<div class="role">ACCOUNTANT</div></div></td>
+            <td><div class="line">Approved by<div class="role">PRINCIPAL</div></div></td>
         </tr>
     </table>
 </body>

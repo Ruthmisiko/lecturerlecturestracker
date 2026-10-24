@@ -117,6 +117,7 @@ class InstitutionController extends Controller
             'letterhead'        => 'nullable|image|mimes:png,jpg,jpeg|max:5120',
             'primary_color'     => ['required', 'regex:/^#[0-9a-fA-F]{6}$/'],
             'secondary_color'   => ['required', 'regex:/^#[0-9a-fA-F]{6}$/'],
+            'employer_pin'      => 'nullable|string|max:30',
         ], [
             'primary_color.regex'   => 'Pick a valid primary colour.',
             'secondary_color.regex' => 'Pick a valid secondary colour.',
@@ -127,6 +128,7 @@ class InstitutionController extends Controller
         $data = [
             'primary_color'   => strtolower($request->primary_color),
             'secondary_color' => strtolower($request->secondary_color),
+            'employer_pin'    => $request->filled('employer_pin') ? strtoupper(trim($request->employer_pin)) : null,
         ];
 
         foreach (Institution::ASSETS as $type => $column) {
