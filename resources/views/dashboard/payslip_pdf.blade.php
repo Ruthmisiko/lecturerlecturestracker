@@ -25,6 +25,9 @@
         .units { width: 100%; border-collapse: collapse; font-size: 10px; }
         .units td { padding: 2px 2px; }
         .units td.v { text-align: right; }
+        .sign { width: 100%; margin-top: 20px; }
+        .sign td { width: 50%; padding-top: 36px; vertical-align: bottom; }
+        .line { border-top: 1px solid #555; width: 80%; padding-top: 4px; }
     </style>
 </head>
 <body>
@@ -55,11 +58,7 @@
                 <td class="k">Department</td><td>{{ $lecturer->department->name ?? '—' }}</td>
             </tr>
             <tr>
-                <td class="k">ID Number</td><td>{{ $lecturer->id_number ?: '—' }}</td>
                 <td class="k">KRA PIN</td><td>{{ $lecturer->kra_pin ?: '—' }}</td>
-            </tr>
-            <tr>
-                <td class="k">Email</td><td>{{ $lecturer->email ?: '—' }}</td>
                 <td class="k">Phone</td><td>{{ $lecturer->phone ?: '—' }}</td>
             </tr>
         </table>
@@ -84,5 +83,15 @@
         </table>
     @endif
 
+    <table class="sign">
+        <tr>
+            <td><div class="line">HOD Confirmation</div></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td><div class="line">Authorised and Prepared by</div></td>
+            <td><div class="line">Approved by</div></td>
+        </tr>
+    </table>
 </body>
 </html>
