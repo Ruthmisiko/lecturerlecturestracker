@@ -31,7 +31,7 @@
 
 @section('content')
 @php
-    $money = fn ($v) => 'KES ' . number_format($v, 2);
+    $money = fn ($v) => 'KES ' . number_format($v, 4);
     $maxDeptHours = max(1, $departmentSummary->max('hours') ?? 0);
     $keep = array_filter(['statuses' => $statuses]);
     $statusOptions = \App\Services\LecturerPayroll::STATUSES;
@@ -83,7 +83,7 @@
             ['Total Lecturers', $stats['lecturers'], 'fa-chalkboard-teacher', '#e8f5e9', '#28a745'],
             ['Total Units', $stats['units'], 'fa-book', '#e3f2fd', '#1e88e5'],
             ['Total Departments', $stats['departments'], 'fa-building', '#fff3e0', '#fb8c00'],
-            ['Hours Administered', number_format($stats['hours'], 1), 'fa-clock', '#f3e5f5', '#8e24aa'],
+            ['Hours Administered', number_format($stats['hours'], 2), 'fa-clock', '#f3e5f5', '#8e24aa'],
         ] as [$label, $value, $icon, $bg, $fg])
             <div class="col-sm-6 col-xl-3 mb-3">
                 <div class="card dash-stat h-100">
@@ -149,7 +149,7 @@
                                 <div class="font-weight-bold name">{{ $row->name }}</div>
                                 <div class="dept">{{ $row->department }}</div>
                             </div>
-                            <span class="badge badge-pill {{ $row->hours > 0 ? 'badge-success' : 'badge-secondary' }}">{{ number_format($row->hours, 1) }} hrs</span>
+                            <span class="badge badge-pill {{ $row->hours > 0 ? 'badge-success' : 'badge-secondary' }}">{{ number_format($row->hours, 2) }} hrs</span>
                         </div>
                     @empty
                         <div class="p-4 text-center text-muted">No lecturers yet.</div>
@@ -206,7 +206,7 @@
                     <div class="mb-3">
                         <div class="d-flex justify-content-between small mb-1">
                             <strong>{{ $dept->name }}</strong>
-                            <span>{{ number_format($dept->hours, 1) }} hrs · {{ $money($dept->net) }}</span>
+                            <span>{{ number_format($dept->hours, 2) }} hrs · {{ $money($dept->net) }}</span>
                         </div>
                         <div class="bar"><span style="width: {{ round($dept->hours / $maxDeptHours * 100) }}%"></span></div>
                     </div>
@@ -223,7 +223,7 @@
     var rows = @json($rows->keyBy('id'));
     @php $payslipUrl = route('dashboard.payslip', array_merge(['lecturer' => '__ID__'], request()->only('from', 'to', 'statuses'))); @endphp
     var payslipUrl = @json($payslipUrl);
-    var fmt = new Intl.NumberFormat('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    var fmt = new Intl.NumberFormat('en-KE', { minimumFractionDigits: 4, maximumFractionDigits: 4 });
     var money = function (v) { return 'KES ' + fmt.format(v); };
     var esc = function (s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; };
     var detail = document.getElementById('lecturerDetail');
@@ -237,7 +237,7 @@
         if (!r) return;
 
         var units = Object.keys(r.units).map(function (u) {
-            return '<li class="d-flex justify-content-between"><span>' + esc(u) + '</span><span>' + r.units[u].toFixed(1) + ' hrs</span></li>';
+            return '<li class="d-flex justify-content-between"><span>' + esc(u) + '</span><span>' + r.units[u].toFixed(4) + ' hrs</span></li>';
         }).join('');
 
         detail.innerHTML =
@@ -252,10 +252,10 @@
             line('KRA PIN', esc(r.kra_pin)) +
             (r.excluded_sessions > 0
                 ? '<div class="alert alert-light border small py-2 my-2"><i class="fas fa-filter mr-1"></i>' +
-                  r.excluded_sessions + ' session(s) / ' + r.excluded_hours.toFixed(2) + ' hrs not counted (status filter).</div>'
+                  r.excluded_sessions + ' session(s) / ' + r.excluded_hours.toFixed(4) + ' hrs not counted (status filter).</div>'
                 : '') +
             line('Lecture sessions', r.sessions) +
-            line('Total hours', r.hours.toFixed(2) + ' hrs') +
+            line('Total hours', r.hours.toFixed(4) + ' hrs') +
             line('Rate per hour', money(r.rate)) +
             line('<strong>Gross amount</strong> <small class="text-muted">(hours × rate)</small>', '<strong>' + money(r.gross) + '</strong>') +
             line('Tax (' + r.tax_rate + '%)', '− ' + money(r.tax), 'deduction') +

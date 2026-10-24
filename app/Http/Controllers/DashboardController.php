@@ -46,8 +46,8 @@ class DashboardController extends Controller
         $departmentSummary = $rows->groupBy('department')
             ->map(fn ($g, $name) => (object) [
                 'name'  => $name,
-                'hours' => round($g->sum('hours'), 2),
-                'net'   => round($g->sum('net'), 2),
+                'hours' => round($g->sum('hours'), LecturerPayroll::PRECISION),
+                'net'   => round($g->sum('net'), LecturerPayroll::PRECISION),
             ])
             ->sortByDesc('hours')
             ->values();

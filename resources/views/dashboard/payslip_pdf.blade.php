@@ -34,7 +34,7 @@
 </head>
 <body>
     @php
-        $money = fn ($v) => 'KES ' . number_format($v, 2);
+        $money = fn ($v) => 'KES ' . number_format($v, 4);
         $pct   = fn ($v) => rtrim(rtrim(number_format($v, 2), '0'), '.') . '%';
     @endphp
 
@@ -64,7 +64,7 @@
 
     <table class="pay">
         <tr><td>Lecture sessions</td><td class="v">{{ $row->sessions }}</td></tr>
-        <tr><td>Total hours</td><td class="v">{{ number_format($row->hours, 2) }} hrs</td></tr>
+        <tr><td>Total hours</td><td class="v">{{ number_format($row->hours, 4) }} hrs</td></tr>
         <tr><td>Rate per hour</td><td class="v">{{ $money($row->rate) }}</td></tr>
         <tr class="bold"><td>Gross amount <span class="note">(hours × rate)</span></td><td class="v">{{ $money($row->gross) }}</td></tr>
         <tr class="ded"><td>Tax ({{ $pct($row->tax_rate) }})</td><td class="v">− {{ $money($row->tax) }}</td></tr>
@@ -82,7 +82,7 @@
         <h4>Hours by unit</h4>
         <table class="units">
             @foreach ($row->units as $unit => $hours)
-                <tr><td>{{ $unit }}</td><td class="v">{{ number_format($hours, 1) }} hrs</td></tr>
+                <tr><td>{{ $unit }}</td><td class="v">{{ number_format($hours, 4) }} hrs</td></tr>
             @endforeach
         </table>
     @endif

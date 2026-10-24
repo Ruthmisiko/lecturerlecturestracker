@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('content')
-@php $n = fn ($v) => number_format($v, 2); @endphp
+@php $n = fn ($v) => number_format($v, 4); @endphp
 
 <section class="content-header">
     <div class="container-fluid d-flex flex-wrap justify-content-between align-items-center" style="gap:12px;">

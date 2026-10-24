@@ -16,6 +16,9 @@ use Illuminate\Support\Collection;
 class LecturerPayroll
 {
     /** Clash statuses, as on the Lecture Administereds page. */
+    /** Decimal places kept in hours and money calculations. */
+    public const PRECISION = 4;
+
     public const STATUSES = [
         'ok'                  => 'OK',
         'own_clash'           => 'Own Clash',
@@ -60,13 +63,16 @@ class LecturerPayroll
         return $lecturers->map(function (Lecturer $lecturer) use ($payableByLecturer, $allByLecturer) {
             $own      = $payableByLecturer->get($lecturer->id, collect());
             $all      = $allByLecturer->get($lecturer->id, collect());
-            $hours    = round($own->sum(fn ($l) => self::minutes($l)) / 60, 2);
-            $allHours = round($all->sum(fn ($l) => self::minutes($l)) / 60, 2);
+            $exactHours = $own->sum(fn ($l) => self::minutes($l)) / 60;
+            $hours      = round($exactHours, self::PRECISION);
+            $allHours   = round($all->sum(fn ($l) => self::minutes($l)) / 60, self::PRECISION);
 
             $rate    = (float) $lecturer->rate_per_hour;
-            $gross   = round($hours * $rate, 2);
-            $tax     = round($gross * $lecturer->tax_rate / 100, 2);
-            $housing = round($gross * $lecturer->housing_levy_rate / 100, 2);
+            // Work from the exact hours; keep every amount to 4 decimal places.
+            $exactGross = $exactHours * $rate;
+            $gross      = round($exactGross, self::PRECISION);
+            $tax        = round($exactGross * $lecturer->tax_rate / 100, self::PRECISION);
+            $housing    = round($exactGross * $lecturer->housing_levy_rate / 100, self::PRECISION);
 
             return (object) [
                 'id'                => $lecturer->id,
@@ -76,17 +82,17 @@ class LecturerPayroll
                 'sessions'          => $own->count(),
                 'hours'             => $hours,
                 'excluded_sessions' => $all->count() - $own->count(),
-                'excluded_hours'    => round($allHours - $hours, 2),
+                'excluded_hours'    => round($allHours - $hours, self::PRECISION),
                 'rate'              => $rate,
                 'tax_rate'          => (float) $lecturer->tax_rate,
                 'housing_levy_rate' => (float) $lecturer->housing_levy_rate,
                 'gross'             => $gross,
                 'tax'               => $tax,
                 'housing'           => $housing,
-                'net'               => round($gross - $tax - $housing, 2),
+                'net'               => round($gross - $tax - $housing, self::PRECISION),
                 'last_lecture'      => $own->max('lecture_date'),
                 'units'             => $own->groupBy(fn ($l) => $l->unit->name ?? 'No unit')
-                    ->map(fn ($g) => round($g->sum(fn ($l) => self::minutes($l)) / 60, 2))
+                    ->map(fn ($g) => round($g->sum(fn ($l) => self::minutes($l)) / 60, self::PRECISION))
                     ->sortDesc()
                     ->all(),
             ];
@@ -98,11 +104,11 @@ class LecturerPayroll
     {
         return (object) [
             'sessions' => $rows->sum('sessions'),
-            'hours'    => round($rows->sum('hours'), 2),
-            'gross'    => round($rows->sum('gross'), 2),
-            'tax'      => round($rows->sum('tax'), 2),
-            'housing'  => round($rows->sum('housing'), 2),
-            'net'      => round($rows->sum('net'), 2),
+            'hours'    => round($rows->sum('hours'), self::PRECISION),
+            'gross'    => round($rows->sum('gross'), self::PRECISION),
+            'tax'      => round($rows->sum('tax'), self::PRECISION),
+            'housing'  => round($rows->sum('housing'), self::PRECISION),
+            'net'      => round($rows->sum('net'), self::PRECISION),
         ];
     }
 
