@@ -315,6 +315,7 @@
             line('Tax (' + r.tax_rate + '%)', '− ' + money(r.tax), 'deduction') +
             line('Housing levy (' + r.housing_levy_rate + '%)', '− ' + money(r.housing), 'deduction') +
             line('Net pay', money(r.net), 'net') +
+            (units ? '<h6 class="mt-4 font-weight-bold">Hours by unit</h6><ul class="list-unstyled small mb-0">' + units + '</ul>' : '') +
             (r.gross > 0
                 ? '<div class="narration-box mt-3">' +
                       '<div class="d-flex justify-content-between align-items-center mb-2">' +
@@ -324,7 +325,6 @@
                       '<div class="narration-text" id="narrationText">' + esc(narration(r)) + '</div>' +
                   '</div>'
                 : '') +
-            (units ? '<h6 class="mt-4 font-weight-bold">Hours by unit</h6><ul class="list-unstyled small mb-0">' + units + '</ul>' : '') +
             (r.last_lecture ? '<p class="small text-muted mt-3 mb-0">Last lecture: ' + esc(r.last_lecture) + '</p>' : '');
 
         document.querySelectorAll('.lecturer-item').forEach(function (el) {
