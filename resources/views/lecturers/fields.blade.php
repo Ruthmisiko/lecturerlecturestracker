@@ -54,15 +54,11 @@
 
 <div class="form-group col-md-12">
     <label>Units</label>
-    <div class="d-flex flex-wrap" style="gap:8px 24px;">
+    <select name="units[]" class="form-control units-select" multiple>
         @foreach($units ?? [] as $id => $name)
-            <div class="form-check">
-                <input class="form-check-input" type="checkbox"
-                       name="units[]" value="{{ $id }}"
-                       id="edit_unit_{{ $id }}"
-                       {{ in_array($id, $selectedUnits ?? []) ? 'checked' : '' }}>
-                <label class="form-check-label" for="edit_unit_{{ $id }}">{{ $name }}</label>
-            </div>
+            <option value="{{ $id }}" {{ in_array($id, $selectedUnits ?? []) ? 'selected' : '' }}>{{ $name }}</option>
         @endforeach
-    </div>
+    </select>
 </div>
+
+@include('lecturers._units_select_assets')

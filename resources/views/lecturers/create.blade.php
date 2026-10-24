@@ -26,6 +26,8 @@
 </style>
 @endpush
 
+@include('lecturers._units_select_assets')
+
 @section('content')
     <section class="content-header">
         <div class="container-fluid">
@@ -122,6 +124,7 @@
             '</div></div>';
 
         document.getElementById('lecturer-rows').insertAdjacentHTML('beforeend', html);
+        initUnitsSelect(document.querySelector('.lecturer-row[data-index="' + index + '"] .units-select'));
         updateRowNumbers();
     }
 
@@ -140,23 +143,28 @@
             '</div>';
     }
 
+    function escapeHtml(s) {
+        var d = document.createElement('div');
+        d.textContent = s;
+        return d.innerHTML;
+    }
+
+    // <option> tags for units in the chosen department (all units when none chosen).
+    function unitOptions(departmentId, selected) {
+        selected = selected || [];
+        return unitsData.filter(function(unit) {
+            return !departmentId || unit.department_id == departmentId;
+        }).map(function(unit) {
+            var label = unit.name + (unit.unitCode ? ' (' + unit.unitCode + ')' : '');
+            var isSel = selected.indexOf(String(unit.id)) !== -1 ? ' selected' : '';
+            return '<option value="' + unit.id + '"' + isSel + '>' + escapeHtml(label) + '</option>';
+        }).join('');
+    }
+
     function buildUnitsField(index, departmentId) {
-        var checkboxes = '';
-        unitsData.forEach(function(unit) {
-            if (!departmentId || unit.department_id == departmentId) {
-                var label = unit.name + (unit.unitCode ? ' (' + unit.unitCode + ')' : '');
-                checkboxes += '<div class="form-check units-item" data-department="' + (unit.department_id || '') + '">' +
-                    '<input class="form-check-input" type="checkbox" ' +
-                    'name="lecturers[' + index + '][units][]" value="' + unit.id + '" ' +
-                    'id="unit_' + index + '_' + unit.id + '">' +
-                    '<label class="form-check-label" for="unit_' + index + '_' + unit.id + '">' + label + '</label>' +
-                    '</div>';
-            }
-        });
-        if (!checkboxes) checkboxes = '<span class="text-muted small">No units available</span>';
         return '<div class="form-group col-md-8"><label>Units</label>' +
-            '<div class="units-checkbox-group border rounded p-2" style="height:100px;overflow-y:auto;background:#fff;">' +
-            checkboxes + '</div></div>';
+            '<select name="lecturers[' + index + '][units][]" class="form-control units-select" multiple>' +
+            unitOptions(departmentId) + '</select></div>';
     }
 
     function removeRow(btn) {
@@ -173,17 +181,12 @@
         });
     }
 
-    // Filter unit checkboxes when department changes
+    // Limit each units dropdown to the chosen department, keeping still-valid selections
     document.getElementById('department_id').addEventListener('change', function() {
         var departmentId = this.value;
-        document.querySelectorAll('.units-item').forEach(function(item) {
-            var itemDept = item.dataset.department;
-            var show = !departmentId || itemDept == departmentId;
-            item.style.display = show ? '' : 'none';
-            if (!show) {
-                var cb = item.querySelector('input[type=checkbox]');
-                if (cb) cb.checked = false;
-            }
+        $('.units-select').each(function() {
+            var selected = ($(this).val() || []).map(String);
+            $(this).html(unitOptions(departmentId, selected)).trigger('change');
         });
     });
 </script>

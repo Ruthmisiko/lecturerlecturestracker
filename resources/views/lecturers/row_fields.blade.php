@@ -48,21 +48,10 @@
 
     <div class="form-group col-md-8">
         <label>Units</label>
-        <div class="units-checkbox-group border rounded p-2" style="height:100px; overflow-y:auto; background:#fff;">
+        <select name="lecturers[{{ $index }}][units][]" class="form-control units-select" multiple>
             @foreach($units as $unit)
-                <div class="form-check units-item" data-department="{{ $unit->department_id }}">
-                    <input class="form-check-input" type="checkbox"
-                           name="lecturers[{{ $index }}][units][]"
-                           value="{{ $unit->id }}"
-                           id="unit_{{ $index }}_{{ $unit->id }}">
-                    <label class="form-check-label" for="unit_{{ $index }}_{{ $unit->id }}">
-                        {{ $unit->name }}{{ $unit->unitCode ? ' ('.$unit->unitCode.')' : '' }}
-                    </label>
-                </div>
+                <option value="{{ $unit->id }}">{{ $unit->name }}{{ $unit->unitCode ? ' ('.$unit->unitCode.')' : '' }}</option>
             @endforeach
-            @if($units->isEmpty())
-                <span class="text-muted small">No units available</span>
-            @endif
-        </div>
+        </select>
     </div>
 </div>
