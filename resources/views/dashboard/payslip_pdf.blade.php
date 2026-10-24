@@ -20,15 +20,11 @@
         .pay .note { color: #888; font-size: 10px; font-weight: normal; }
         .pay .bold td { font-weight: bold; }
         .pay .ded td { color: #c0392b; }
-        .pay .net td { font-size: 15px; font-weight: bold; color: #1e7e34; border-top: 2px solid #28a745; border-bottom: 0; padding-top: 12px; }
+        .pay .net td { font-size: 15px; font-weight: bold; color: #000; border-bottom: 0; padding-top: 12px; }
         h4 { margin: 0 0 6px; font-size: 12px; }
         .units { width: 100%; border-collapse: collapse; font-size: 10px; }
         .units td { padding: 2px 2px; }
         .units td.v { text-align: right; }
-        .sign { width: 100%; margin-top: 40px; }
-        .sign td { width: 50%; padding-top: 28px; }
-        .line { border-top: 1px solid #555; width: 80%; padding-top: 4px; }
-        .foot { margin-top: 24px; font-size: 9px; color: #888; text-align: center; }
     </style>
 </head>
 <body>
@@ -88,13 +84,5 @@
         </table>
     @endif
 
-    <table class="sign">
-        <tr>
-            <td><div class="line">Prepared by</div></td>
-            <td><div class="line">Approved by</div></td>
-        </tr>
-    </table>
-
-    <div class="foot">Computer-generated payslip</div>
 </body>
 </html>
