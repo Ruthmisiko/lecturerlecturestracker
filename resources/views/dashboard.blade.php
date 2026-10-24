@@ -27,7 +27,7 @@
     .bar > span { display: block; height: 100%; background: var(--primary); }
     .empty-detail { color: #6c757d; text-align: center; padding: 60px 20px; }
     .narration-box { background: #f8f9fa; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px 14px; }
-    .narration-text { white-space: pre-line; font-size: 14px; line-height: 1.5; color: #333; }
+    .narration-text { white-space: pre-line; font-size: 14px; line-height: 1.45; color: #333; }
 
     /* Dashboard uses the institution's secondary colour to balance the primary-coloured sidebar. */
     {!! \App\Support\Theme::current()->secondaryScope('.dash-theme') !!}
@@ -264,9 +264,9 @@
 
         return 'Being payment for teaching services rendered in ' + dept + ' for ' + hours + ' at ' + rate +
             ' per hour, as per the attached supporting documentation.\n\n' +
-            'Gross Amount: ' + ksh(r.gross) + ' (' + hours + ' × ' + rate + ')\n\n' +
-            'PAYE (' + num(r.tax_rate, 2) + '%): ' + ksh(r.tax) + '\n\n' +
-            'Affordable Housing Levy (AHL) (' + num(r.housing_levy_rate, 2) + '%): ' + ksh(r.housing) + '\n\n' +
+            'Gross Amount: ' + ksh(r.gross) + ' (' + hours + ' × ' + rate + ')\n' +
+            'PAYE (' + num(r.tax_rate, 2) + '%): ' + ksh(r.tax) + '\n' +
+            'Affordable Housing Levy (AHL) (' + num(r.housing_levy_rate, 2) + '%): ' + ksh(r.housing) + '\n' +
             'Net Payable: ' + ksh(r.net);
     }
 
