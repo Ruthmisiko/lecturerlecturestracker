@@ -26,27 +26,27 @@ class UserController extends Controller
 
     public function create()
     {
-        $roles       = Role::all();
-        $departments = Department::where('user_id', Auth::user()->ownerId())->get();
-        return view('users.create', compact('roles', 'departments'));
+        return view('users.create', $this->formData());
     }
 
     public function store(Request $request)
     {
+        $institutionId = $this->chosenInstitutionId($request);
+
         $request->validate([
             'name'     => 'required|string|max:255',
             'email'    => 'required|email|unique:users,email',
             'password' => 'required|min:6',
             'role'     => 'required',
-            ...$this->departmentRules(),
+            ...$this->departmentRules($institutionId),
         ]);
 
         $user = User::create([
-            'name'          => $request->name,
-            'email'         => $request->email,
-            'password'      => Hash::make($request->password),
+            'name'           => $request->name,
+            'email'          => $request->email,
+            'password'       => Hash::make($request->password),
             'user_id'        => Auth::user()->ownerId(),
-            'institution_id' => Auth::user()->currentInstitutionId(),
+            'institution_id' => $institutionId,
             'department_id'  => null,
         ]);
 
@@ -58,38 +58,76 @@ class UserController extends Controller
 
     public function edit($id)
     {
-        $user        = $this->institutionUsers()->findOrFail($id);
-        $roles       = Role::all();
-        $departments = Department::where('user_id', Auth::user()->ownerId())->get();
-        return view('users.edit', compact('user', 'roles', 'departments'));
+        $user = $this->institutionUsers()->findOrFail($id);
+
+        return view('users.edit', ['user' => $user] + $this->formData());
     }
 
     public function update(Request $request, $id)
     {
-        $request->validate($this->departmentRules());
+        $user          = $this->institutionUsers()->findOrFail($id);
+        $institutionId = $this->chosenInstitutionId($request, $user->institution_id);
 
-        $user = $this->institutionUsers()->findOrFail($id);
+        $request->validate($this->departmentRules($institutionId));
 
         $user->update([
-            'name'          => $request->name,
-            'email'         => $request->email,
-            'department_id' => null,
+            'name'           => $request->name,
+            'email'          => $request->email,
+            'institution_id' => $institutionId,
+            'department_id'  => null,
         ]);
 
         $user->syncRoles([$request->role]);
         $user->departments()->sync($request->departments ?? []);
 
-        return redirect()->route('users.index')->with('success', 'User updated successfully.');
+        $message = $institutionId === Auth::user()->currentInstitutionId()
+            ? 'User updated successfully.'
+            : 'User updated and moved to another institution.';
+
+        return redirect()->route('users.index')->with('success', $message);
     }
 
-    /** Departments may only be picked from the current account's own departments. */
-    private function departmentRules(): array
+    /** Roles, the institutions the current user may assign, and every department of those institutions. */
+    private function formData(): array
+    {
+        $institutions = Auth::user()->accessibleInstitutions()->get();
+
+        return [
+            'roles'                => Role::all(),
+            'institutions'         => $institutions,
+            'currentInstitutionId' => Auth::user()->currentInstitutionId(),
+            'canPickInstitution'   => Auth::user()->isSuperAdmin() && $institutions->count() > 1,
+            'departments'          => Department::withoutGlobalScope('institution')
+                ->whereIn('institution_id', $institutions->pluck('id'))
+                ->orderBy('name')
+                ->get(),
+        ];
+    }
+
+    /** Superusers may place a user in any accessible institution; everyone else uses the current one. */
+    private function chosenInstitutionId(Request $request, ?int $fallback = null): int
+    {
+        $current = $fallback ?? Auth::user()->currentInstitutionId();
+
+        if (!Auth::user()->isSuperAdmin() || !$request->filled('institution_id')) {
+            return $current;
+        }
+
+        $request->validate([
+            'institution_id' => ['integer', Rule::in(Auth::user()->accessibleInstitutions()->pluck('id')->all())],
+        ]);
+
+        return (int) $request->institution_id;
+    }
+
+    /** Departments may only be picked from the chosen institution. */
+    private function departmentRules(int $institutionId): array
     {
         return [
             'departments'   => 'nullable|array',
             'departments.*' => Rule::exists('departments', 'id')
                 ->where('user_id', Auth::user()->ownerId())
-                ->where('institution_id', Auth::user()->currentInstitutionId()),
+                ->where('institution_id', $institutionId),
         ];
     }
 

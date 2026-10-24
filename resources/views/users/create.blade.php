@@ -38,18 +38,10 @@
             </select>
         </div>
 
-        <div class="mb-3">
-            <label>Departments <small class="text-muted">(optional — restricts user to these departments' data; leave all unticked for no restriction)</small></label>
-            @forelse ($departments as $dept)
-                <div class="form-check">
-                    <input class="form-check-input" type="checkbox" name="departments[]" value="{{ $dept->id }}"
-                           id="dept{{ $dept->id }}" {{ in_array($dept->id, old('departments', [])) ? 'checked' : '' }}>
-                    <label class="form-check-label" for="dept{{ $dept->id }}">{{ $dept->name }}</label>
-                </div>
-            @empty
-                <p class="text-muted mb-0">No departments yet.</p>
-            @endforelse
-        </div>
+        @include('users._institution_departments', [
+            'selectedInstitutionId' => old('institution_id', $currentInstitutionId),
+            'selectedDepartmentIds' => array_map('intval', old('departments', [])),
+        ])
 
         <button type="submit" class="btn btn-success">Create</button>
         <a href="{{ route('users.index') }}" class="btn btn-secondary">Cancel</a>
