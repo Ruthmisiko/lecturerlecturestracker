@@ -34,6 +34,10 @@
         .sign td { width: 50%; padding-top: 42px; vertical-align: bottom; font-size: 7.5px; }
         .line { border-top: 1px solid #222; width: 90%; padding-top: 5px; font-weight: bold; font-size: 8px; color: #000; }
         .role { font-size: 7.5px; font-weight: bold; letter-spacing: .5px; margin-top: 4px; color: #444; }
+        /* Pinned to the bottom of the page */
+        .powered { position: fixed; bottom: 0; left: 0; right: 0; text-align: center; font-size: 7px; color: #777; }
+        .powered img { width: 42px; height: 42px; display: block; margin: 0 auto 2px; }
+        .powered a { color: #2d2a6b; font-weight: bold; text-decoration: none; }
     </style>
 </head>
 <body>
@@ -96,5 +100,12 @@
             <td><div class="line">Approved by<div class="role">PRINCIPAL</div></div></td>
         </tr>
     </table>
+
+    <div class="powered">
+        @if (file_exists($qr = public_path('images/nawema-qr.png')))
+            <img src="{{ $qr }}" alt="nawema.co.ke">
+        @endif
+        Powered by <a href="https://nawema.co.ke">nawema.co.ke</a>
+    </div>
 </body>
 </html>
