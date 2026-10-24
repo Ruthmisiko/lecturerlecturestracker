@@ -10,5 +10,6 @@
 
 <div class="form-group col-md-12">
     {!! Form::label('description', 'Description:') !!}
-    {!! Form::textarea('description', null, ['class' => 'form-control', 'rows' => 3]) !!}
+    {!! Form::textarea('description', null, ['class' => 'form-control', 'rows' => 3, 'placeholder' => 'e.g. Health Records and Information Technology']) !!}
+    <small class="text-muted">Used in payment narrations: "…rendered in the Department of <em>description</em>…". Leave empty to use the department name.</small>
 </div>

@@ -78,6 +78,7 @@ class LecturerPayroll
                 'id'                => $lecturer->id,
                 'name'              => $lecturer->name,
                 'department'        => $lecturer->department->name ?? '—',
+                'department_description' => trim($lecturer->department->description ?? '') ?: ($lecturer->department->name ?? ''),
                 'kra_pin'           => $lecturer->kra_pin ?: '—',
                 'sessions'          => $own->count(),
                 'hours'             => $hours,
@@ -89,6 +90,8 @@ class LecturerPayroll
                 'gross'             => $gross,
                 'tax'               => $tax,
                 'housing'           => $housing,
+                // Employer matches the employee's Affordable Housing Levy at the same rate.
+                'employer_levy'     => $housing,
                 'net'               => round($gross - $tax - $housing, self::PRECISION),
                 'last_lecture'      => $own->max('lecture_date'),
                 'units'             => $own->groupBy(fn ($l) => $l->unit->name ?? 'No unit')
@@ -108,6 +111,7 @@ class LecturerPayroll
             'gross'    => round($rows->sum('gross'), self::PRECISION),
             'tax'      => round($rows->sum('tax'), self::PRECISION),
             'housing'  => round($rows->sum('housing'), self::PRECISION),
+            'employer_levy' => round($rows->sum('employer_levy'), self::PRECISION),
             'net'      => round($rows->sum('net'), self::PRECISION),
         ];
     }

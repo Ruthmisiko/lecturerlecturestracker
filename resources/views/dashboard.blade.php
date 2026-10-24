@@ -26,6 +26,8 @@
     .bar { height: 8px; background: #e9ecef; border-radius: 4px; overflow: hidden; }
     .bar > span { display: block; height: 100%; background: #28a745; }
     .empty-detail { color: #6c757d; text-align: center; padding: 60px 20px; }
+    .narration-box { background: #f8f9fa; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px 14px; }
+    .narration-text { white-space: pre-line; font-size: 14px; line-height: 1.5; color: #333; }
 </style>
 @endpush
 
@@ -99,25 +101,30 @@
         @endforeach
     </div>
 
-    {{-- Payroll totals (hidden for now)
+    {{-- Payroll totals --}}
+    @php
+        // Show the rate in the label only when every paid lecturer uses the same one.
+        $paidRows   = $rows->filter(fn ($r) => $r->gross > 0);
+        $rateLabel  = fn ($field) => ($rates = $paidRows->pluck($field)->unique())->count() === 1
+            ? ' (' . rtrim(rtrim(number_format($rates->first(), 2), '0'), '.') . '%)' : '';
+    @endphp
     <div class="row">
         @foreach ([
-            ['Gross Amount', $totals->gross, ''],
-            ['Tax', $totals->tax, 'deduction'],
-            ['Housing Levy', $totals->housing, 'deduction'],
-            ['Net Payable', $totals->net, 'text-success'],
-        ] as [$label, $value, $class])
+            ['Total Gross Amount', $totals->gross, '', 'fa-money-bill-wave'],
+            ['Total Tax (PAYE)' . $rateLabel('tax_rate'), $totals->tax, 'deduction', 'fa-receipt'],
+            ['Housing Levy' . $rateLabel('housing_levy_rate'), $totals->housing, 'deduction', 'fa-home'],
+            ['Employer Levy' . $rateLabel('housing_levy_rate'), $totals->employer_levy, '', 'fa-building'],
+        ] as [$label, $value, $class, $icon])
             <div class="col-sm-6 col-xl-3 mb-3">
                 <div class="card money-card h-100">
                     <div class="card-body">
-                        <p class="label">{{ $label }}</p>
+                        <p class="label"><i class="fas {{ $icon }} mr-1"></i> {{ $label }}</p>
                         <p class="value {{ $class }}">{{ $money($value) }}</p>
                     </div>
                 </div>
             </div>
         @endforeach
     </div>
-    --}}
 
     @if ($missingRate->isNotEmpty())
         <div class="alert alert-warning d-flex align-items-start">
@@ -232,6 +239,53 @@
         return '<div class="detail-row ' + (cls || '') + '"><span>' + label + '</span><span>' + value + '</span></div>';
     }
 
+    // Plain numbers for the narration: trim trailing zeros (23, 2.1833, 1,000) / money to 2 decimals.
+    var num = function (v, maxDp) {
+        return new Intl.NumberFormat('en-KE', { minimumFractionDigits: 0, maximumFractionDigits: maxDp }).format(v);
+    };
+    var ksh = function (v) {
+        return 'KSh ' + new Intl.NumberFormat('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v);
+    };
+
+    // Payment voucher narration for the selected lecturer.
+    function narration(r) {
+        var dept  = r.department_description ? 'the Department of ' + r.department_description : 'the department';
+        var hours = num(r.hours, 4) + ' hour' + (r.hours == 1 ? '' : 's');
+        var rate  = 'KSh ' + num(r.rate, 2);
+
+        return 'Being payment for teaching services rendered in ' + dept + ' for ' + hours + ' at ' + rate +
+            ' per hour, as per the attached supporting documentation.\n\n' +
+            'Gross Amount: ' + ksh(r.gross) + ' (' + hours + ' × ' + rate + ')\n\n' +
+            'PAYE (' + num(r.tax_rate, 2) + '%): ' + ksh(r.tax) + '\n\n' +
+            'Affordable Housing Levy (AHL) (' + num(r.housing_levy_rate, 2) + '%): ' + ksh(r.housing) + '\n\n' +
+            'Net Payable: ' + ksh(r.net);
+    }
+
+    function copyText(text, button) {
+        var done = function () {
+            button.innerHTML = '<i class="fas fa-check mr-1"></i>Copied';
+            setTimeout(function () { button.innerHTML = '<i class="far fa-copy mr-1"></i>Copy'; }, 2000);
+        };
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(text).then(done);
+            return;
+        }
+        // Fallback for non-HTTPS pages.
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        try { document.execCommand('copy'); done(); } catch (e) { alert('Press Ctrl+C to copy.'); }
+        document.body.removeChild(ta);
+    }
+
+    detail.addEventListener('click', function (e) {
+        var btn = e.target.closest('#copyNarration');
+        if (btn) copyText(document.getElementById('narrationText').textContent, btn);
+    });
+
     function show(id) {
         var r = rows[id];
         if (!r) return;
@@ -261,6 +315,15 @@
             line('Tax (' + r.tax_rate + '%)', '− ' + money(r.tax), 'deduction') +
             line('Housing levy (' + r.housing_levy_rate + '%)', '− ' + money(r.housing), 'deduction') +
             line('Net pay', money(r.net), 'net') +
+            (r.gross > 0
+                ? '<div class="narration-box mt-3">' +
+                      '<div class="d-flex justify-content-between align-items-center mb-2">' +
+                          '<strong><i class="fas fa-align-left mr-1 text-success"></i> Narration</strong>' +
+                          '<button type="button" class="btn btn-sm btn-outline-success" id="copyNarration"><i class="far fa-copy mr-1"></i>Copy</button>' +
+                      '</div>' +
+                      '<div class="narration-text" id="narrationText">' + esc(narration(r)) + '</div>' +
+                  '</div>'
+                : '') +
             (units ? '<h6 class="mt-4 font-weight-bold">Hours by unit</h6><ul class="list-unstyled small mb-0">' + units + '</ul>' : '') +
             (r.last_lecture ? '<p class="small text-muted mt-3 mb-0">Last lecture: ' + esc(r.last_lecture) + '</p>' : '');
 
