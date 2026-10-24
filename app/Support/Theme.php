@@ -69,8 +69,26 @@ class Theme
     public function primarySoft(): string   { return self::shade($this->primary, 0.88); }
     public function secondarySoft(): string { return self::shade($this->secondary, 0.80); }
 
+    public function secondaryDark(): string { return self::shade($this->secondary, -0.25); }
+
     /** "r, g, b" for use in rgba(). */
-    public function primaryRgb(): string { return implode(', ', self::rgb($this->primary)); }
+    public function primaryRgb(): string   { return implode(', ', self::rgb($this->primary)); }
+    public function secondaryRgb(): string { return implode(', ', self::rgb($this->secondary)); }
+
+    /**
+     * CSS that makes everything inside the given selector use the secondary colour where it
+     * would normally use the primary one (buttons, badges, highlights...).
+     */
+    public function secondaryScope(string $selector): string
+    {
+        return "{$selector} {"
+            . " --primary: {$this->secondary};"
+            . " --primary-dark: {$this->secondaryDark()};"
+            . " --primary-soft: {$this->secondarySoft()};"
+            . " --primary-rgb: {$this->secondaryRgb()};"
+            . " --primary-text: {$this->secondaryText()};"
+            . " }";
+    }
 
     public function logoUrl(): ?string  { return $this->institution?->assetUrl('logo'); }
     public function logoPath(): ?string { return $this->institution?->assetPath('logo'); }

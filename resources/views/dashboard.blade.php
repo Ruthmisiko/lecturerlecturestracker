@@ -15,9 +15,9 @@
     .panel .card-header { background: #fff; border-bottom: 1px solid #eef0f2; font-weight: 600; }
     .lecturer-list { max-height: 460px; overflow-y: auto; }
     .lecturer-item { cursor: pointer; border-left: 3px solid transparent; color: #212529; }
-    .lecturer-item:hover { background: #f4f9f5; }
-    .lecturer-item.selected { background: var(--primary-soft); border-left-color: var(--primary); }
-    .lecturer-item.selected .name { color: var(--primary-dark); }
+    .lecturer-item:hover { background: #f8f9fa; }
+    .lecturer-item.selected { background: var(--primary-soft); border-left: 4px solid var(--primary); }
+    .lecturer-item.selected .name { color: #212529; }
     .lecturer-item .dept { font-size: 12px; color: #6c757d; }
     .detail-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px dashed #e5e7eb; }
     .detail-row:last-child { border-bottom: 0; }
@@ -28,10 +28,15 @@
     .empty-detail { color: #6c757d; text-align: center; padding: 60px 20px; }
     .narration-box { background: #f8f9fa; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px 14px; }
     .narration-text { white-space: pre-line; font-size: 14px; line-height: 1.5; color: #333; }
+
+    /* Dashboard uses the institution's secondary colour to balance the primary-coloured sidebar. */
+    {!! \App\Support\Theme::current()->secondaryScope('.dash-theme') !!}
+    .dash-theme .detail-row.net { color: #212529; }
 </style>
 @endpush
 
 @section('content')
+<div class="dash-theme">
 @php
     $money = fn ($v) => 'KES ' . number_format($v, 4);
     $maxDeptHours = max(1, $departmentSummary->max('hours') ?? 0);
@@ -222,6 +227,7 @@
         </div>
     @endif
 </div>
+</div>{{-- .dash-theme --}}
 @endsection
 
 @push('scripts')
