@@ -6,7 +6,33 @@ use Illuminate\Database\Eloquent\Model;
 
 class Institution extends Model
 {
-    protected $fillable = ['name', 'owner_id'];
+    protected $fillable = ['name', 'owner_id', 'logo_path', 'letterhead_path', 'primary_color', 'secondary_color'];
+
+    public const DEFAULT_PRIMARY_COLOR   = '#28a745';
+    public const DEFAULT_SECONDARY_COLOR = '#1e7e34';
+
+    /** Uploaded images live on the local (private) disk and are served through the app. */
+    public const ASSETS = ['logo' => 'logo_path', 'letterhead' => 'letterhead_path'];
+
+    /** URL to show an uploaded logo/letterhead in the browser, or null if none. */
+    public function assetUrl(string $type): ?string
+    {
+        $column = self::ASSETS[$type] ?? null;
+
+        return $column && $this->$column
+            ? route('institutions.asset', [$this->id, $type, 'v' => $this->updated_at?->timestamp])
+            : null;
+    }
+
+    /** Absolute file path (e.g. for embedding in PDFs), or null if none. */
+    public function assetPath(string $type): ?string
+    {
+        $column = self::ASSETS[$type] ?? null;
+
+        return $column && $this->$column && \Storage::disk('local')->exists($this->$column)
+            ? \Storage::disk('local')->path($this->$column)
+            : null;
+    }
 
     public function owner()
     {

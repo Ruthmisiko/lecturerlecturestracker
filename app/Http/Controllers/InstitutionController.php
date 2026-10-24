@@ -6,6 +6,7 @@ use Flash;
 use App\Models\Institution;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 
 class InstitutionController extends Controller
 {
@@ -90,12 +91,73 @@ class InstitutionController extends Controller
             return redirect()->route('institutions.index');
         }
 
+        Storage::disk('local')->deleteDirectory("institutions/{$institution->id}");
         $institution->delete();
         session()->forget('active_institution_id');
 
         Flash::success('Institution deleted.');
 
         return redirect()->route('institutions.index');
+    }
+
+    public function settings($id)
+    {
+        $this->authorizeSuperuser();
+
+        return view('institutions.settings', ['institution' => $this->find($id)]);
+    }
+
+    public function updateSettings(Request $request, $id)
+    {
+        $this->authorizeSuperuser();
+        $institution = $this->find($id);
+
+        $request->validate([
+            'logo'              => 'nullable|image|mimes:png,jpg,jpeg,webp|max:2048',
+            'letterhead'        => 'nullable|image|mimes:png,jpg,jpeg|max:5120',
+            'primary_color'     => ['required', 'regex:/^#[0-9a-fA-F]{6}$/'],
+            'secondary_color'   => ['required', 'regex:/^#[0-9a-fA-F]{6}$/'],
+        ], [
+            'primary_color.regex'   => 'Pick a valid primary colour.',
+            'secondary_color.regex' => 'Pick a valid secondary colour.',
+            'logo.max'              => 'The logo must be 2 MB or smaller.',
+            'letterhead.max'        => 'The letterhead must be 5 MB or smaller.',
+        ]);
+
+        $data = [
+            'primary_color'   => strtolower($request->primary_color),
+            'secondary_color' => strtolower($request->secondary_color),
+        ];
+
+        foreach (Institution::ASSETS as $type => $column) {
+            $remove = $request->boolean("remove_{$type}");
+
+            if (($request->hasFile($type) || $remove) && $institution->$column) {
+                Storage::disk('local')->delete($institution->$column);
+                $data[$column] = null;
+            }
+
+            if ($request->hasFile($type)) {
+                $data[$column] = $request->file($type)->store("institutions/{$institution->id}", 'local');
+            }
+        }
+
+        $institution->update($data);
+
+        Flash::success('Settings saved for ' . $institution->name . '.');
+
+        return redirect()->route('institutions.settings', $institution->id);
+    }
+
+    /** Streams an institution's logo or letterhead to anyone who can work in that institution. */
+    public function asset($id, string $type)
+    {
+        $institution = $this->find($id);
+        $path        = $institution->assetPath($type);
+
+        abort_unless($path, 404);
+
+        return response()->file($path, ['Cache-Control' => 'private, max-age=86400']);
     }
 
     public function switch(Request $request)

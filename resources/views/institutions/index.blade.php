@@ -38,6 +38,13 @@
                         @foreach ($institutions as $institution)
                             <tr>
                                 <td>
+                                    @if ($logo = $institution->assetUrl('logo'))
+                                        <img src="{{ $logo }}" alt="" style="height:28px;width:28px;object-fit:contain;" class="mr-2 rounded">
+                                    @endif
+                                    <span class="d-inline-block rounded-circle mr-1" title="Theme colours"
+                                          style="width:10px;height:10px;background:{{ $institution->primary_color }};"></span><span
+                                          class="d-inline-block rounded-circle mr-2"
+                                          style="width:10px;height:10px;background:{{ $institution->secondary_color }};"></span>
                                     <strong>{{ $institution->name }}</strong>
                                     @if ($institution->id === $currentId)
                                         <span class="badge badge-success ml-1">Current</span>
@@ -55,6 +62,9 @@
                                             <button class="btn btn-sm btn-outline-success">Switch to</button>
                                         </form>
                                     @endif
+                                    <a href="{{ route('institutions.settings', $institution->id) }}" class="btn btn-sm btn-info">
+                                        <i class="fas fa-cog"></i> Settings
+                                    </a>
                                     <a href="{{ route('institutions.edit', $institution->id) }}" class="btn btn-sm btn-warning">Rename</a>
                                     <form method="POST" action="{{ route('institutions.destroy', $institution->id) }}" class="d-inline"
                                           onsubmit="return confirm('Delete {{ addslashes($institution->name) }}? Only empty institutions can be deleted.')">

@@ -23,6 +23,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/dashboard/report', [App\Http\Controllers\DashboardController::class, 'report'])->name('dashboard.report');
     Route::get('/dashboard/payslip/{lecturer}', [App\Http\Controllers\DashboardController::class, 'payslip'])->name('dashboard.payslip');
     Route::post('/institution/switch', [App\Http\Controllers\InstitutionController::class, 'switch'])->name('institution.switch');
+    Route::get('/institutions/{institution}/settings', [App\Http\Controllers\InstitutionController::class, 'settings'])->name('institutions.settings');
+    Route::put('/institutions/{institution}/settings', [App\Http\Controllers\InstitutionController::class, 'updateSettings'])->name('institutions.settings.update');
+    Route::get('/institutions/{institution}/asset/{type}', [App\Http\Controllers\InstitutionController::class, 'asset'])
+        ->whereIn('type', ['logo', 'letterhead'])->name('institutions.asset');
     Route::resource('institutions', App\Http\Controllers\InstitutionController::class)->except('show');
 });
 
