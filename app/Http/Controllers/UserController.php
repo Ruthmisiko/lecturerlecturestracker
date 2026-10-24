@@ -96,7 +96,7 @@ class UserController extends Controller
             'roles'                => Role::all(),
             'institutions'         => $institutions,
             'currentInstitutionId' => Auth::user()->currentInstitutionId(),
-            'canPickInstitution'   => Auth::user()->isSuperAdmin() && $institutions->count() > 1,
+            'canPickInstitution'   => Auth::user()->isSuperAdmin(),
             'departments'          => Department::withoutGlobalScope('institution')
                 ->whereIn('institution_id', $institutions->pluck('id'))
                 ->orderBy('name')

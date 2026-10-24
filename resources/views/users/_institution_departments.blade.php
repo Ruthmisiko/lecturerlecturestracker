@@ -7,7 +7,12 @@
                 <option value="{{ $inst->id }}" {{ (int) $selectedInstitutionId === $inst->id ? 'selected' : '' }}>{{ $inst->name }}</option>
             @endforeach
         </select>
-        <small class="text-muted">The user will only see this institution's data.</small>
+        <small class="text-muted">
+            The user will only see this institution's data.
+            @if ($institutions->count() === 1)
+                To add another institution, go to <a href="{{ route('institutions.create') }}">Institutions → Add Institution</a>.
+            @endif
+        </small>
     </div>
 @else
     <input type="hidden" id="institutionSelect" value="{{ $selectedInstitutionId }}">

@@ -10,7 +10,7 @@
         </div>
     @endif
 
-    <form method="POST" action="{{ route('users.store') }}">
+    <form method="POST" action="{{ route('users.store') }}" autocomplete="off">
         @csrf
 
         <div class="mb-3">
@@ -20,12 +20,12 @@
 
         <div class="mb-3">
             <label>Email</label>
-            <input type="email" name="email" class="form-control" value="{{ old('email') }}" required>
+            <input type="email" name="email" class="form-control" value="{{ old('email') }}" required autocomplete="off">
         </div>
 
         <div class="mb-3">
             <label>Password</label>
-            <input type="password" name="password" class="form-control" required>
+            <input type="password" name="password" class="form-control" required autocomplete="new-password">
         </div>
 
         <div class="mb-3">
