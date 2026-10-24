@@ -255,26 +255,34 @@
             '<td>' + f('id_number', item.id_number) + '</td>' +
             '<td class="text-center"><button type="button" class="btn btn-sm btn-link text-danger remove-row" title="Remove"><i class="fas fa-times"></i></button></td>';
         rowsEl.appendChild(tr);
+        bindRow(tr);
         renumber();
         return tr;
     }
 
-    // Row actions (remove, per-row payable statuses)
-    rowsEl.addEventListener('click', function (e) {
-        var tr = e.target.closest('tr');
-        if (e.target.closest('.remove-row')) {
+    // Handlers sit on the buttons themselves: the dropdown menu stops clicks from bubbling
+    // (so it stays open while ticking boxes), which would block a handler on the table.
+    function bindRow(tr) {
+        tr.querySelector('.remove-row').addEventListener('click', function () {
             tr.remove();
             renumber();
-        } else if (e.target.closest('.payable-all')) {
+        });
+
+        var all = tr.querySelector('.payable-all');
+        if (!all) return;
+
+        all.addEventListener('click', function () {
             tr.querySelectorAll('.payable-status').forEach(function (b) { b.checked = true; });
-        } else if (e.target.closest('.payable-apply')) {
+        });
+
+        tr.querySelector('.payable-apply').addEventListener('click', function () {
             var list = rowStatuses(tr);
             if (!list.length) { alert('Tick at least one status.'); return; }
             tr.querySelector('.payable-label').textContent = statusText(list);
-            $(tr).find('[data-toggle="dropdown"]').dropdown('toggle');
             refreshRow(tr);
-        }
-    });
+            try { $(tr).find('[data-toggle="dropdown"]').dropdown('hide'); } catch (e) {}
+        });
+    }
     rowsEl.addEventListener('input', function (e) {
         if (e.target.classList.contains('amount-input')) renumber();
     });
