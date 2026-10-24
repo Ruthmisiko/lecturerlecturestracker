@@ -16,10 +16,11 @@ class Unit extends Model
         'name',
         'unitCode',
         'department_id',
+        'max_hours',
     ];
 
     protected $casts = [
-
+        'max_hours' => 'float',
     ];
 
     public static array $rules = [

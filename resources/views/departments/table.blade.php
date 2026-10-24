@@ -6,6 +6,7 @@
                     <th>Name</th>
                     <th>Code</th>
                     <th>Description</th>
+                    @if (Auth::user()->isSuperAdmin())<th class="text-right">Approved Hours</th>@endif
                     <th>Action</th>
                 </tr>
             </thead>
@@ -15,6 +16,9 @@
                         <td>{{ $department->name }}</td>
                         <td>{{ $department->code }}</td>
                         <td>{{ $department->description }}</td>
+                        @if (Auth::user()->isSuperAdmin())
+                            <td class="text-right">{{ $department->approved_hours !== null ? number_format($department->approved_hours, 2) : '—' }}</td>
+                        @endif
                         <td style="width: 120px">
                             <div class="dropdown">
                                 <button class="btn btn-light btn-sm dropdown-toggle" type="button"

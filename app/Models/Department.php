@@ -16,6 +16,11 @@ class Department extends Model
         'name',
         'code',
         'description',
+        'approved_hours',
+    ];
+
+    protected $casts = [
+        'approved_hours' => 'float',
     ];
 
     public static array $rules = [];

@@ -68,7 +68,7 @@ class UnitController extends AppBaseController
      */
     public function store(CreateUnitRequest $request)
     {
-        $input = $request->all();
+        $input = $this->withHourLimit($request);
 
         $user = Auth::user();
 
@@ -139,11 +139,26 @@ class UnitController extends AppBaseController
             return redirect(route('units.index'));
         }
 
-        $unit = $this->unitRepository->update($request->all(), $id);
+        $unit = $this->unitRepository->update($this->withHourLimit($request), $id);
 
         Flash::success('Unit updated successfully.');
 
         return redirect(route('units.index'));
+    }
+
+    /** Request data with max_hours validated; only the superuser may set it. */
+    private function withHourLimit(Request $request): array
+    {
+        if (!Auth::user()->isSuperAdmin()) {
+            return $request->except('max_hours');
+        }
+
+        $request->validate(['max_hours' => 'nullable|numeric|min:0']);
+
+        $input = $request->all();
+        $input['max_hours'] = $request->filled('max_hours') ? $request->max_hours : null;
+
+        return $input;
     }
 
     /**

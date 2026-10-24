@@ -28,6 +28,7 @@
                 <tr>
                     <th>Name</th>
                     <th>Department</th>
+                    @if (Auth::user()->isSuperAdmin())<th class="text-right">Max Hours</th>@endif
                     <th>Action</th>
                 </tr>
             </thead>
@@ -36,6 +37,9 @@
                     <tr>
                         <td>{{ $unit->name }}</td>
                         <td>{{ $unit->department->name ?? '—' }}</td>
+                        @if (Auth::user()->isSuperAdmin())
+                            <td class="text-right">{{ $unit->max_hours !== null ? number_format($unit->max_hours, 2) : '—' }}</td>
+                        @endif
                        <td style="width: 120px">
                         <div class="dropdown">
                             <button class="btn btn-light btn-sm dropdown-toggle" type="button" id="dropdownMenuButton{{ $unit->id }}"

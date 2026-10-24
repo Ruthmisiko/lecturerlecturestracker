@@ -41,7 +41,7 @@ class DepartmentController extends AppBaseController
 
     public function store(CreateDepartmentRequest $request)
     {
-        $input = $request->all();
+        $input = $this->withApprovedHours($request);
         $user = Auth::user();
         $input['user_id'] = $user->ownerId();
 
@@ -87,11 +87,26 @@ class DepartmentController extends AppBaseController
             return redirect(route('departments.index'));
         }
 
-        $this->departmentRepository->update($request->all(), $id);
+        $this->departmentRepository->update($this->withApprovedHours($request), $id);
 
         Flash::success('Department updated successfully.');
 
         return redirect(route('departments.index'));
+    }
+
+    /** Request data with approved_hours validated; only the superuser may set it. */
+    private function withApprovedHours(Request $request): array
+    {
+        if (!Auth::user()->isSuperAdmin()) {
+            return $request->except('approved_hours');
+        }
+
+        $request->validate(['approved_hours' => 'nullable|numeric|min:0']);
+
+        $input = $request->all();
+        $input['approved_hours'] = $request->filled('approved_hours') ? $request->approved_hours : null;
+
+        return $input;
     }
 
     public function switchDepartment(Request $request)
