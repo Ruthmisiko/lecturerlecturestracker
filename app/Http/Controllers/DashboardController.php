@@ -24,10 +24,11 @@ class DashboardController extends Controller
         }
 
         [$from, $to] = $this->period($request);
+        $statuses    = $this->statuses($request);
         $ownerId     = $user->ownerId();
         $deptIds     = $user->scopedDepartmentIds();
 
-        $rows   = (new LecturerPayroll($user, $from, $to))->rows();
+        $rows   = (new LecturerPayroll($user, $from, $to, $statuses))->rows();
         $totals = LecturerPayroll::totals($rows);
 
         $stats = [
@@ -51,7 +52,7 @@ class DashboardController extends Controller
             ->sortByDesc('hours')
             ->values();
 
-        return view('dashboard', compact('rows', 'totals', 'stats', 'missingRate', 'departmentSummary', 'from', 'to'));
+        return view('dashboard', compact('rows', 'totals', 'stats', 'missingRate', 'departmentSummary', 'from', 'to', 'statuses'));
     }
 
     public function report(Request $request)
@@ -59,21 +60,22 @@ class DashboardController extends Controller
         $this->authorizeSuperuser();
 
         [$from, $to] = $this->period($request);
-        $rows   = (new LecturerPayroll(Auth::user(), $from, $to))->rows();
+        $statuses    = $this->statuses($request);
+        $rows   = (new LecturerPayroll(Auth::user(), $from, $to, $statuses))->rows();
         $totals = LecturerPayroll::totals($rows);
 
         if ($request->get('format') === 'excel') {
-            return $this->excel($rows, $totals, $from, $to);
+            return $this->excel($rows, $totals, $from, $to, $statuses);
         }
 
         if ($request->get('format') === 'pdf') {
             $period = $this->periodLabel($from, $to);
-            return PDF::loadView('dashboard.report_pdf', compact('rows', 'totals', 'period'))
+            return PDF::loadView('dashboard.report_pdf', compact('rows', 'totals', 'period', 'statuses'))
                 ->setPaper('a4', 'landscape')
                 ->download('lecturer_payment_report.pdf');
         }
 
-        return view('dashboard.report', compact('rows', 'totals', 'from', 'to'));
+        return view('dashboard.report', compact('rows', 'totals', 'from', 'to', 'statuses'));
     }
 
     public function payslip(Request $request, $lecturerId)
@@ -81,23 +83,24 @@ class DashboardController extends Controller
         $this->authorizeSuperuser();
 
         [$from, $to] = $this->period($request);
+        $statuses    = $this->statuses($request);
         $lecturer    = Lecturer::with('department', 'institution')->findOrFail($lecturerId);
-        $row         = (new LecturerPayroll(Auth::user(), $from, $to))->rows()->firstWhere('id', $lecturer->id);
+        $row         = (new LecturerPayroll(Auth::user(), $from, $to, $statuses))->rows()->firstWhere('id', $lecturer->id);
 
         abort_unless($row, 404);
 
         $period = $this->periodLabel($from, $to);
         $slipNo = 'PS-' . str_pad($lecturer->id, 4, '0', STR_PAD_LEFT) . '-' . ($to ? str_replace('-', '', substr($to, 0, 7)) : now()->format('Ym'));
 
-        return PDF::loadView('dashboard.payslip_pdf', compact('lecturer', 'row', 'period', 'slipNo'))
+        return PDF::loadView('dashboard.payslip_pdf', compact('lecturer', 'row', 'period', 'slipNo', 'statuses'))
             ->setPaper('a4')
             ->download('payslip_' . str($lecturer->name)->slug('_') . '.pdf');
     }
 
-    protected function excel($rows, $totals, $from, $to)
+    protected function excel($rows, $totals, $from, $to, ?array $statuses)
     {
         $data = collect([
-            ['Lecturer Payment Report — ' . $this->periodLabel($from, $to)],
+            ['Lecturer Payment Report — ' . $this->periodLabel($from, $to) . ' — Payable: ' . self::statusLabel($statuses)],
             [],
             ['Lecturer', 'Department', 'KRA PIN', 'Sessions', 'Total Hours', 'Rate / Hr', 'Gross Amount', 'Tax', 'Housing Levy', 'Net Pay'],
         ]);
@@ -117,6 +120,19 @@ class DashboardController extends Controller
         $valid = fn ($v) => $v && preg_match('/^\d{4}-\d{2}-\d{2}$/', $v) ? $v : null;
 
         return [$valid($request->get('from')), $valid($request->get('to'))];
+    }
+
+    /** Clash statuses whose hours are payable; null = all statuses. */
+    protected function statuses(Request $request): ?array
+    {
+        return LecturerPayroll::normaliseStatuses($request->input('statuses'));
+    }
+
+    public static function statusLabel(?array $statuses): string
+    {
+        return $statuses
+            ? collect($statuses)->map(fn ($s) => LecturerPayroll::STATUSES[$s])->join(', ')
+            : 'All statuses';
     }
 
     protected function periodLabel(?string $from, ?string $to): string

@@ -74,6 +74,12 @@
         <tr class="net"><td>Net pay</td><td class="v">{{ $money($row->net) }}</td></tr>
     </table>
 
+    @if ($statuses)
+        <p class="muted" style="font-size:10px;margin:-8px 0 14px;">
+            Payable hours counted: {{ \App\Http\Controllers\DashboardController::statusLabel($statuses) }}
+        </p>
+    @endif
+
     @if (!empty($row->units))
         <h4>Hours by unit</h4>
         <table class="units">

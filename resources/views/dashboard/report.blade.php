@@ -8,17 +8,17 @@
         <div>
             <h1 class="font-weight-bold mb-0">Lecturer Payment Report</h1>
             <small class="text-muted">
-                Period: {{ !$from && !$to ? 'All time' : (($from ?: 'Start') . ' → ' . ($to ?: 'Today')) }} · Amounts in KES
+                Period: {{ !$from && !$to ? 'All time' : (($from ?: 'Start') . ' → ' . ($to ?: 'Today')) }} · Payable hrs: {{ \App\Http\Controllers\DashboardController::statusLabel($statuses) }} · Amounts in KES
             </small>
         </div>
         <div>
-            <a href="{{ route('dashboard', request()->only('from', 'to')) }}" class="btn btn-outline-secondary">
+            <a href="{{ route('dashboard', request()->only('from', 'to', 'statuses')) }}" class="btn btn-outline-secondary">
                 <i class="fas fa-arrow-left mr-1"></i> Dashboard
             </a>
-            <a href="{{ route('dashboard.report', array_merge(request()->only('from', 'to'), ['format' => 'excel'])) }}" class="btn btn-success">
+            <a href="{{ route('dashboard.report', array_merge(request()->only('from', 'to', 'statuses'), ['format' => 'excel'])) }}" class="btn btn-success">
                 <i class="fas fa-file-excel mr-1"></i> Excel
             </a>
-            <a href="{{ route('dashboard.report', array_merge(request()->only('from', 'to'), ['format' => 'pdf'])) }}" class="btn btn-danger">
+            <a href="{{ route('dashboard.report', array_merge(request()->only('from', 'to', 'statuses'), ['format' => 'pdf'])) }}" class="btn btn-danger">
                 <i class="fas fa-file-pdf mr-1"></i> PDF
             </a>
         </div>
@@ -36,8 +36,9 @@
                 <label class="small text-muted mb-1">To</label>
                 <input type="date" name="to" value="{{ $to }}" class="form-control form-control-sm">
             </div>
+            @foreach ($statuses ?? [] as $s)<input type="hidden" name="statuses[]" value="{{ $s }}">@endforeach
             <button class="btn btn-sm btn-success">Apply</button>
-            <a href="{{ route('dashboard.report') }}" class="btn btn-sm btn-outline-secondary">All time</a>
+            <a href="{{ route('dashboard.report', request()->only('statuses')) }}" class="btn btn-sm btn-outline-secondary">All time</a>
         </div>
     </form>
 
@@ -73,7 +74,7 @@
                             <td class="text-right text-danger">{{ $n($r->housing) }}</td>
                             <td class="text-right font-weight-bold text-success">{{ $n($r->net) }}</td>
                             <td class="text-right">
-                                <a href="{{ route('dashboard.payslip', array_merge(['lecturer' => $r->id], request()->only('from', 'to'))) }}"
+                                <a href="{{ route('dashboard.payslip', array_merge(['lecturer' => $r->id], request()->only('from', 'to', 'statuses'))) }}"
                                    class="btn btn-xs btn-outline-success" title="Print payslip"><i class="fas fa-print"></i></a>
                             </td>
                         </tr>

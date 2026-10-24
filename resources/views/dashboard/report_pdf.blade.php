@@ -18,7 +18,7 @@
 <body>
     @php $n = fn ($v) => number_format($v, 2); @endphp
     <h2>Lecturer Payment Report</h2>
-    <div class="meta">Period: {{ $period }} &nbsp;|&nbsp; Generated: {{ now()->format('d M Y, H:i') }} &nbsp;|&nbsp; Amounts in KES</div>
+    <div class="meta">Period: {{ $period }} &nbsp;|&nbsp; Payable hrs: {{ \App\Http\Controllers\DashboardController::statusLabel($statuses) }} &nbsp;|&nbsp; Generated: {{ now()->format('d M Y, H:i') }} &nbsp;|&nbsp; Amounts in KES</div>
 
     <table>
         <thead>

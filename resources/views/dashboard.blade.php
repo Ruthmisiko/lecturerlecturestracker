@@ -33,6 +33,9 @@
 @php
     $money = fn ($v) => 'KES ' . number_format($v, 2);
     $maxDeptHours = max(1, $departmentSummary->max('hours') ?? 0);
+    $keep = array_filter(['statuses' => $statuses]);
+    $statusOptions = \App\Services\LecturerPayroll::STATUSES;
+    $checked = $statuses ?? array_keys($statusOptions);
 @endphp
 
 <section class="content-header">
@@ -41,7 +44,7 @@
             <h1 class="font-weight-bold mb-0">Dashboard</h1>
             <small class="text-muted">Welcome back, {{ Auth::user()->name }}</small>
         </div>
-        <a href="{{ route('dashboard.report', request()->only('from', 'to')) }}" class="btn btn-success">
+        <a href="{{ route('dashboard.report', request()->only('from', 'to', 'statuses')) }}" class="btn btn-success">
             <i class="fas fa-file-invoice-dollar mr-1"></i> Payment Report
         </a>
     </div>
@@ -60,12 +63,13 @@
                 <label class="small text-muted mb-1">To</label>
                 <input type="date" name="to" value="{{ $to }}" class="form-control form-control-sm">
             </div>
+            @foreach ($statuses ?? [] as $s)<input type="hidden" name="statuses[]" value="{{ $s }}">@endforeach
             <button class="btn btn-sm btn-success">Apply</button>
             <div class="btn-group btn-group-sm ml-md-2">
-                <a class="btn btn-outline-secondary" href="{{ route('dashboard', ['from' => now()->startOfMonth()->toDateString(), 'to' => now()->endOfMonth()->toDateString()]) }}">This month</a>
-                <a class="btn btn-outline-secondary" href="{{ route('dashboard', ['from' => now()->subMonthNoOverflow()->startOfMonth()->toDateString(), 'to' => now()->subMonthNoOverflow()->endOfMonth()->toDateString()]) }}">Last month</a>
-                <a class="btn btn-outline-secondary" href="{{ route('dashboard', ['from' => now()->startOfYear()->toDateString(), 'to' => now()->endOfYear()->toDateString()]) }}">This year</a>
-                <a class="btn btn-outline-secondary" href="{{ route('dashboard') }}">All time</a>
+                <a class="btn btn-outline-secondary" href="{{ route('dashboard', ['from' => now()->startOfMonth()->toDateString(), 'to' => now()->endOfMonth()->toDateString()] + $keep) }}">This month</a>
+                <a class="btn btn-outline-secondary" href="{{ route('dashboard', ['from' => now()->subMonthNoOverflow()->startOfMonth()->toDateString(), 'to' => now()->subMonthNoOverflow()->endOfMonth()->toDateString()] + $keep) }}">Last month</a>
+                <a class="btn btn-outline-secondary" href="{{ route('dashboard', ['from' => now()->startOfYear()->toDateString(), 'to' => now()->endOfYear()->toDateString()] + $keep) }}">This year</a>
+                <a class="btn btn-outline-secondary" href="{{ route('dashboard', $keep) }}">All time</a>
             </div>
             <span class="ml-auto small text-muted">
                 Showing: <strong>{{ !$from && !$to ? 'All time' : (($from ?: 'Start') . ' → ' . ($to ?: 'Today')) }}</strong>
@@ -156,7 +160,33 @@
 
         <div class="col-lg-7 mb-3">
             <div class="card panel h-100">
-                <div class="card-header"><i class="fas fa-file-invoice mr-1 text-success"></i> Payment Summary</div>
+                <div class="card-header d-flex flex-wrap justify-content-between align-items-center" style="gap:8px;">
+                    <span><i class="fas fa-file-invoice mr-1 text-success"></i> Payment Summary</span>
+
+                    {{-- Which clash statuses count as payable hours --}}
+                    <form method="GET" class="dropdown" id="payableForm">
+                        @if ($from)<input type="hidden" name="from" value="{{ $from }}">@endif
+                        @if ($to)<input type="hidden" name="to" value="{{ $to }}">@endif
+                        <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-filter mr-1"></i> Payable hrs:
+                            <strong>{{ $statuses ? collect($statuses)->map(fn ($s) => $statusOptions[$s])->join(', ') : 'All' }}</strong>
+                        </button>
+                        <div class="dropdown-menu dropdown-menu-right p-3" style="min-width: 270px;" onclick="event.stopPropagation()">
+                            <h6 class="dropdown-header px-0">Count hours with status</h6>
+                            @foreach ($statusOptions as $key => $label)
+                                <div class="form-check mb-1">
+                                    <input class="form-check-input payable-status" type="checkbox" name="statuses[]" value="{{ $key }}"
+                                           id="payable_{{ $key }}" {{ in_array($key, $checked) ? 'checked' : '' }}>
+                                    <label class="form-check-label" for="payable_{{ $key }}">{{ $label }}</label>
+                                </div>
+                            @endforeach
+                            <div class="d-flex justify-content-between mt-2">
+                                <button type="button" class="btn btn-sm btn-link px-0" id="payableAll">Select all</button>
+                                <button type="submit" class="btn btn-sm btn-success">Apply</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
                 <div class="card-body" id="lecturerDetail">
                     <div class="empty-detail">
                         <i class="fas fa-hand-pointer fa-2x mb-2"></i>
@@ -191,7 +221,7 @@
 <script>
 (function () {
     var rows = @json($rows->keyBy('id'));
-    @php $payslipUrl = route('dashboard.payslip', array_merge(['lecturer' => '__ID__'], request()->only('from', 'to'))); @endphp
+    @php $payslipUrl = route('dashboard.payslip', array_merge(['lecturer' => '__ID__'], request()->only('from', 'to', 'statuses'))); @endphp
     var payslipUrl = @json($payslipUrl);
     var fmt = new Intl.NumberFormat('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     var money = function (v) { return 'KES ' + fmt.format(v); };
@@ -220,6 +250,10 @@
             '</div>' +
             (r.rate <= 0 && r.hours > 0 ? '<div class="alert alert-warning py-2 small">No rate per hour set for this lecturer.</div>' : '') +
             line('KRA PIN', esc(r.kra_pin)) +
+            (r.excluded_sessions > 0
+                ? '<div class="alert alert-light border small py-2 my-2"><i class="fas fa-filter mr-1"></i>' +
+                  r.excluded_sessions + ' session(s) / ' + r.excluded_hours.toFixed(2) + ' hrs not counted (status filter).</div>'
+                : '') +
             line('Lecture sessions', r.sessions) +
             line('Total hours', r.hours.toFixed(2) + ' hrs') +
             line('Rate per hour', money(r.rate)) +
@@ -246,8 +280,28 @@
         });
     });
 
-    var first = document.querySelector('.lecturer-item');
-    if (first) show(first.dataset.id);
+    // Re-open the lecturer that was selected before the page reloaded (e.g. after changing filters).
+    var remembered = null;
+    try { remembered = sessionStorage.getItem('dashLecturer'); } catch (e) {}
+    var start = (remembered && rows[remembered]) ? remembered : (document.querySelector('.lecturer-item') || {dataset: {}}).dataset.id;
+    if (start) show(start);
+
+    document.querySelectorAll('.lecturer-item').forEach(function (el) {
+        el.addEventListener('click', function () {
+            try { sessionStorage.setItem('dashLecturer', el.dataset.id); } catch (e) {}
+        });
+    });
+
+    document.getElementById('payableAll').addEventListener('click', function () {
+        document.querySelectorAll('.payable-status').forEach(function (cb) { cb.checked = true; });
+    });
+
+    document.getElementById('payableForm').addEventListener('submit', function (e) {
+        if (!document.querySelector('.payable-status:checked')) {
+            e.preventDefault();
+            alert('Tick at least one status.');
+        }
+    });
 })();
 </script>
 @endpush
