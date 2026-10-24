@@ -14,17 +14,81 @@
 <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
+@php $theme = \App\Support\Theme::current(); @endphp
 <style>
-    .nav-link {
-        transition: background-color 0.3s ease;
+    /* Institution theme (Institutions → Settings) */
+    :root {
+        --primary: {{ $theme->primary }};
+        --primary-dark: {{ $theme->primaryDark() }};
+        --primary-soft: {{ $theme->primarySoft() }};
+        --primary-rgb: {{ $theme->primaryRgb() }};
+        --primary-text: {{ $theme->primaryText() }};
+        --secondary: {{ $theme->secondary }};
+        --secondary-soft: {{ $theme->secondarySoft() }};
+        --secondary-text: {{ $theme->secondaryText() }};
     }
 
-    .nav-link:hover {
-        background-color: #218838 !important; /* Darker green on hover */
+    /* ---- Sidebar ---- */
+    .main-sidebar.themed-sidebar {
+        background: var(--primary) !important;
+        border-radius: 0 18px 18px 0;
+        overflow: hidden;
     }
-    .nav-link.active {
-        background-color: #1e7e34 !important;
+    .themed-sidebar .brand-link {
+        display: flex; flex-direction: column; align-items: center; gap: 6px;
+        padding: 16px 10px 14px; border-bottom: 1px solid rgba(255, 255, 255, .15) !important;
+        color: var(--primary-text) !important; height: auto; text-align: center;
     }
+    .themed-sidebar .brand-logo {
+        width: 64px; height: 64px; object-fit: contain; background: #fff;
+        border-radius: 14px; padding: 4px; box-shadow: 0 2px 6px rgba(0, 0, 0, .2);
+    }
+    .themed-sidebar .brand-text { color: var(--primary-text) !important; font-size: 1.15rem; margin: 0; }
+    .sidebar-mini.sidebar-collapse .themed-sidebar .brand-logo { width: 38px; height: 38px; }
+    .sidebar-mini.sidebar-collapse .themed-sidebar:not(:hover) .brand-text { display: none; }
+
+    .themed-sidebar .sidebar nav > .nav-link,
+    .themed-sidebar .sidebar nav .nav-link {
+        display: block; margin: 4px 8px; padding: 10px 14px; border-radius: 12px;
+        color: var(--primary-text) !important; border: 2px solid transparent;
+        transition: background-color .2s ease, transform .15s ease, border-color .2s ease;
+    }
+    .themed-sidebar .sidebar nav .nav-link p { margin: 0; color: inherit !important; }
+    .themed-sidebar .sidebar nav .nav-link:hover {
+        background-color: rgba(255, 255, 255, .16) !important; transform: translateX(3px);
+    }
+    .themed-sidebar .sidebar nav .nav-link.active {
+        background-color: var(--secondary) !important; color: var(--secondary-text) !important;
+        border-color: var(--primary-dark); box-shadow: 0 3px 8px rgba(0, 0, 0, .18);
+    }
+
+    /* ---- Bootstrap greens → institution colours ---- */
+    .btn-success, .btn-primary {
+        background-color: var(--primary) !important; border-color: var(--primary) !important; color: var(--primary-text) !important;
+    }
+    .btn-success:hover, .btn-primary:hover, .btn-success:focus, .btn-primary:focus,
+    .btn-success:not(:disabled):active, .btn-primary:not(:disabled):active {
+        background-color: var(--primary-dark) !important; border-color: var(--primary-dark) !important;
+        box-shadow: 0 0 0 .2rem rgba(var(--primary-rgb), .3) !important;
+    }
+    .btn-outline-success, .btn-outline-primary { color: var(--primary) !important; border-color: var(--primary) !important; background: transparent; }
+    .btn-outline-success:hover, .btn-outline-primary:hover { background-color: var(--primary) !important; color: var(--primary-text) !important; }
+    .btn-info { background-color: var(--secondary) !important; border-color: var(--secondary) !important; color: var(--secondary-text) !important; }
+    .btn-link, a:not(.btn):not(.nav-link):not(.dropdown-item):not(.page-link):not(.brand-link):not(.list-group-item) { color: var(--primary); }
+    .text-success, .text-primary { color: var(--primary) !important; }
+    .bg-success, .bg-primary { background-color: var(--primary) !important; color: var(--primary-text) !important; }
+    .badge-success, .badge-primary { background-color: var(--primary) !important; color: var(--primary-text) !important; }
+    .badge-info { background-color: var(--secondary) !important; color: var(--secondary-text) !important; }
+    .border-success, .border-primary { border-color: var(--primary) !important; }
+    .alert-success { background-color: var(--primary-soft) !important; border-color: var(--primary-soft) !important; color: var(--primary-dark) !important; }
+    .page-item.active .page-link { background-color: var(--primary) !important; border-color: var(--primary) !important; color: var(--primary-text) !important; }
+    .page-link { color: var(--primary); }
+    .dropdown-item.active, .dropdown-item:active { background-color: var(--primary) !important; color: var(--primary-text) !important; }
+    .form-control:focus, .custom-select:focus { border-color: var(--primary) !important; box-shadow: 0 0 0 .2rem rgba(var(--primary-rgb), .2) !important; }
+    .form-check-input:checked { accent-color: var(--primary); }
+    input[type=checkbox], input[type=radio] { accent-color: var(--primary); }
+    .thead-light th, .table thead th { border-bottom-color: var(--primary-soft); }
+    .card-primary:not(.card-outline) > .card-header, .card-success:not(.card-outline) > .card-header { background-color: var(--primary); color: var(--primary-text); }
 </style>
     @stack('styles')
 </head>
@@ -117,9 +181,12 @@
         @endauth
     </nav>
     <!-- Sidebar -->
-<aside class="main-sidebar sidebar-dark-success bg-success elevation-4">
+<aside class="main-sidebar sidebar-dark-success themed-sidebar elevation-4">
     <a href="{{ url('/') }}" class="brand-link">
-        <span class="brand-text font-weight-bold text-white">Lecturer Tracker</span>
+        @if ($logo = $theme->logoUrl())
+            <img src="{{ $logo }}" alt="{{ $theme->institution->name ?? 'Logo' }}" class="brand-logo">
+        @endif
+        <span class="brand-text font-weight-bold">Lecturer Tracker</span>
     </a>
     <div class="sidebar">
         <nav class="mt-2">

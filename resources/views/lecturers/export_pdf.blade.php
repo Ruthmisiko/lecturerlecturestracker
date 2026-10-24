@@ -7,7 +7,8 @@
         h2 { margin-bottom: 4px; }
         .meta { font-size: 10px; color: #555; margin-bottom: 12px; }
         table { width: 100%; border-collapse: collapse; }
-        th { background: #1e7e34; color: #fff; padding: 6px 8px; text-align: left; }
+        @php $theme = \App\Support\Theme::current(); @endphp
+        th { background: {{ $theme->primary }}; color: {{ $theme->primaryText() }}; padding: 6px 8px; text-align: left; }
         td { padding: 5px 8px; border-bottom: 1px solid #ddd; }
         tr:nth-child(even) td { background: #f7f7f7; }
         .ok         { color: #1e7e34; font-weight: bold; }

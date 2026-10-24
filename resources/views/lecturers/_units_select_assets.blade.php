@@ -4,7 +4,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@ttskch/select2-bootstrap4-theme@1.5.2/dist/select2-bootstrap4.min.css">
 <style>
     .select2-container--bootstrap4 .select2-selection--multiple { min-height: 38px; }
-    .select2-container--bootstrap4 .select2-selection__choice { background: #e9f6ec; border-color: #28a745; color: #1e7e34; font-size: 13px; }
+    .select2-container--bootstrap4 .select2-selection__choice { background: var(--primary-soft); border-color: var(--primary); color: var(--primary-dark); font-size: 13px; }
 
     /* Checkbox look for each unit in the open list */
     .select2-container--bootstrap4 .select2-results__option { position: relative; padding-left: 38px; }
@@ -15,11 +15,11 @@
     }
     .select2-container--bootstrap4 .select2-results__option[aria-selected=true],
     .select2-container--bootstrap4 .select2-results__option--selected {
-        background: #e9f6ec !important; color: #1e7e34 !important; font-weight: 600;
+        background: var(--primary-soft) !important; color: var(--primary-dark) !important; font-weight: 600;
     }
     .select2-container--bootstrap4 .select2-results__option[aria-selected=true]::before,
     .select2-container--bootstrap4 .select2-results__option--selected::before {
-        content: '\2713'; background: #28a745; border-color: #28a745;
+        content: '\2713'; background: var(--primary); border-color: var(--primary);
     }
     /* Hover row: light grey instead of the solid blue bar */
     .select2-container--bootstrap4 .select2-results__option--highlighted {
@@ -27,7 +27,7 @@
     }
     .select2-container--bootstrap4 .select2-results__option--highlighted[aria-selected=true],
     .select2-container--bootstrap4 .select2-results__option--highlighted.select2-results__option--selected {
-        background: #d4edda !important; color: #155724 !important;
+        background: var(--secondary-soft) !important; color: #212529 !important;
     }
     /* No-results / searching messages shouldn't get a checkbox */
     .select2-container--bootstrap4 .select2-results__message::before { display: none; }

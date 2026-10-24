@@ -16,15 +16,15 @@
     .lecturer-list { max-height: 460px; overflow-y: auto; }
     .lecturer-item { cursor: pointer; border-left: 3px solid transparent; color: #212529; }
     .lecturer-item:hover { background: #f4f9f5; }
-    .lecturer-item.selected { background: #e9f6ec; border-left-color: #28a745; }
-    .lecturer-item.selected .name { color: #1e7e34; }
+    .lecturer-item.selected { background: var(--primary-soft); border-left-color: var(--primary); }
+    .lecturer-item.selected .name { color: var(--primary-dark); }
     .lecturer-item .dept { font-size: 12px; color: #6c757d; }
     .detail-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px dashed #e5e7eb; }
     .detail-row:last-child { border-bottom: 0; }
-    .detail-row.net { font-size: 18px; font-weight: 700; color: #1e7e34; border-top: 2px solid #28a745; border-bottom: 0; margin-top: 6px; }
+    .detail-row.net { font-size: 18px; font-weight: 700; color: var(--primary-dark); border-top: 2px solid var(--primary); border-bottom: 0; margin-top: 6px; }
     .deduction { color: #c0392b; }
     .bar { height: 8px; background: #e9ecef; border-radius: 4px; overflow: hidden; }
-    .bar > span { display: block; height: 100%; background: #28a745; }
+    .bar > span { display: block; height: 100%; background: var(--primary); }
     .empty-detail { color: #6c757d; text-align: center; padding: 60px 20px; }
     .narration-box { background: #f8f9fa; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px 14px; }
     .narration-text { white-space: pre-line; font-size: 14px; line-height: 1.5; color: #333; }
@@ -82,7 +82,7 @@
     {{-- Headline stats --}}
     <div class="row">
         @foreach ([
-            ['Total Lecturers', $stats['lecturers'], 'fa-chalkboard-teacher', '#e8f5e9', '#28a745'],
+            ['Total Lecturers', $stats['lecturers'], 'fa-chalkboard-teacher', 'var(--primary-soft)', 'var(--primary)'],
             ['Total Units', $stats['units'], 'fa-book', '#e3f2fd', '#1e88e5'],
             ['Total Departments', $stats['departments'], 'fa-building', '#fff3e0', '#fb8c00'],
             ['Hours Administered', number_format($stats['hours'], 2), 'fa-clock', '#f3e5f5', '#8e24aa'],

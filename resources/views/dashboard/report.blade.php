@@ -83,7 +83,7 @@
                     @endforelse
                 </tbody>
                 <tfoot>
-                    <tr class="font-weight-bold" style="background:#e9f6ec;">
+                    <tr class="font-weight-bold" style="background:var(--primary-soft);">
                         <td colspan="4">TOTAL</td>
                         <td class="text-right">{{ $n($totals->hours) }}</td>
                         <td></td>

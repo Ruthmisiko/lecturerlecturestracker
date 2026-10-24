@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html>
+@php $theme = \App\Support\Theme::for($lecturer->institution); $logoPath = $theme->logoPath(); @endphp
 <head>
     <meta charset="UTF-8">
     <title>Payslip — {{ $lecturer->name }}</title>
@@ -7,10 +8,11 @@
         /* Half-width A4 slip (105 × 210 mm) */
         @page { margin: 8mm 7mm; }
         body { font-family: DejaVu Sans, sans-serif; font-size: 8.5px; color: #222; margin: 0; }
-        .header { border-bottom: 2px solid #28a745; padding-bottom: 6px; margin-bottom: 10px; }
+        .header { border-bottom: 2px solid {{ $theme->primary }}; padding-bottom: 6px; margin-bottom: 10px; }
         .header table { width: 100%; border-collapse: collapse; }
-        .org { font-size: 12px; font-weight: bold; color: #1e7e34; }
+        .org { font-size: 12px; font-weight: bold; color: {{ $theme->primary }}; }
         .title { font-size: 10px; font-weight: bold; text-align: right; letter-spacing: 1.5px; vertical-align: top; }
+        .logo { max-height: 46px; max-width: 120px; }
         .muted { color: #666; }
         .box { border: 1px solid #ddd; border-radius: 3px; padding: 5px 6px; margin-bottom: 10px; }
         .grid { width: 100%; border-collapse: collapse; }
@@ -42,8 +44,11 @@
         <table>
             <tr>
                 <td>
-                    <div class="org">{{ $lecturer->institution->name ?? 'Lecturer Tracker' }}</div>
-                    <div class="muted">Part-time Lecturer Payment</div>
+                    @if ($logoPath)
+                        <img src="{{ $logoPath }}" class="logo" alt="Logo">
+                    @else
+                        <div class="org">{{ $lecturer->institution->name ?? 'Lecturer Tracker' }}</div>
+                    @endif
                 </td>
                 <td class="title">
                     PAYSLIP<br>

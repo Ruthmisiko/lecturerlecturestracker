@@ -1,18 +1,19 @@
 <!DOCTYPE html>
 <html>
+@php $theme = \App\Support\Theme::current(); @endphp
 <head>
     <meta charset="UTF-8">
     <title>Lecturer Payment Report</title>
     <style>
         body { font-family: DejaVu Sans, sans-serif; font-size: 11px; color: #222; }
-        h2 { margin: 0 0 4px; color: #1e7e34; }
+        h2 { margin: 0 0 4px; color: {{ $theme->primary }}; }
         .meta { color: #666; margin-bottom: 14px; }
         table { width: 100%; border-collapse: collapse; }
-        th { background: #28a745; color: #fff; padding: 6px; text-align: left; }
+        th { background: {{ $theme->primary }}; color: {{ $theme->primaryText() }}; padding: 6px; text-align: left; }
         td { padding: 5px 6px; border-bottom: 1px solid #ddd; }
         .r { text-align: right; }
         tr:nth-child(even) td { background: #f6f8f7; }
-        tfoot td { font-weight: bold; background: #e9f6ec; border-top: 2px solid #28a745; }
+        tfoot td { font-weight: bold; background: {{ $theme->primarySoft() }}; border-top: 2px solid {{ $theme->primary }}; }
     </style>
 </head>
 <body>
