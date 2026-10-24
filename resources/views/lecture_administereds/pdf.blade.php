@@ -70,6 +70,9 @@
     @if(!empty($filters['class']))
         <span><strong>Class:</strong> {{ $filters['class'] }}</span>
     @endif
+    @if(!empty($filters['unit']))
+        <span><strong>Unit:</strong> {{ $filters['unit'] }}</span>
+    @endif
     @if(!empty($filters['lecture_date']))
         <span><strong>Date:</strong> {{ $filters['lecture_date'] }}</span>
     @endif

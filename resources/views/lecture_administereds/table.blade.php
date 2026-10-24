@@ -25,7 +25,23 @@
 </div>
 
 <div class="col-md-2">
-    <input type="text" name="class" class="form-control" placeholder="Class" value="{{ request('class') }}">
+    <select name="classs_id" class="form-control">
+        <option value="">All Classes</option>
+        @foreach($allClasses as $cls)
+            <option value="{{ $cls->id }}" {{ request('classs_id') == $cls->id ? 'selected' : '' }}>{{ $cls->name }}</option>
+        @endforeach
+    </select>
+</div>
+
+<div class="col-md-2">
+    <select name="unit_id" class="form-control">
+        <option value="">All Units</option>
+        @foreach($allUnits as $unit)
+            <option value="{{ $unit->id }}" {{ request('unit_id') == $unit->id ? 'selected' : '' }}>
+                {{ $unit->name }}{{ $unit->unitCode ? ' (' . $unit->unitCode . ')' : '' }}
+            </option>
+        @endforeach
+    </select>
 </div>
 
 <div class="col-md-2">
@@ -71,11 +87,11 @@
     </form>
 </div>
 @can('clash.own')
-@if((request('lecturer') || request('class') || request('lecture_date')) && $duplicates->isNotEmpty())
+@if((request('lecturer') || request('class') || request('classs_id') || request('lecture_date')) && $duplicates->isNotEmpty())
     @foreach($duplicates as $dup)
         @php
             $matchesLecturer = request('lecturer') ? str_contains(strtolower($dup->lecturer->name), strtolower(request('lecturer'))) : true;
-            $matchesClass = request('class') ? str_contains(strtolower($dup->classs->name), strtolower(request('class'))) : true;
+            $matchesClass = (request('class') ? str_contains(strtolower($dup->classs->name), strtolower(request('class'))) : true) && (request('classs_id') ? $dup->classs_id == request('classs_id') : true);
             $matchesDate = request('lecture_date') ? $dup->lecture_date === request('lecture_date') : true;
         @endphp
 
@@ -91,10 +107,10 @@
 @endcan
 
 @can('clash.all')
- @if((request('lecturer') || request('class') || request('lecture_date')) && $clashes->isNotEmpty())
+ @if((request('lecturer') || request('class') || request('classs_id') || request('lecture_date')) && $clashes->isNotEmpty())
                         @foreach($clashes as $clash)
                             @php
-                                $matchesClass = request('class') ? str_contains(strtolower($clash->classs->name), strtolower(request('class'))) : true;
+                                $matchesClass = (request('class') ? str_contains(strtolower($clash->classs->name), strtolower(request('class'))) : true) && (request('classs_id') ? $clash->classs_id == request('classs_id') : true);
                                 $matchesDate = request('lecture_date') ? $clash->lecture_date === request('lecture_date') : true;
                             @endphp
 

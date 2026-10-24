@@ -67,6 +67,12 @@ class LectureAdministeredController extends AppBaseController
             !str_contains(strtolower($item->classs->name ?? ''), strtolower($request->class))) {
             return false;
         }
+        if ($request->filled('classs_id') && $item->classs_id != $request->classs_id) {
+            return false;
+        }
+        if ($request->filled('unit_id') && $item->unit_id != $request->unit_id) {
+            return false;
+        }
         if ($request->filled('lecture_date') && $item->lecture_date !== $request->lecture_date) {
             return false;
         }
@@ -114,9 +120,14 @@ class LectureAdministeredController extends AppBaseController
         : Department::where('user_id', $ownerId)->orderBy('name')->get();
 
     $allLecturers = Lecturer::where('user_id', $ownerId)->orderBy('name')->get();
+    $allClasses   = Classs::where('user_id', $ownerId)->orderBy('name')->get(['id', 'name']);
+    $allUnits     = \App\Models\Unit::where('user_id', $ownerId)
+        ->when($user->scopedDepartmentIds(), fn($q) => $q->whereIn('department_id', $user->scopedDepartmentIds()))
+        ->orderBy('name')
+        ->get(['id', 'name', 'unitCode']);
 
     return view('lecture_administereds.index',
-        compact('lectureAdministereds', 'duplicates', 'clashes', 'ownClashPool', 'departments', 'allLecturers', 'totalHours'));
+        compact('lectureAdministereds', 'duplicates', 'clashes', 'ownClashPool', 'departments', 'allLecturers', 'allClasses', 'allUnits', 'totalHours'));
 }
 
 private function buildClashPools($allRecords, $ownerId): array
@@ -211,7 +222,10 @@ public function exportPdf(Request $request)
         'clashes'      => $clashes,
         'status'       => $request->status,
         'department'   => $department,
-        'filters'      => $request->only('lecturer', 'class', 'lecture_date', 'department_id', 'status'),
+        'filters'      => $request->only('lecturer', 'class', 'lecture_date', 'department_id', 'status') + array_filter([
+            'class' => $request->filled('classs_id') ? Classs::find($request->classs_id)?->name : null,
+            'unit'  => $request->filled('unit_id') ? \App\Models\Unit::find($request->unit_id)?->name : null,
+        ]),
     ])->setPaper('a4', 'landscape');
 
     return $pdf->download('lecture_report.pdf');
@@ -235,6 +249,8 @@ private function fetchExportData(Request $request): array
             !str_contains(strtolower($item->lecturer->name ?? ''), strtolower($request->lecturer_name))) return false;
         if ($request->filled('class') &&
             !str_contains(strtolower($item->classs->name ?? ''), strtolower($request->class))) return false;
+        if ($request->filled('classs_id') && $item->classs_id != $request->classs_id) return false;
+        if ($request->filled('unit_id') && $item->unit_id != $request->unit_id) return false;
         if ($request->filled('lecture_date') && $item->lecture_date !== $request->lecture_date) return false;
         if ($request->filled('department_id') && $item->department_id != $request->department_id) return false;
         if ($request->filled('status')) {
