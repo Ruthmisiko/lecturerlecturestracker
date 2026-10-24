@@ -19,7 +19,13 @@ class UserController extends Controller
 
         $users = $this->institutionUsers()
             ->where('id', '!=', $ownerId)
-            ->with('roles', 'departments')
+            ->with([
+                'roles',
+                'institution',
+                'departments' => fn ($q) => $q->withoutGlobalScope('institution'),
+            ])
+            ->orderBy('institution_id')
+            ->orderBy('name')
             ->get();
         return view('users.index', compact('users'));
     }
@@ -66,7 +72,8 @@ class UserController extends Controller
     public function update(Request $request, $id)
     {
         $user          = $this->institutionUsers()->findOrFail($id);
-        $institutionId = $this->chosenInstitutionId($request, $user->institution_id);
+        $previousId    = $user->institution_id;
+        $institutionId = $this->chosenInstitutionId($request, $previousId);
 
         $request->validate($this->departmentRules($institutionId));
 
@@ -80,7 +87,7 @@ class UserController extends Controller
         $user->syncRoles([$request->role]);
         $user->departments()->sync($request->departments ?? []);
 
-        $message = $institutionId === Auth::user()->currentInstitutionId()
+        $message = $institutionId === $previousId
             ? 'User updated successfully.'
             : 'User updated and moved to another institution.';
 
@@ -131,10 +138,13 @@ class UserController extends Controller
         ];
     }
 
-    /** Users belonging to the institution currently being worked in. */
+    /** Users a manager can see: superusers see every institution's users, others only the current institution's. */
     private function institutionUsers()
     {
-        return User::whereNotNull('user_id')
-            ->where('institution_id', Auth::user()->currentInstitutionId());
+        $institutionIds = Auth::user()->isSuperAdmin()
+            ? Auth::user()->accessibleInstitutions()->pluck('id')
+            : [Auth::user()->currentInstitutionId()];
+
+        return User::whereNotNull('user_id')->whereIn('institution_id', $institutionIds);
     }
 }

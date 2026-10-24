@@ -16,6 +16,7 @@
             <tr>
                 <th>Name</th>
                 <th>Email</th>
+                <th>Institution</th>
                 <th>Department</th>
                 <th>Roles</th>
                 <th>Actions</th>
@@ -26,6 +27,7 @@
                 <tr>
                     <td>{{ $user->name }}</td>
                     <td>{{ $user->email }}</td>
+                    <td>{{ $user->institution->name ?? '—' }}</td>
                     <td>{{ $user->departments->pluck('name')->join(', ') ?: '—' }}</td>
                     <td>
                         @foreach ($user->roles as $role)
