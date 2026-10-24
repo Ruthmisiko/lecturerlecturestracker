@@ -35,9 +35,12 @@
         .line { border-top: 1px solid #222; width: 90%; padding-top: 5px; font-weight: bold; font-size: 8px; color: #000; }
         .role { font-size: 7.5px; font-weight: bold; letter-spacing: .5px; margin-top: 4px; color: #444; }
         /* Pinned to the bottom of the page */
-        .powered { position: fixed; bottom: 0; left: 0; right: 0; text-align: center; font-size: 7px; color: #777; }
-        .powered img { width: 42px; height: 42px; display: block; margin: 0 auto 2px; }
-        .powered a { color: #2d2a6b; font-weight: bold; text-decoration: none; }
+        .powered { position: fixed; bottom: 0; left: 0; right: 0; border-top: 1px solid #e5e5e5; padding-top: 4px; }
+        .powered table { margin: 0 auto; border-collapse: collapse; }
+        .powered td { vertical-align: middle; padding: 0; }
+        .powered img { width: 30px; height: 30px; }
+        .powered .txt { padding-left: 6px; font-size: 7px; color: #777; line-height: 1.3; }
+        .powered a { color: #2d2a6b; font-weight: bold; font-size: 8px; text-decoration: none; }
     </style>
 </head>
 <body>
@@ -102,10 +105,14 @@
     </table>
 
     <div class="powered">
-        @if (file_exists($qr = public_path('images/nawema-qr.png')))
-            <img src="{{ $qr }}" alt="nawema.co.ke">
-        @endif
-        Powered by <a href="https://nawema.co.ke">nawema.co.ke</a>
+        <table>
+            <tr>
+                @if (file_exists($qr = public_path('images/nawema-qr.png')))
+                    <td><img src="{{ $qr }}" alt="nawema.co.ke"></td>
+                @endif
+                <td class="txt">Powered by<br><a href="https://nawema.co.ke">nawema.co.ke</a></td>
+            </tr>
+        </table>
     </div>
 </body>
 </html>
