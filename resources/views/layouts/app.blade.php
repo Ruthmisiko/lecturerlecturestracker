@@ -203,10 +203,9 @@
 
     <!-- Footer -->
     <footer class="main-footer text-center">
-        <strong>&copy; {{ date('Y') }} Lecturer Tracker System</strong>
-        <div class="small text-muted mt-1">
+        <span class="text-muted">
             Powered by <a href="https://nawema.co.ke" target="_blank" rel="noopener" class="font-weight-bold">nawema.co.ke</a>
-        </div>
+        </span>
     </footer>
 </div>
 
