@@ -10,17 +10,21 @@
         .org { font-size: 18px; font-weight: bold; color: #1e7e34; }
         .title { font-size: 15px; font-weight: bold; text-align: right; letter-spacing: 2px; }
         .muted { color: #666; }
-        .box { border: 1px solid #ddd; border-radius: 4px; padding: 10px; margin-bottom: 14px; }
+        .box { border: 1px solid #ddd; border-radius: 4px; padding: 10px; margin-bottom: 16px; }
         .grid { width: 100%; border-collapse: collapse; }
         .grid td { padding: 4px 6px; vertical-align: top; }
         .grid .k { color: #666; width: 22%; }
-        .pay { width: 100%; border-collapse: collapse; margin-bottom: 14px; }
-        .pay th { background: #28a745; color: #fff; padding: 7px; text-align: left; }
-        .pay td { padding: 7px; border-bottom: 1px solid #e5e5e5; }
-        .r, .pay th.r { text-align: right; }
-        .ded { color: #c0392b; }
-        .net td { font-size: 14px; font-weight: bold; background: #e9f6ec; border-top: 2px solid #28a745; color: #1e7e34; }
-        h4 { margin: 0 0 6px; font-size: 12px; color: #1e7e34; }
+        .pay { width: 100%; border-collapse: collapse; margin-bottom: 18px; font-size: 12px; }
+        .pay td { padding: 9px 2px; border-bottom: 1px dashed #e0e0e0; }
+        .pay td.v { text-align: right; }
+        .pay .note { color: #888; font-size: 10px; font-weight: normal; }
+        .pay .bold td { font-weight: bold; }
+        .pay .ded td { color: #c0392b; }
+        .pay .net td { font-size: 15px; font-weight: bold; color: #1e7e34; border-top: 2px solid #28a745; border-bottom: 0; padding-top: 12px; }
+        h4 { margin: 0 0 6px; font-size: 12px; }
+        .units { width: 100%; border-collapse: collapse; font-size: 10px; }
+        .units td { padding: 2px 2px; }
+        .units td.v { text-align: right; }
         .sign { width: 100%; margin-top: 40px; }
         .sign td { width: 50%; padding-top: 28px; }
         .line { border-top: 1px solid #555; width: 80%; padding-top: 4px; }
@@ -28,7 +32,10 @@
     </style>
 </head>
 <body>
-    @php $n = fn ($v) => number_format($v, 2); @endphp
+    @php
+        $money = fn ($v) => 'KES ' . number_format($v, 2);
+        $pct   = fn ($v) => rtrim(rtrim(number_format($v, 2), '0'), '.') . '%';
+    @endphp
 
     <div class="header">
         <table>
@@ -49,11 +56,7 @@
         <table class="grid">
             <tr>
                 <td class="k">Lecturer</td><td><strong>{{ $lecturer->name }}</strong></td>
-                <td class="k">Pay Period</td><td>{{ $period }}</td>
-            </tr>
-            <tr>
                 <td class="k">Department</td><td>{{ $lecturer->department->name ?? '—' }}</td>
-                <td class="k">Date Issued</td><td>{{ now()->format('d M Y') }}</td>
             </tr>
             <tr>
                 <td class="k">ID Number</td><td>{{ $lecturer->id_number ?: '—' }}</td>
@@ -67,29 +70,22 @@
     </div>
 
     <table class="pay">
-        <thead>
-            <tr><th>Description</th><th class="r">Details</th><th class="r">Amount (KES)</th></tr>
-        </thead>
-        <tbody>
-            <tr><td>Lecture sessions</td><td class="r">{{ $row->sessions }}</td><td></td></tr>
-            <tr><td>Hours taught</td><td class="r">{{ $n($row->hours) }} hrs × {{ $n($row->rate) }}</td><td class="r"></td></tr>
-            <tr><td><strong>Gross Pay</strong></td><td></td><td class="r"><strong>{{ $n($row->gross) }}</strong></td></tr>
-            <tr><td class="ded">Less: Tax</td><td class="r">{{ rtrim(rtrim(number_format($row->tax_rate, 2), '0'), '.') }}% of gross</td><td class="r ded">({{ $n($row->tax) }})</td></tr>
-            <tr><td class="ded">Less: Housing Levy</td><td class="r">{{ rtrim(rtrim(number_format($row->housing_levy_rate, 2), '0'), '.') }}% of gross</td><td class="r ded">({{ $n($row->housing) }})</td></tr>
-            <tr><td>Total Deductions</td><td></td><td class="r ded">({{ $n($row->tax + $row->housing) }})</td></tr>
-            <tr class="net"><td>NET PAY</td><td></td><td class="r">KES {{ $n($row->net) }}</td></tr>
-        </tbody>
+        <tr><td>Lecture sessions</td><td class="v">{{ $row->sessions }}</td></tr>
+        <tr><td>Total hours</td><td class="v">{{ number_format($row->hours, 2) }} hrs</td></tr>
+        <tr><td>Rate per hour</td><td class="v">{{ $money($row->rate) }}</td></tr>
+        <tr class="bold"><td>Gross amount <span class="note">(hours × rate)</span></td><td class="v">{{ $money($row->gross) }}</td></tr>
+        <tr class="ded"><td>Tax ({{ $pct($row->tax_rate) }})</td><td class="v">− {{ $money($row->tax) }}</td></tr>
+        <tr class="ded"><td>Housing levy ({{ $pct($row->housing_levy_rate) }})</td><td class="v">− {{ $money($row->housing) }}</td></tr>
+        <tr class="net"><td>Net pay</td><td class="v">{{ $money($row->net) }}</td></tr>
     </table>
 
     @if (!empty($row->units))
-        <div class="box">
-            <h4>Hours by Unit</h4>
-            <table class="grid">
-                @foreach ($row->units as $unit => $hours)
-                    <tr><td>{{ $unit }}</td><td class="r">{{ $n($hours) }} hrs</td></tr>
-                @endforeach
-            </table>
-        </div>
+        <h4>Hours by unit</h4>
+        <table class="units">
+            @foreach ($row->units as $unit => $hours)
+                <tr><td>{{ $unit }}</td><td class="v">{{ number_format($hours, 1) }} hrs</td></tr>
+            @endforeach
+        </table>
     @endif
 
     <table class="sign">
@@ -99,6 +95,6 @@
         </tr>
     </table>
 
-    <div class="foot">Computer-generated payslip · {{ now()->format('d M Y, H:i') }}</div>
+    <div class="foot">Computer-generated payslip</div>
 </body>
 </html>
