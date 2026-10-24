@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToInstitution;
 use Illuminate\Database\Eloquent\Model;
 
 class Department extends Model
 {
+    use BelongsToInstitution;
+
     public $table = 'departments';
 
     protected $fillable = [

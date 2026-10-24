@@ -43,6 +43,37 @@
         <!-- Right: Department Switcher -->
         @auth
         <ul class="navbar-nav ml-auto">
+            @php
+                $navInstitutions = Auth::user()->accessibleInstitutions()->get();
+                $navInstitutionId = Auth::user()->currentInstitutionId();
+                $navInstitution = $navInstitutions->firstWhere('id', $navInstitutionId);
+            @endphp
+            @if (Auth::user()->isSuperAdmin())
+                <li class="nav-item dropdown mr-2">
+                    <a class="nav-link dropdown-toggle font-weight-bold text-success" href="#" data-toggle="dropdown" aria-expanded="false">
+                        <i class="fas fa-university mr-1"></i>
+                        {{ $navInstitution->name ?? 'Institution' }}
+                    </a>
+                    <div class="dropdown-menu dropdown-menu-right">
+                        <h6 class="dropdown-header">Switch institution</h6>
+                        <form method="POST" action="{{ route('institution.switch') }}">
+                            @csrf
+                            @foreach ($navInstitutions as $inst)
+                                <button type="submit" name="institution_id" value="{{ $inst->id }}"
+                                        class="dropdown-item {{ $inst->id === $navInstitutionId ? 'active font-weight-bold' : '' }}">
+                                    {{ $inst->name }}
+                                </button>
+                            @endforeach
+                        </form>
+                        <div class="dropdown-divider"></div>
+                        <a class="dropdown-item" href="{{ route('institutions.index') }}"><i class="fas fa-cog mr-1"></i> Manage institutions</a>
+                    </div>
+                </li>
+            @elseif ($navInstitution)
+                <li class="nav-item">
+                    <span class="nav-link font-weight-bold text-success"><i class="fas fa-university mr-1"></i> {{ $navInstitution->name }}</span>
+                </li>
+            @endif
             <li class="nav-item dropdown">
                 @php
                     $navUser     = Auth::user();

@@ -24,6 +24,7 @@ class User extends Authenticatable
         'password',
         'user_id',
         'department_id',
+        'institution_id',
     ];
 
     /**
@@ -75,6 +76,52 @@ class User extends Authenticatable
             ->pluck('departments.id')
             ->map(fn ($id) => (int) $id)
             ->all();
+    }
+
+    public function institution()
+    {
+        return $this->belongsTo(Institution::class);
+    }
+
+    /** Institutions this user may work in: superusers see all of the account's, others only their own. */
+    public function accessibleInstitutions()
+    {
+        $query = Institution::where('owner_id', $this->ownerId())->orderBy('name');
+
+        if (!$this->isSuperAdmin() && $this->institution_id) {
+            $query->where('id', $this->institution_id);
+        }
+
+        return $query;
+    }
+
+    protected ?int $currentInstitutionId = null;
+
+    /**
+     * The institution whose data the user is working in.
+     * Superusers can switch (session); everyone else is locked to their assigned institution.
+     */
+    public function currentInstitutionId(): ?int
+    {
+        if ($this->currentInstitutionId) {
+            return $this->currentInstitutionId;
+        }
+
+        $allowed = $this->accessibleInstitutions()->pluck('id')->map(fn ($id) => (int) $id);
+
+        if ($allowed->isEmpty()) {
+            $allowed = collect([Institution::create(['name' => 'Main Institution', 'owner_id' => $this->ownerId()])->id]);
+        }
+
+        $preferred = $this->isSuperAdmin() ? (int) session('active_institution_id') : 0;
+
+        foreach ([$preferred, (int) $this->institution_id] as $id) {
+            if ($id && $allowed->contains($id)) {
+                return $this->currentInstitutionId = $id;
+            }
+        }
+
+        return $this->currentInstitutionId = $allowed->first();
     }
 
     /** Super admin has no parent user (user_id IS NULL) or holds the superuser role. */

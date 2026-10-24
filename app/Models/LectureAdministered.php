@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToInstitution;
 use Illuminate\Database\Eloquent\Model;
 
 class LectureAdministered extends Model
 {
+    use BelongsToInstitution;
+
     public $table = 'lecture_administereds';
 
     public $fillable = [

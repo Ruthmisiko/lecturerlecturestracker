@@ -21,6 +21,8 @@ Route::get('/', function () {
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [App\Http\Controllers\DashboardController::class, 'index'])->name('dashboard');
     Route::get('/dashboard/report', [App\Http\Controllers\DashboardController::class, 'report'])->name('dashboard.report');
+    Route::post('/institution/switch', [App\Http\Controllers\InstitutionController::class, 'switch'])->name('institution.switch');
+    Route::resource('institutions', App\Http\Controllers\InstitutionController::class)->except('show');
 });
 
 Route::middleware('auth')->group(function () {

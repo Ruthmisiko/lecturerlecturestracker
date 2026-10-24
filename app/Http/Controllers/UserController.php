@@ -17,7 +17,8 @@ class UserController extends Controller
         $user    = Auth::user();
         $ownerId = $user->ownerId();
 
-        $users = User::whereIn('user_id', array_unique([$ownerId, $user->id]))
+        $users = $this->institutionUsers()
+            ->where('id', '!=', $ownerId)
             ->with('roles', 'departments')
             ->get();
         return view('users.index', compact('users'));
@@ -44,8 +45,9 @@ class UserController extends Controller
             'name'          => $request->name,
             'email'         => $request->email,
             'password'      => Hash::make($request->password),
-            'user_id'       => Auth::user()->ownerId(),
-            'department_id' => null,
+            'user_id'        => Auth::user()->ownerId(),
+            'institution_id' => Auth::user()->currentInstitutionId(),
+            'department_id'  => null,
         ]);
 
         $user->assignRole($request->role);
@@ -56,7 +58,7 @@ class UserController extends Controller
 
     public function edit($id)
     {
-        $user        = User::findOrFail($id);
+        $user        = $this->institutionUsers()->findOrFail($id);
         $roles       = Role::all();
         $departments = Department::where('user_id', Auth::user()->ownerId())->get();
         return view('users.edit', compact('user', 'roles', 'departments'));
@@ -66,7 +68,7 @@ class UserController extends Controller
     {
         $request->validate($this->departmentRules());
 
-        $user = User::findOrFail($id);
+        $user = $this->institutionUsers()->findOrFail($id);
 
         $user->update([
             'name'          => $request->name,
@@ -85,7 +87,16 @@ class UserController extends Controller
     {
         return [
             'departments'   => 'nullable|array',
-            'departments.*' => Rule::exists('departments', 'id')->where('user_id', Auth::user()->ownerId()),
+            'departments.*' => Rule::exists('departments', 'id')
+                ->where('user_id', Auth::user()->ownerId())
+                ->where('institution_id', Auth::user()->currentInstitutionId()),
         ];
+    }
+
+    /** Users belonging to the institution currently being worked in. */
+    private function institutionUsers()
+    {
+        return User::whereNotNull('user_id')
+            ->where('institution_id', Auth::user()->currentInstitutionId());
     }
 }

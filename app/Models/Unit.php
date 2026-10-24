@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToInstitution;
 use Illuminate\Database\Eloquent\Model;
 
 class Unit extends Model
 {
+    use BelongsToInstitution;
+
     public $table = 'units';
 
     public $fillable = [
