@@ -61,26 +61,10 @@
                 </div>
 
                 <div class="d-flex flex-wrap align-items-center" style="gap:10px;">
-                    {{-- Payable hours: which clash statuses count towards the amount --}}
-                    <div class="dropdown">
-                        <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
-                            <i class="fas fa-filter mr-1"></i> Payable hrs: <strong id="statusLabel">All</strong>
-                        </button>
-                        <div class="dropdown-menu p-3" style="min-width: 270px;" onclick="event.stopPropagation()">
-                            <h6 class="dropdown-header px-0">Count hours with status</h6>
-                            @foreach ($statusOptions as $key => $label)
-                                <div class="form-check mb-1">
-                                    <input class="form-check-input payable-status recalc" type="checkbox" name="statuses[]" value="{{ $key }}"
-                                           id="st_{{ $key }}" data-label="{{ $label }}" {{ in_array($key, $checked) ? 'checked' : '' }}>
-                                    <label class="form-check-label" for="st_{{ $key }}">{{ $label }}</label>
-                                </div>
-                            @endforeach
-                        </div>
-                    </div>
                     <button type="button" class="btn btn-outline-success" id="recalcBtn">
                         <i class="fas fa-sync-alt mr-1"></i> Recalculate amounts
                     </button>
-                    <small class="text-muted" id="recalcNote">Amount = each lecturer's net pay for the hours and statuses chosen. You can still edit any amount.</small>
+                    <small class="text-muted" id="recalcNote">Amount = each lecturer's net pay for the hours chosen and the <strong>Payable hrs</strong> set on the Amount column. You can still edit any amount.</small>
                 </div>
             </div>
         </div>
@@ -108,7 +92,29 @@
                             <th class="sno">S/NO</th>
                             <th>NAME</th>
                             <th>ACCOUNT NO.</th>
-                            <th class="text-right" style="width:150px;">AMOUNT</th>
+                            <th class="text-right" style="width:170px;">
+                                <div>AMOUNT</div>
+                                {{-- Payable hours: which clash statuses count towards the amount --}}
+                                <div class="dropdown mt-1">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle font-weight-normal" data-toggle="dropdown" aria-expanded="false">
+                                        <i class="fas fa-filter mr-1"></i> Payable hrs: <strong id="statusLabel">All</strong>
+                                    </button>
+                                    <div class="dropdown-menu dropdown-menu-right p-3 text-left" style="min-width: 270px;" onclick="event.stopPropagation()">
+                                        <h6 class="dropdown-header px-0">Count hours with status</h6>
+                                        @foreach ($statusOptions as $key => $label)
+                                            <div class="form-check mb-1 font-weight-normal">
+                                                <input class="form-check-input payable-status" type="checkbox" name="statuses[]" value="{{ $key }}"
+                                                       id="st_{{ $key }}" data-label="{{ $label }}" {{ in_array($key, $checked) ? 'checked' : '' }}>
+                                                <label class="form-check-label" for="st_{{ $key }}">{{ $label }}</label>
+                                            </div>
+                                        @endforeach
+                                        <div class="d-flex justify-content-between mt-2">
+                                            <button type="button" class="btn btn-sm btn-link px-0" id="statusAll">Select all</button>
+                                            <button type="button" class="btn btn-sm btn-success" id="statusApply">Apply</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </th>
                             <th>BANK</th>
                             <th>BRANCH</th>
                             <th style="width:140px;">ID NO.</th>
@@ -290,7 +296,21 @@
 
     document.getElementById('recalcBtn').addEventListener('click', function () { recalc(true); });
     document.querySelectorAll('.recalc').forEach(function (el) {
-        el.addEventListener('change', function () { statusLabel(); recalc(true); });
+        el.addEventListener('change', function () { recalc(true); });
+    });
+
+    document.getElementById('statusAll').addEventListener('click', function () {
+        document.querySelectorAll('.payable-status').forEach(function (b) { b.checked = true; });
+    });
+
+    document.getElementById('statusApply').addEventListener('click', function () {
+        if (!document.querySelector('.payable-status:checked')) {
+            alert('Tick at least one status.');
+            return;
+        }
+        statusLabel();
+        recalc(true);
+        $(this).closest('.dropdown').find('[data-toggle="dropdown"]').dropdown('toggle');
     });
 
     document.getElementById('scheduleForm').addEventListener('submit', function (e) {
