@@ -54,6 +54,7 @@ class LecturerPayroll
                 'id'                => $lecturer->id,
                 'name'              => $lecturer->name,
                 'department'        => $lecturer->department->name ?? '—',
+                'kra_pin'           => $lecturer->kra_pin ?: '—',
                 'sessions'          => $own->count(),
                 'hours'             => $hours,
                 'rate'              => $rate,

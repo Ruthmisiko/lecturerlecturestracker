@@ -26,6 +26,7 @@
                 <th>#</th>
                 <th>Lecturer</th>
                 <th>Department</th>
+                <th>KRA PIN</th>
                 <th class="r">Total Hrs</th>
                 <th class="r">Rate / Hr</th>
                 <th class="r">Total Amount</th>
@@ -40,6 +41,7 @@
                     <td>{{ $i + 1 }}</td>
                     <td>{{ $r->name }}</td>
                     <td>{{ $r->department }}</td>
+                    <td>{{ $r->kra_pin }}</td>
                     <td class="r">{{ $n($r->hours) }}</td>
                     <td class="r">{{ $n($r->rate) }}</td>
                     <td class="r">{{ $n($r->gross) }}</td>
@@ -51,7 +53,7 @@
         </tbody>
         <tfoot>
             <tr>
-                <td colspan="3">TOTAL</td>
+                <td colspan="4">TOTAL</td>
                 <td class="r">{{ $n($totals->hours) }}</td>
                 <td></td>
                 <td class="r">{{ $n($totals->gross) }}</td>

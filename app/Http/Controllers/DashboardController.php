@@ -76,19 +76,37 @@ class DashboardController extends Controller
         return view('dashboard.report', compact('rows', 'totals', 'from', 'to'));
     }
 
+    public function payslip(Request $request, $lecturerId)
+    {
+        $this->authorizeSuperuser();
+
+        [$from, $to] = $this->period($request);
+        $lecturer    = Lecturer::with('department', 'institution')->findOrFail($lecturerId);
+        $row         = (new LecturerPayroll(Auth::user(), $from, $to))->rows()->firstWhere('id', $lecturer->id);
+
+        abort_unless($row, 404);
+
+        $period = $this->periodLabel($from, $to);
+        $slipNo = 'PS-' . str_pad($lecturer->id, 4, '0', STR_PAD_LEFT) . '-' . ($to ? str_replace('-', '', substr($to, 0, 7)) : now()->format('Ym'));
+
+        return PDF::loadView('dashboard.payslip_pdf', compact('lecturer', 'row', 'period', 'slipNo'))
+            ->setPaper('a4')
+            ->download('payslip_' . str($lecturer->name)->slug('_') . '.pdf');
+    }
+
     protected function excel($rows, $totals, $from, $to)
     {
         $data = collect([
             ['Lecturer Payment Report — ' . $this->periodLabel($from, $to)],
             [],
-            ['Lecturer', 'Department', 'Sessions', 'Total Hours', 'Rate / Hr', 'Gross Amount', 'Tax', 'Housing Levy', 'Net Pay'],
+            ['Lecturer', 'Department', 'KRA PIN', 'Sessions', 'Total Hours', 'Rate / Hr', 'Gross Amount', 'Tax', 'Housing Levy', 'Net Pay'],
         ]);
 
         foreach ($rows as $r) {
-            $data->push([$r->name, $r->department, $r->sessions, $r->hours, $r->rate, $r->gross, $r->tax, $r->housing, $r->net]);
+            $data->push([$r->name, $r->department, $r->kra_pin, $r->sessions, $r->hours, $r->rate, $r->gross, $r->tax, $r->housing, $r->net]);
         }
 
-        $data->push(['TOTAL', '', $totals->sessions, $totals->hours, '', $totals->gross, $totals->tax, $totals->housing, $totals->net]);
+        $data->push(['TOTAL', '', '', $totals->sessions, $totals->hours, '', $totals->gross, $totals->tax, $totals->housing, $totals->net]);
 
         return Excel::download(new CollectionExport($data), 'lecturer_payment_report.xlsx');
     }

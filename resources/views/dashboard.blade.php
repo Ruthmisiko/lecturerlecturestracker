@@ -191,6 +191,8 @@
 <script>
 (function () {
     var rows = @json($rows->keyBy('id'));
+    @php $payslipUrl = route('dashboard.payslip', array_merge(['lecturer' => '__ID__'], request()->only('from', 'to'))); @endphp
+    var payslipUrl = @json($payslipUrl);
     var fmt = new Intl.NumberFormat('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     var money = function (v) { return 'KES ' + fmt.format(v); };
     var esc = function (s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; };
@@ -211,9 +213,13 @@
         detail.innerHTML =
             '<div class="d-flex justify-content-between align-items-start mb-3">' +
                 '<div><h4 class="mb-0 font-weight-bold">' + esc(r.name) + '</h4><span class="text-muted">' + esc(r.department) + '</span></div>' +
-                '<a href="{{ url('lecturers') }}/' + r.id + '" class="btn btn-sm btn-outline-success">View lectures</a>' +
+                '<div class="text-nowrap">' +
+                    '<a href="{{ url('lecturers') }}/' + r.id + '" class="btn btn-sm btn-outline-success mr-1">View lectures</a>' +
+                    '<a href="' + payslipUrl.replace('__ID__', r.id) + '" class="btn btn-sm btn-success"><i class="fas fa-print mr-1"></i>Print Payslip</a>' +
+                '</div>' +
             '</div>' +
             (r.rate <= 0 && r.hours > 0 ? '<div class="alert alert-warning py-2 small">No rate per hour set for this lecturer.</div>' : '') +
+            line('KRA PIN', esc(r.kra_pin)) +
             line('Lecture sessions', r.sessions) +
             line('Total hours', r.hours.toFixed(2) + ' hrs') +
             line('Rate per hour', money(r.rate)) +

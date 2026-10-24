@@ -49,12 +49,14 @@
                         <th>#</th>
                         <th>Lecturer</th>
                         <th>Department</th>
+                        <th>KRA PIN</th>
                         <th class="text-right">Total Hrs</th>
                         <th class="text-right">Rate / Hr</th>
                         <th class="text-right">Total Amount</th>
                         <th class="text-right">Tax</th>
                         <th class="text-right">Housing Levy</th>
                         <th class="text-right">Net Pay</th>
+                        <th></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -63,26 +65,32 @@
                             <td>{{ $i + 1 }}</td>
                             <td><a href="{{ route('lecturers.show', $r->id) }}">{{ $r->name }}</a></td>
                             <td>{{ $r->department }}</td>
+                            <td>{{ $r->kra_pin }}</td>
                             <td class="text-right">{{ $n($r->hours) }}</td>
                             <td class="text-right">{!! $r->rate > 0 ? $n($r->rate) : '<span class="badge badge-warning">Not set</span>' !!}</td>
                             <td class="text-right">{{ $n($r->gross) }}</td>
                             <td class="text-right text-danger">{{ $n($r->tax) }}</td>
                             <td class="text-right text-danger">{{ $n($r->housing) }}</td>
                             <td class="text-right font-weight-bold text-success">{{ $n($r->net) }}</td>
+                            <td class="text-right">
+                                <a href="{{ route('dashboard.payslip', array_merge(['lecturer' => $r->id], request()->only('from', 'to'))) }}"
+                                   class="btn btn-xs btn-outline-success" title="Print payslip"><i class="fas fa-print"></i></a>
+                            </td>
                         </tr>
                     @empty
-                        <tr><td colspan="9" class="text-center text-muted p-4">No lecturers found.</td></tr>
+                        <tr><td colspan="11" class="text-center text-muted p-4">No lecturers found.</td></tr>
                     @endforelse
                 </tbody>
                 <tfoot>
                     <tr class="font-weight-bold" style="background:#e9f6ec;">
-                        <td colspan="3">TOTAL</td>
+                        <td colspan="4">TOTAL</td>
                         <td class="text-right">{{ $n($totals->hours) }}</td>
                         <td></td>
                         <td class="text-right">{{ $n($totals->gross) }}</td>
                         <td class="text-right text-danger">{{ $n($totals->tax) }}</td>
                         <td class="text-right text-danger">{{ $n($totals->housing) }}</td>
                         <td class="text-right text-success">{{ $n($totals->net) }}</td>
+                        <td></td>
                     </tr>
                 </tfoot>
             </table>
