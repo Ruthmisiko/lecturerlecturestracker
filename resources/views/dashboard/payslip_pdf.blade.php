@@ -17,7 +17,7 @@
         .grid td { padding: 2px 0; vertical-align: top; }
         .grid .k { color: #666; width: 36%; }
         .pay { width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 9px; }
-        .pay td { padding: 5px 0; border-bottom: 1px dashed #e0e0e0; }
+        .pay td { padding: 5px 0; }
         .pay td.v { text-align: right; white-space: nowrap; }
         .pay .note { color: #888; font-size: 7.5px; font-weight: normal; }
         .pay .bold td { font-weight: bold; }
