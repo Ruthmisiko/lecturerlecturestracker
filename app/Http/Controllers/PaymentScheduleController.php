@@ -42,6 +42,7 @@ class PaymentScheduleController extends Controller
             'name'           => $l->name,
             'account_number' => $l->account_number,
             'amount'         => $amounts[$l->id] ?? 0,
+            'statuses'       => null, // all statuses until changed on the row
             'bank'           => $l->bank_name,
             'branch'         => $l->bank_branch,
             'id_number'      => $l->id_number,
@@ -86,7 +87,7 @@ class PaymentScheduleController extends Controller
     {
         $schedule  = PaymentSchedule::with('items')->findOrFail($id);
         $lecturers = $this->lecturers();
-        $items     = $schedule->items->map(fn ($i) => $i->only(['lecturer_id', 'name', 'account_number', 'amount', 'bank', 'branch', 'id_number']))->values();
+        $items     = $schedule->items->map(fn ($i) => $i->only(['lecturer_id', 'name', 'account_number', 'amount', 'statuses', 'bank', 'branch', 'id_number']))->values();
 
         return view('payment_schedules.form', compact('schedule', 'items', 'lecturers'));
     }
@@ -206,6 +207,8 @@ class PaymentScheduleController extends Controller
             'items.*.name'           => 'required|string|max:255',
             'items.*.account_number' => 'nullable|string|max:50',
             'items.*.amount'         => 'required|numeric|min:0',
+            'items.*.statuses'       => 'nullable|array',
+            'items.*.statuses.*'     => 'in:' . implode(',', array_keys(LecturerPayroll::STATUSES)),
             'items.*.bank'           => 'nullable|string|max:100',
             'items.*.branch'         => 'nullable|string|max:100',
             'items.*.id_number'      => 'nullable|string|max:50',
@@ -237,6 +240,7 @@ class PaymentScheduleController extends Controller
                 'name'           => trim($item['name']),
                 'account_number' => trim($item['account_number'] ?? '') ?: null,
                 'amount'         => $item['amount'],
+                'statuses'       => LecturerPayroll::normaliseStatuses($item['statuses'] ?? null),
                 'bank'           => trim($item['bank'] ?? '') ?: null,
                 'branch'         => trim($item['branch'] ?? '') ?: null,
                 'id_number'      => trim($item['id_number'] ?? '') ?: null,

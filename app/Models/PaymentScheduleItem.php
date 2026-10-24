@@ -8,11 +8,12 @@ class PaymentScheduleItem extends Model
 {
     protected $fillable = [
         'payment_schedule_id', 'lecturer_id', 'position', 'name',
-        'account_number', 'amount', 'bank', 'branch', 'id_number',
+        'account_number', 'amount', 'statuses', 'bank', 'branch', 'id_number',
     ];
 
     protected $casts = [
-        'amount' => 'float',
+        'amount'   => 'float',
+        'statuses' => 'array',
     ];
 
     public function schedule()

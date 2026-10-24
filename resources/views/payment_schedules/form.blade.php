@@ -2,22 +2,24 @@
 
 @push('styles')
 <style>
-    .schedule-table { min-width: 980px; }
+    .schedule-table { min-width: 1080px; }
     .schedule-table th { white-space: nowrap; font-size: 13px; }
     .schedule-table td { vertical-align: middle; padding: 4px 6px; }
     .schedule-table .form-control { height: 32px; padding: 4px 8px; font-size: 14px; }
     .schedule-table .sno { width: 48px; text-align: center; color: #6c757d; }
-    .schedule-table .amount input { text-align: right; }
+    .schedule-table .amount-input { text-align: right; }
     .schedule-table tfoot td { font-weight: 700; font-size: 15px; }
+    .payable-btn { font-size: 12px; padding: 1px 8px; margin-top: 3px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .payable-menu { min-width: 270px; }
     .sign-card label { font-size: 13px; color: #6c757d; margin-bottom: 2px; }
+    .row-busy .amount-input { opacity: .5; }
 </style>
 @endpush
 
 @section('content')
 @php
-    $statusOptions = \App\Services\LecturerPayroll::STATUSES;
-    $checked = old('statuses', $schedule->statuses ?? array_keys($statusOptions)) ?: array_keys($statusOptions);
     $isEdit = $schedule->exists;
+    $rows   = collect(old('items', $items))->values();
 @endphp
 
 <section class="content-header">
@@ -62,9 +64,9 @@
 
                 <div class="d-flex flex-wrap align-items-center" style="gap:10px;">
                     <button type="button" class="btn btn-outline-success" id="recalcBtn">
-                        <i class="fas fa-sync-alt mr-1"></i> Recalculate amounts
+                        <i class="fas fa-sync-alt mr-1"></i> Recalculate all amounts
                     </button>
-                    <small class="text-muted" id="recalcNote">Amount = each lecturer's net pay for the hours chosen and the <strong>Payable hrs</strong> set on the Amount column. You can still edit any amount.</small>
+                    <small class="text-muted" id="recalcNote">Amount = the lecturer's net pay for the hours chosen. Use <strong>Payable hrs</strong> under each amount to pick which statuses count for that lecturer. You can still type any amount.</small>
                 </div>
             </div>
         </div>
@@ -85,60 +87,21 @@
                     <button type="button" class="btn btn-sm btn-outline-danger" id="removeZeroBtn" title="Remove rows whose amount is 0">Remove 0 amounts</button>
                 </div>
             </div>
-            <div class="card-body p-0 table-responsive">
+            <div class="card-body p-0 table-responsive" style="overflow: visible;">
                 <table class="table table-bordered table-striped mb-0 schedule-table">
                     <thead class="thead-light">
                         <tr>
                             <th class="sno">S/NO</th>
                             <th>NAME</th>
                             <th>ACCOUNT NO.</th>
-                            <th class="text-right" style="width:170px;">
-                                <div>AMOUNT</div>
-                                {{-- Payable hours: which clash statuses count towards the amount --}}
-                                <div class="dropdown mt-1">
-                                    <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle font-weight-normal" data-toggle="dropdown" aria-expanded="false">
-                                        <i class="fas fa-filter mr-1"></i> Payable hrs: <strong id="statusLabel">All</strong>
-                                    </button>
-                                    <div class="dropdown-menu dropdown-menu-right p-3 text-left" style="min-width: 270px;" onclick="event.stopPropagation()">
-                                        <h6 class="dropdown-header px-0">Count hours with status</h6>
-                                        @foreach ($statusOptions as $key => $label)
-                                            <div class="form-check mb-1 font-weight-normal">
-                                                <input class="form-check-input payable-status" type="checkbox" name="statuses[]" value="{{ $key }}"
-                                                       id="st_{{ $key }}" data-label="{{ $label }}" {{ in_array($key, $checked) ? 'checked' : '' }}>
-                                                <label class="form-check-label" for="st_{{ $key }}">{{ $label }}</label>
-                                            </div>
-                                        @endforeach
-                                        <div class="d-flex justify-content-between mt-2">
-                                            <button type="button" class="btn btn-sm btn-link px-0" id="statusAll">Select all</button>
-                                            <button type="button" class="btn btn-sm btn-success" id="statusApply">Apply</button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </th>
+                            <th class="text-right" style="width:190px;">AMOUNT</th>
                             <th>BANK</th>
                             <th>BRANCH</th>
                             <th style="width:140px;">ID NO.</th>
                             <th style="width:40px;"></th>
                         </tr>
                     </thead>
-                    <tbody id="rows">
-                        @foreach (old('items', $items) as $i => $item)
-                            <tr data-lecturer="{{ $item['lecturer_id'] ?? '' }}">
-                                <td class="sno"></td>
-                                <td>
-                                    <input type="hidden" name="items[{{ $i }}][lecturer_id]" value="{{ $item['lecturer_id'] ?? '' }}">
-                                    <input type="text" name="items[{{ $i }}][name]" class="form-control" required value="{{ $item['name'] ?? '' }}">
-                                </td>
-                                <td><input type="text" name="items[{{ $i }}][account_number]" class="form-control" value="{{ $item['account_number'] ?? '' }}"></td>
-                                <td class="amount"><input type="number" step="0.01" min="0" name="items[{{ $i }}][amount]" class="form-control amount-input" required
-                                                          value="{{ number_format((float) ($item['amount'] ?? 0), 2, '.', '') }}"></td>
-                                <td><input type="text" name="items[{{ $i }}][bank]" class="form-control" value="{{ $item['bank'] ?? '' }}"></td>
-                                <td><input type="text" name="items[{{ $i }}][branch]" class="form-control" value="{{ $item['branch'] ?? '' }}"></td>
-                                <td><input type="text" name="items[{{ $i }}][id_number]" class="form-control" value="{{ $item['id_number'] ?? '' }}"></td>
-                                <td class="text-center"><button type="button" class="btn btn-sm btn-link text-danger remove-row" title="Remove"><i class="fas fa-times"></i></button></td>
-                            </tr>
-                        @endforeach
-                    </tbody>
+                    <tbody id="rows"></tbody>
                     <tfoot>
                         <tr>
                             <td></td>
@@ -193,14 +156,42 @@
 @push('scripts')
 <script>
 (function () {
-    var lecturers = @json($lecturers->keyBy('id'));
+    var STATUSES   = @json(\App\Services\LecturerPayroll::STATUSES);
+    var ALL        = Object.keys(STATUSES);
+    var lecturers  = @json($lecturers->keyBy('id'));
+    var initial    = @json($rows);
     var amountsUrl = @json(route('payment-schedules.amounts'));
-    var amounts = {};
-    var rowsEl = document.getElementById('rows');
-    var nextIndex = rowsEl.children.length;
+    var cache      = {};   // "statusKey" => { lecturerId: net }
+    var rowsEl     = document.getElementById('rows');
+    var nextIndex  = 0;
 
     function esc(s) { var d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; }
     function money(v) { return Number(v || 0).toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+
+    function rowStatuses(tr) {
+        return Array.prototype.map.call(tr.querySelectorAll('.payable-status:checked'), function (b) { return b.value; });
+    }
+    function statusKey(list) { return list.length === 0 || list.length === ALL.length ? 'all' : list.slice().sort().join(','); }
+    function statusText(list) {
+        return list.length === 0 || list.length === ALL.length ? 'All' : list.map(function (s) { return STATUSES[s]; }).join(', ');
+    }
+
+    /** Net pay for every lecturer with the given statuses (cached per period + status set). */
+    function fetchAmounts(list) {
+        var params = new URLSearchParams();
+        var from = document.getElementById('periodFrom').value, to = document.getElementById('periodTo').value;
+        if (from) params.append('period_from', from);
+        if (to) params.append('period_to', to);
+        if (statusKey(list) !== 'all') list.forEach(function (s) { params.append('statuses[]', s); });
+
+        var key = params.toString();
+        if (!cache[key]) {
+            cache[key] = fetch(amountsUrl + '?' + key, { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' })
+                .then(function (r) { if (!r.ok) throw new Error(); return r.json(); })
+                .catch(function (e) { delete cache[key]; throw e; });
+        }
+        return cache[key];
+    }
 
     function renumber() {
         var total = 0;
@@ -209,6 +200,39 @@
             total += parseFloat(tr.querySelector('.amount-input').value) || 0;
         });
         document.getElementById('total').textContent = money(total);
+    }
+
+    /** Recalculate one row's amount from its own payable statuses. */
+    function refreshRow(tr) {
+        var id = tr.dataset.lecturer;
+        if (!id) return Promise.resolve();
+        tr.classList.add('row-busy');
+        return fetchAmounts(rowStatuses(tr)).then(function (data) {
+            tr.querySelector('.amount-input').value = Number(data[id] || 0).toFixed(2);
+            renumber();
+        }).catch(function () {
+            document.getElementById('recalcNote').textContent = 'Could not refresh amounts. Check your connection and try again.';
+        }).finally(function () { tr.classList.remove('row-busy'); });
+    }
+
+    function payableDropdown(i, selected) {
+        var on = selected && selected.length ? selected : ALL;
+        var boxes = ALL.map(function (s) {
+            var id = 'st_' + i + '_' + s;
+            return '<div class="form-check mb-1">' +
+                '<input class="form-check-input payable-status" type="checkbox" name="items[' + i + '][statuses][]" value="' + s + '" id="' + id + '"' + (on.indexOf(s) !== -1 ? ' checked' : '') + '>' +
+                '<label class="form-check-label" for="' + id + '">' + esc(STATUSES[s]) + '</label></div>';
+        }).join('');
+        return '<div class="dropdown">' +
+            '<button type="button" class="btn btn-outline-secondary payable-btn dropdown-toggle" data-toggle="dropdown" aria-expanded="false" title="Which statuses count for this lecturer">' +
+                '<i class="fas fa-filter mr-1"></i>Payable hrs: <strong class="payable-label">' + esc(statusText(on)) + '</strong></button>' +
+            '<div class="dropdown-menu dropdown-menu-right p-3 text-left payable-menu" onclick="event.stopPropagation()">' +
+                '<h6 class="dropdown-header px-0">Count hours with status</h6>' + boxes +
+                '<div class="d-flex justify-content-between mt-2">' +
+                    '<button type="button" class="btn btn-sm btn-link px-0 payable-all">Select all</button>' +
+                    '<button type="button" class="btn btn-sm btn-success payable-apply">Apply</button>' +
+                '</div>' +
+            '</div></div>';
     }
 
     function addRow(item) {
@@ -222,7 +246,10 @@
             '<td class="sno"></td>' +
             '<td><input type="hidden" name="items[' + i + '][lecturer_id]" value="' + esc(item.lecturer_id || '') + '">' + f('name', item.name, ' required') + '</td>' +
             '<td>' + f('account_number', item.account_number) + '</td>' +
-            '<td class="amount"><input type="number" step="0.01" min="0" name="items[' + i + '][amount]" class="form-control amount-input" required value="' + Number(item.amount || 0).toFixed(2) + '"></td>' +
+            '<td class="text-right">' +
+                '<input type="number" step="0.01" min="0" name="items[' + i + '][amount]" class="form-control amount-input" required value="' + Number(item.amount || 0).toFixed(2) + '">' +
+                (item.lecturer_id ? payableDropdown(i, item.statuses) : '') +
+            '</td>' +
             '<td>' + f('bank', item.bank) + '</td>' +
             '<td>' + f('branch', item.branch) + '</td>' +
             '<td>' + f('id_number', item.id_number) + '</td>' +
@@ -232,10 +259,20 @@
         return tr;
     }
 
+    // Row actions (remove, per-row payable statuses)
     rowsEl.addEventListener('click', function (e) {
+        var tr = e.target.closest('tr');
         if (e.target.closest('.remove-row')) {
-            e.target.closest('tr').remove();
+            tr.remove();
             renumber();
+        } else if (e.target.closest('.payable-all')) {
+            tr.querySelectorAll('.payable-status').forEach(function (b) { b.checked = true; });
+        } else if (e.target.closest('.payable-apply')) {
+            var list = rowStatuses(tr);
+            if (!list.length) { alert('Tick at least one status.'); return; }
+            tr.querySelector('.payable-label').textContent = statusText(list);
+            $(tr).find('[data-toggle="dropdown"]').dropdown('toggle');
+            refreshRow(tr);
         }
     });
     rowsEl.addEventListener('input', function (e) {
@@ -243,12 +280,12 @@
     });
 
     document.getElementById('addLecturerBtn').addEventListener('click', function () {
-        var id = document.getElementById('addLecturer').value;
-        var l = lecturers[id];
+        var l = lecturers[document.getElementById('addLecturer').value];
         if (!l) return;
-        addRow({ lecturer_id: l.id, name: l.name, account_number: l.account_number, bank: l.bank_name,
-                 branch: l.bank_branch, id_number: l.id_number, amount: amounts[l.id] || 0 })
-            .querySelector('input[name$="[account_number]"]').focus();
+        var tr = addRow({ lecturer_id: l.id, name: l.name, account_number: l.account_number, bank: l.bank_name,
+                          branch: l.bank_branch, id_number: l.id_number, amount: 0, statuses: null });
+        refreshRow(tr);
+        tr.querySelector('input[name$="[account_number]"]').focus();
     });
 
     document.getElementById('addBlankBtn').addEventListener('click', function () {
@@ -262,56 +299,13 @@
         renumber();
     });
 
-    function statusLabel() {
-        var boxes = document.querySelectorAll('.payable-status');
-        var on = Array.prototype.filter.call(boxes, function (b) { return b.checked; });
-        document.getElementById('statusLabel').textContent =
-            on.length === boxes.length || on.length === 0 ? 'All' : on.map(function (b) { return b.dataset.label; }).join(', ');
-    }
-
-    // Fetch net pay for the chosen period/statuses and update every lecturer row's amount.
-    function recalc(updateRows) {
-        var params = new URLSearchParams();
-        ['periodFrom', 'periodTo'].forEach(function (id) {
-            var v = document.getElementById(id).value;
-            if (v) params.append(id === 'periodFrom' ? 'period_from' : 'period_to', v);
-        });
-        document.querySelectorAll('.payable-status:checked').forEach(function (b) { params.append('statuses[]', b.value); });
-
+    function refreshAll() {
+        cache = {};
         var note = document.getElementById('recalcNote');
-        fetch(amountsUrl + '?' + params.toString(), { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' })
-            .then(function (r) { return r.json(); })
-            .then(function (data) {
-                amounts = data;
-                if (!updateRows) return;
-                Array.prototype.forEach.call(rowsEl.children, function (tr) {
-                    var id = tr.dataset.lecturer;
-                    if (id && data[id] !== undefined) tr.querySelector('.amount-input').value = Number(data[id]).toFixed(2);
-                });
-                renumber();
-                note.textContent = 'Amounts updated.';
-            })
-            .catch(function () { note.textContent = 'Could not refresh amounts. Check your connection and try again.'; });
+        Promise.all(Array.prototype.map.call(rowsEl.children, refreshRow)).then(function () { note.textContent = 'Amounts updated.'; });
     }
-
-    document.getElementById('recalcBtn').addEventListener('click', function () { recalc(true); });
-    document.querySelectorAll('.recalc').forEach(function (el) {
-        el.addEventListener('change', function () { recalc(true); });
-    });
-
-    document.getElementById('statusAll').addEventListener('click', function () {
-        document.querySelectorAll('.payable-status').forEach(function (b) { b.checked = true; });
-    });
-
-    document.getElementById('statusApply').addEventListener('click', function () {
-        if (!document.querySelector('.payable-status:checked')) {
-            alert('Tick at least one status.');
-            return;
-        }
-        statusLabel();
-        recalc(true);
-        $(this).closest('.dropdown').find('[data-toggle="dropdown"]').dropdown('toggle');
-    });
+    document.getElementById('recalcBtn').addEventListener('click', refreshAll);
+    document.querySelectorAll('.recalc').forEach(function (el) { el.addEventListener('change', refreshAll); });
 
     document.getElementById('scheduleForm').addEventListener('submit', function (e) {
         if (!rowsEl.children.length) {
@@ -320,9 +314,7 @@
         }
     });
 
-    statusLabel();
-    renumber();
-    recalc(false); // load amounts for the "Add lecturer" button without touching existing rows
+    initial.forEach(addRow);
 })();
 </script>
 @endpush
