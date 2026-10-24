@@ -138,7 +138,21 @@ class InstitutionController extends Controller
             }
 
             if ($request->hasFile($type)) {
-                $data[$column] = $request->file($type)->store("institutions/{$institution->id}", 'local');
+                try {
+                    $path = $request->file($type)->store("institutions/{$institution->id}", 'local');
+                } catch (\Throwable $e) {
+                    report($e);
+                    $path = false;
+                }
+
+                if (!$path) {
+                    return back()->withInput()->withErrors([
+                        $type => "Could not save the {$type} on the server. The storage folder is probably not writable "
+                            . '(run: chown -R www-data:www-data storage bootstrap/cache && chmod -R 775 storage bootstrap/cache).',
+                    ]);
+                }
+
+                $data[$column] = $path;
             }
         }
 
