@@ -242,6 +242,68 @@
         </div>
     @endif
 
+    {{-- Email payslip --}}
+    @php
+        $periodText = !$from && !$to ? 'all lectures to date' : (($from ? \Carbon\Carbon::parse($from)->format('d M Y') : 'the start') . ' to ' . ($to ? \Carbon\Carbon::parse($to)->format('d M Y') : 'today'));
+        $institutionName = \App\Models\Institution::find(Auth::user()->currentInstitutionId())?->name;
+    @endphp
+    <div class="modal fade" id="emailModal" tabindex="-1" role="dialog" aria-labelledby="emailModalTitle" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <form class="modal-content" id="emailForm">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="emailModalTitle"><i class="far fa-envelope mr-1"></i> Email Payslip</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                </div>
+                <div class="modal-body">
+                    @if ($emailConfigs->isEmpty())
+                        <div class="alert alert-warning mb-0">
+                            No email account is set up yet. Add one under
+                            <a href="{{ route('email-configurations.index') }}">Email Settings</a>, then come back.
+                        </div>
+                    @else
+                        <div class="form-group">
+                            <label>Send from</label>
+                            @if ($emailConfigs->count() > 1)
+                                <select name="email_configuration_id" class="form-control">
+                                    @foreach ($emailConfigs as $cfg)
+                                        <option value="{{ $cfg->id }}" {{ $cfg->is_default ? 'selected' : '' }}>{{ $cfg->name }} &lt;{{ $cfg->from_address }}&gt;{{ $cfg->is_default ? ' (default)' : '' }}</option>
+                                    @endforeach
+                                </select>
+                            @else
+                                <input type="hidden" name="email_configuration_id" value="{{ $emailConfigs->first()->id }}">
+                                <div class="form-control-plaintext font-weight-bold">{{ $emailConfigs->first()->name }} &lt;{{ $emailConfigs->first()->from_address }}&gt;</div>
+                            @endif
+                        </div>
+                        <div class="form-group">
+                            <label>To (lecturer's email)</label>
+                            <input type="email" name="to" id="emailTo" class="form-control" required maxlength="190">
+                            <div class="form-check mt-1">
+                                <input class="form-check-input" type="checkbox" name="save_email" value="1" id="saveEmail">
+                                <label class="form-check-label small" for="saveEmail">Save this as the lecturer's email address</label>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Subject</label>
+                            <input type="text" name="subject" id="emailSubject" class="form-control" required maxlength="200">
+                        </div>
+                        <div class="form-group">
+                            <label>Message</label>
+                            <textarea name="body" id="emailBody" class="form-control" rows="9" required maxlength="10000"></textarea>
+                        </div>
+                        <div class="small text-muted"><i class="fas fa-paperclip mr-1"></i> Attachment: <span id="emailAttachment"></span> (payslip for the period and payable hours shown on the dashboard)</div>
+                        <div class="alert mt-3 mb-0 d-none" id="emailResult"></div>
+                    @endif
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                    @if ($emailConfigs->isNotEmpty())
+                        <button type="submit" class="btn btn-success" id="emailSend"><i class="far fa-paper-plane mr-1"></i> Send</button>
+                    @endif
+                </div>
+            </form>
+        </div>
+    </div>
+
     {{-- Reports (charts) --}}
     <div id="reports" class="pt-2">
         <h4 class="font-weight-bold mb-3"><i class="fas fa-chart-bar mr-1 text-success"></i> Reports</h4>
@@ -393,7 +455,8 @@
                 '<div><h4 class="mb-0 font-weight-bold">' + esc(r.name) + '</h4><span class="text-muted">' + esc(r.department) + '</span></div>' +
                 '<div class="text-nowrap">' +
                     '<a href="{{ url('lecturers') }}/' + r.id + '" class="btn btn-sm btn-outline-brand mr-1">View lectures</a>' +
-                    '<a href="' + payslipUrl.replace('__ID__', r.id) + '" class="btn btn-sm btn-success"><i class="fas fa-print mr-1"></i>Print Payslip</a>' +
+                    '<a href="' + payslipUrl.replace('__ID__', r.id) + '" class="btn btn-sm btn-success mr-1"><i class="fas fa-print mr-1"></i>Print Payslip</a>' +
+                    '<button type="button" class="btn btn-sm btn-brand email-payslip" data-id="' + r.id + '"><i class="far fa-envelope mr-1"></i>Email Payslip</button>' +
                 '</div>' +
             '</div>' +
             (r.rate <= 0 && r.hours > 0 ? '<div class="alert alert-warning py-2 small">No rate per hour set for this lecturer.</div>' : '') +
@@ -419,6 +482,7 @@
                       '<div class="narration-text" id="narrationText">' + esc(narration(r)) + '</div>' +
                   '</div>'
                 : '') +
+            (lastEmailed[r.id] ? '<p class="small text-success mt-3 mb-0"><i class="far fa-envelope mr-1"></i>Payslip last emailed to ' + esc(lastEmailed[r.id].to) + ' on ' + esc(lastEmailed[r.id].at) + '</p>' : '') +
             (r.last_lecture ? '<p class="small text-muted mt-3 mb-0">Last lecture: ' + esc(r.last_lecture) + '</p>' : '');
 
         document.querySelectorAll('.lecturer-item').forEach(function (el) {
@@ -435,6 +499,70 @@
         document.querySelectorAll('.lecturer-item').forEach(function (el) {
             el.style.setProperty('display', el.dataset.search.indexOf(q) !== -1 ? '' : 'none', 'important');
         });
+    });
+
+    // ---- Email payslip ----
+    @php
+        $emailUrl = route('dashboard.payslip.email', ['lecturer' => '__ID__']) . '?' . http_build_query(request()->only('from', 'to', 'statuses'));
+        $lastEmailedJs = (object) $lastEmailed->all();
+    @endphp
+    var emailUrl     = @json($emailUrl);
+    var lastEmailed  = @json($lastEmailedJs);
+    var periodText   = @json($periodText);
+    var senderName   = @json($institutionName ?? '');
+    var emailFor     = null;
+
+    function openEmail(id) {
+        var r = rows[id];
+        if (!r || !document.getElementById('emailTo')) { $('#emailModal').modal('show'); return; }
+        emailFor = id;
+        document.getElementById('emailTo').value = r.email || '';
+        document.getElementById('saveEmail').checked = false;
+        document.getElementById('emailSubject').value = 'Payslip – ' + r.name + ' – ' + periodText;
+        document.getElementById('emailBody').value =
+            'Dear ' + r.name + ',\n\n' +
+            'Please find attached your payslip for ' + periodText + '.\n\n' +
+            'Hours: ' + num(r.hours, 2) + '\n' +
+            'Gross amount: ' + ksh(r.gross) + '\n' +
+            'Net pay: ' + ksh(r.net) + '\n\n' +
+            'Kind regards,\n' + (senderName || 'Accounts Office');
+        document.getElementById('emailAttachment').textContent =
+            'payslip_' + r.name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') + '.pdf';
+        document.getElementById('emailResult').className = 'alert mt-3 mb-0 d-none';
+        $('#emailModal').modal('show');
+    }
+
+    detail.addEventListener('click', function (e) {
+        var btn = e.target.closest('.email-payslip');
+        if (btn) openEmail(btn.dataset.id);
+    });
+
+    var emailForm = document.getElementById('emailForm');
+    emailForm.addEventListener('submit', function (e) {
+        e.preventDefault();
+        if (!emailFor) return;
+        var send = document.getElementById('emailSend'), res = document.getElementById('emailResult');
+        send.disabled = true;
+        send.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Sending…';
+        fetch(emailUrl.replace('__ID__', emailFor), {
+            method: 'POST', credentials: 'same-origin',
+            headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': @json(csrf_token()) },
+            body: new FormData(emailForm)
+        })
+            .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+            .then(function (x) {
+                var msg = x.j.errors ? Object.values(x.j.errors)[0][0] : (x.j.message || 'Something went wrong.');
+                res.className = 'alert mt-3 mb-0 ' + (x.ok ? 'alert-success' : 'alert-danger');
+                res.textContent = msg;
+                if (x.ok) {
+                    var to = document.getElementById('emailTo').value;
+                    lastEmailed[emailFor] = { to: to, at: x.j.sent_at };
+                    if (document.getElementById('saveEmail').checked) rows[emailFor].email = to;
+                    show(emailFor);
+                }
+            })
+            .catch(function () { res.className = 'alert mt-3 mb-0 alert-danger'; res.textContent = 'Could not reach the server. Please try again.'; })
+            .finally(function () { send.disabled = false; send.innerHTML = '<i class="far fa-paper-plane mr-1"></i> Send'; });
     });
 
     // Re-open the lecturer that was selected before the page reloaded (e.g. after changing filters).

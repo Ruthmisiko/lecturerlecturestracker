@@ -22,6 +22,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [App\Http\Controllers\DashboardController::class, 'index'])->name('dashboard');
     Route::get('/dashboard/report', [App\Http\Controllers\DashboardController::class, 'report'])->name('dashboard.report');
     Route::get('/dashboard/report/row', [App\Http\Controllers\DashboardController::class, 'reportRow'])->name('dashboard.report.row');
+    Route::post('/dashboard/payslip/{lecturer}/email', [App\Http\Controllers\DashboardController::class, 'emailPayslip'])->name('dashboard.payslip.email');
+    Route::post('/email-configurations/{email_configuration}/test', [App\Http\Controllers\EmailConfigurationController::class, 'test'])->name('email-configurations.test');
+    Route::post('/email-configurations/{email_configuration}/default', [App\Http\Controllers\EmailConfigurationController::class, 'makeDefault'])->name('email-configurations.default');
+    Route::resource('email-configurations', App\Http\Controllers\EmailConfigurationController::class)->except('show');
     Route::get('/dashboard/payslip/{lecturer}', [App\Http\Controllers\DashboardController::class, 'payslip'])->name('dashboard.payslip');
     Route::get('/payment-schedules/amounts', [App\Http\Controllers\PaymentScheduleController::class, 'amounts'])->name('payment-schedules.amounts');
     Route::get('/payment-schedules/{payment_schedule}/pdf', [App\Http\Controllers\PaymentScheduleController::class, 'pdf'])->name('payment-schedules.pdf');

@@ -81,6 +81,7 @@ class LecturerPayroll
                 'department_id'     => $lecturer->department_id,
                 'department_description' => trim($lecturer->department->description ?? '') ?: ($lecturer->department->name ?? ''),
                 'kra_pin'           => $lecturer->kra_pin ?: '—',
+                'email'             => $lecturer->email,
                 'sessions'          => $own->count(),
                 'hours'             => $hours,
                 'excluded_sessions' => $all->count() - $own->count(),

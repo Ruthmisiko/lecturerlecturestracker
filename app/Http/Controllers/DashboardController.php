@@ -75,7 +75,12 @@ class DashboardController extends Controller
             ])
             ->values();
 
-        return view('dashboard', compact('rows', 'totals', 'stats', 'missingRate', 'departmentSummary', 'from', 'to', 'statuses', 'charts'));
+        $emailConfigs = \App\Models\EmailConfiguration::orderByDesc('is_default')->orderBy('name')->get(['id', 'name', 'from_address', 'is_default']);
+        $lastEmailed  = \App\Models\PayslipEmail::whereIn('lecturer_id', $rows->pluck('id'))
+            ->latest()->get(['lecturer_id', 'to', 'created_at'])->unique('lecturer_id')
+            ->mapWithKeys(fn ($e) => [$e->lecturer_id => ['to' => $e->to, 'at' => $e->created_at->format('d M Y, H:i')]]);
+
+        return view('dashboard', compact('rows', 'totals', 'stats', 'missingRate', 'departmentSummary', 'from', 'to', 'statuses', 'charts', 'emailConfigs', 'lastEmailed'));
     }
 
     public function report(Request $request)
@@ -191,18 +196,85 @@ class DashboardController extends Controller
         $this->authorizeSuperuser();
 
         [$from, $to] = $this->period($request);
-        $statuses    = $this->statuses($request);
-        $lecturer    = Lecturer::with('department', 'institution')->findOrFail($lecturerId);
-        $row         = (new LecturerPayroll(Auth::user(), $from, $to, $statuses))->rows()->firstWhere('id', $lecturer->id);
+        [$pdf, $lecturer] = $this->payslipPdf($lecturerId, $from, $to, $this->statuses($request));
+
+        return $pdf->download($this->payslipFileName($lecturer));
+    }
+
+    /** Emails a lecturer's payslip PDF (same period/statuses as on screen) through a chosen email account. */
+    public function emailPayslip(Request $request, $lecturerId)
+    {
+        $this->authorizeSuperuser();
+
+        $data = $request->validate([
+            'email_configuration_id' => 'required|integer',
+            'to'                     => 'required|email|max:190',
+            'subject'                => 'required|string|max:200',
+            'body'                   => 'required|string|max:10000',
+            'save_email'             => 'nullable|boolean',
+        ], [
+            'email_configuration_id.required' => 'Add an email account under Email Settings first.',
+            'to.email'                        => 'Enter a valid email address for the lecturer.',
+        ]);
+
+        $config = \App\Models\EmailConfiguration::find($data['email_configuration_id']);
+        if (!$config) {
+            return response()->json(['message' => 'That email account no longer exists.'], 422);
+        }
+
+        [$from, $to] = $this->period($request);
+        [$pdf, $lecturer] = $this->payslipPdf($lecturerId, $from, $to, $this->statuses($request));
+
+        try {
+            $config->mailer()->to($data['to'])->send(new \App\Mail\PayslipMail(
+                $data['subject'], $data['body'], $pdf->output(), $this->payslipFileName($lecturer),
+                $config->from_address, $config->from_name,
+            ));
+        } catch (\Throwable $e) {
+            report($e);
+            return response()->json(['message' => 'Sending failed: ' . $e->getMessage()], 422);
+        }
+
+        if ($request->boolean('save_email') && $lecturer->email !== $data['to']) {
+            $taken = Lecturer::withoutGlobalScopes()->where('email', $data['to'])->where('id', '!=', $lecturer->id)->exists();
+            if (!$taken) {
+                $lecturer->update(['email' => $data['to']]);
+            }
+        }
+
+        \App\Models\PayslipEmail::create([
+            'lecturer_id'            => $lecturer->id,
+            'email_configuration_id' => $config->id,
+            'to'                     => $data['to'],
+            'subject'                => $data['subject'],
+            'period_from'            => $from,
+            'period_to'              => $to,
+            'user_id'                => Auth::id(),
+        ]);
+
+        return response()->json(['message' => "Payslip sent to {$data['to']}.", 'sent_at' => now()->format('d M Y, H:i')]);
+    }
+
+    /** [Pdf, Lecturer] for a lecturer's payslip. */
+    protected function payslipPdf($lecturerId, ?string $from, ?string $to, ?array $statuses): array
+    {
+        $lecturer = Lecturer::with('department', 'institution')->findOrFail($lecturerId);
+        $row      = (new LecturerPayroll(Auth::user(), $from, $to, $statuses))->rows()->firstWhere('id', $lecturer->id);
 
         abort_unless($row, 404);
 
         $period = $this->periodLabel($from, $to);
         $slipNo = 'PS-' . str_pad($lecturer->id, 4, '0', STR_PAD_LEFT) . '-' . ($to ? str_replace('-', '', substr($to, 0, 7)) : now()->format('Ym'));
 
-        return PDF::loadView('dashboard.payslip_pdf', compact('lecturer', 'row', 'period', 'slipNo', 'statuses'))
-            ->setPaper([0, 0, 297.64, 595.28]) // half-width A4: 105 × 210 mm
-            ->download('payslip_' . str($lecturer->name)->slug('_') . '.pdf');
+        $pdf = PDF::loadView('dashboard.payslip_pdf', compact('lecturer', 'row', 'period', 'slipNo', 'statuses'))
+            ->setPaper([0, 0, 297.64, 595.28]); // half-width A4: 105 × 210 mm
+
+        return [$pdf, $lecturer];
+    }
+
+    protected function payslipFileName(Lecturer $lecturer): string
+    {
+        return 'payslip_' . str($lecturer->name)->slug('_') . '.pdf';
     }
 
     protected function excel($sections, $totals, string $period)

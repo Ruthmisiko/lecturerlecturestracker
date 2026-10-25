@@ -42,6 +42,10 @@
     <p>Semesters</p>
 </a>
 
+<a href="{{ route('email-configurations.index') }}" class="nav-link text-white font-weight-bold {{ Request::is('email-configurations*') ? 'active' : '' }}">
+    <p>Email Settings</p>
+</a>
+
 <a href="{{ route('institutions.index') }}" class="nav-link text-white font-weight-bold {{ Request::is('institutions*') ? 'active' : '' }}">
     <p>Institutions</p>
 </a>
