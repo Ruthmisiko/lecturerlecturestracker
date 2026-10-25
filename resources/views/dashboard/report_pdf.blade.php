@@ -25,7 +25,7 @@
 <body>
     @php $letterheadPath = $theme->institution?->assetPath('letterhead'); @endphp
     @if ($letterheadPath)
-        <div style="text-align:center; margin-bottom:8px;"><img src="{{ $letterheadPath }}" style="height:95px;" alt="Letterhead"></div>
+        <div style="margin-bottom:8px;"><img src="{{ $letterheadPath }}" style="width:100%;" alt="Letterhead"></div>
     @else
         <h2>{{ $theme->institution->name ?? 'Lecturer Payment Report' }}</h2>
     @endif
