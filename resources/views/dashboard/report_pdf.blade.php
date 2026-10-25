@@ -63,7 +63,7 @@
                         <td class="r">{{ $n($r->net) }}</td>
                         <td>{{ $r->department }}</td>
                         <td>{{ $r->period_taught }}</td>
-                        <td></td>
+                        <td>{{ $r->pv_no ?? '' }}</td>
                     </tr>
                 @endforeach
             </tbody>

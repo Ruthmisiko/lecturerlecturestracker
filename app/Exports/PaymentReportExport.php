@@ -48,7 +48,7 @@ class PaymentReportExport implements FromArray, WithEvents, WithTitle
 
             foreach ($section->rows as $i => $r) {
                 $add([$i + 1, $r->kra_pin, $r->name, round($r->hours, 2), round($r->rate, 2), round($r->gross, 2),
-                    round($r->housing, 2), round($r->tax, 2), round($r->net, 2), $r->department, $r->period_taught, ''], 'data');
+                    round($r->housing, 2), round($r->tax, 2), round($r->net, 2), $r->department, $r->period_taught, $r->pv_no ?? ''], 'data');
             }
 
             $t = $section->totals;
@@ -119,6 +119,7 @@ class PaymentReportExport implements FromArray, WithEvents, WithTitle
             $sheet->getStyle("{$col}1:{$col}{$last}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
         }
         $sheet->getStyle("B2:B{$last}")->getNumberFormat()->setFormatCode('@');
+        $sheet->getStyle("L2:L{$last}")->getNumberFormat()->setFormatCode('@');
 
         foreach (['A' => 6, 'B' => 16, 'C' => 32, 'D' => 14, 'E' => 11, 'F' => 15, 'G' => 13, 'H' => 15, 'I' => 15, 'J' => 14, 'K' => 16, 'L' => 15] as $col => $w) {
             $sheet->getColumnDimension($col)->setWidth($w);

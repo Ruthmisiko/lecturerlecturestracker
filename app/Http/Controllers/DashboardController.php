@@ -70,6 +70,15 @@ class DashboardController extends Controller
             ->when($departmentId, fn ($c) => $c->where('department_id', $departmentId))
             ->values();
 
+        // PV / voucher numbers typed on the report (not stored; carried into the downloads).
+        $pv = collect((array) $request->input('pv', []))
+            ->filter(fn ($v, $id) => ctype_digit((string) $id) && is_string($v) && trim($v) !== '')
+            ->map(fn ($v) => mb_substr(trim($v), 0, 50))
+            ->all();
+        foreach ($rows as $r) {
+            $r->pv_no = $pv[$r->id] ?? '';
+        }
+
         $sections = $rows->groupBy('department')
             ->map(fn ($group, $name) => (object) [
                 'name'   => $name,
@@ -94,7 +103,7 @@ class DashboardController extends Controller
                 ->download('lecturer_payment_report.pdf');
         }
 
-        return view('dashboard.report', compact('sections', 'totals', 'from', 'to', 'statuses', 'departments', 'department', 'overrides'));
+        return view('dashboard.report', compact('sections', 'totals', 'from', 'to', 'statuses', 'departments', 'department', 'overrides', 'pv'));
     }
 
     /** One lecturer's figures for the chosen payable statuses (used when a row's dropdown changes). */

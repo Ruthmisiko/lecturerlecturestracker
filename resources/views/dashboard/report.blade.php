@@ -130,7 +130,7 @@
                                 <td class="num font-weight-bold c-net" data-v="{{ $r->net }}">{{ $n($r->net) }}</td>
                                 <td>{{ $r->department }}</td>
                                 <td class="c-period">{{ $r->period_taught }}</td>
-                                <td></td>
+                                <td><input type="text" class="form-control form-control-sm pv-input" maxlength="50" style="min-width:110px;" value="{{ $pv[$r->id] ?? '' }}" placeholder="e.g. M156028"></td>
                                 <td class="text-center">
                                     <a href="#" class="btn btn-xs btn-outline-success payslip-link" title="Print payslip"><i class="fas fa-print"></i></a>
                                 </td>
@@ -199,6 +199,10 @@
             if (Array.isArray(v)) v.forEach(function (x) { p.append(k + '[]', x); }); else if (v !== null && v !== '') p.append(k, v);
         });
         Object.keys(rs).forEach(function (id) { p.append('rs[' + id + ']', rs[id]); });
+        document.querySelectorAll('tr[data-lecturer]').forEach(function (tr) {
+            var v = tr.querySelector('.pv-input').value.trim();
+            if (v) p.append('pv[' + tr.dataset.lecturer + ']', v);
+        });
         Object.keys(extra || {}).forEach(function (k) { p.append(k, extra[k]); });
         return p.toString();
     }
@@ -275,6 +279,9 @@
                 .finally(function () { tr.classList.remove('row-busy'); });
         });
     });
+
+    // Typed PV numbers go into the Excel/PDF links.
+    document.querySelectorAll('.pv-input').forEach(function (input) { input.addEventListener('input', refreshTotals); });
 
     refreshTotals();
 })();
