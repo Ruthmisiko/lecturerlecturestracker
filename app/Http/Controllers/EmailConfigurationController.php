@@ -27,7 +27,7 @@ class EmailConfigurationController extends Controller
 
     public function create()
     {
-        return view('email_configurations.form', ['config' => new EmailConfiguration(['port' => 587, 'encryption' => 'tls'])]);
+        return view('email_configurations.form', ['account' => new EmailConfiguration(['port' => 587, 'encryption' => 'tls'])]);
     }
 
     public function store(Request $request)
@@ -45,7 +45,7 @@ class EmailConfigurationController extends Controller
 
     public function edit($id)
     {
-        return view('email_configurations.form', ['config' => EmailConfiguration::findOrFail($id)]);
+        return view('email_configurations.form', ['account' => EmailConfiguration::findOrFail($id)]);
     }
 
     public function update(Request $request, $id)

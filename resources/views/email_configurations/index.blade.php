@@ -21,27 +21,27 @@
                     <tr><th>Name</th><th>Sends as</th><th>Server</th><th class="text-right">Actions</th></tr>
                 </thead>
                 <tbody>
-                    @forelse ($configs as $config)
+                    @forelse ($configs as $account)
                         <tr>
                             <td>
-                                <strong>{{ $config->name }}</strong>
-                                @if ($config->is_default)<span class="badge badge-success ml-1">Default</span>@endif
+                                <strong>{{ $account->name }}</strong>
+                                @if ($account->is_default)<span class="badge badge-success ml-1">Default</span>@endif
                             </td>
-                            <td>{{ $config->from_name }} &lt;{{ $config->from_address }}&gt;</td>
-                            <td class="text-muted small">{{ $config->host }}:{{ $config->port }} {{ $config->encryption ? strtoupper($config->encryption) : '' }}</td>
+                            <td>{{ $account->from_name }} &lt;{{ $account->from_address }}&gt;</td>
+                            <td class="text-muted small">{{ $account->host }}:{{ $account->port }} {{ $account->encryption ? strtoupper($account->encryption) : '' }}</td>
                             <td class="text-right text-nowrap">
-                                <form method="POST" action="{{ route('email-configurations.test', $config->id) }}" class="d-inline">
+                                <form method="POST" action="{{ route('email-configurations.test', $account->id) }}" class="d-inline">
                                     @csrf
                                     <button class="btn btn-sm btn-outline-success" title="Send a test email to {{ Auth::user()->email }}"><i class="far fa-paper-plane mr-1"></i>Send test</button>
                                 </form>
-                                @unless ($config->is_default)
-                                    <form method="POST" action="{{ route('email-configurations.default', $config->id) }}" class="d-inline">
+                                @unless ($account->is_default)
+                                    <form method="POST" action="{{ route('email-configurations.default', $account->id) }}" class="d-inline">
                                         @csrf
                                         <button class="btn btn-sm btn-outline-secondary">Make default</button>
                                     </form>
                                 @endunless
-                                <a href="{{ route('email-configurations.edit', $config->id) }}" class="btn btn-sm btn-warning">Edit</a>
-                                <form method="POST" action="{{ route('email-configurations.destroy', $config->id) }}" class="d-inline"
+                                <a href="{{ route('email-configurations.edit', $account->id) }}" class="btn btn-sm btn-warning">Edit</a>
+                                <form method="POST" action="{{ route('email-configurations.destroy', $account->id) }}" class="d-inline"
                                       onsubmit="return confirm('Delete this email account?')">
                                     @csrf
                                     @method('DELETE')
