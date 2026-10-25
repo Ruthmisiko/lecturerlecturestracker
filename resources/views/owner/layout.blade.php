@@ -11,12 +11,16 @@
         body { background: var(--bg); color: #1f2333; }
         .owner-nav { background: var(--navy); }
         .owner-nav .brand { color: #fff; font-weight: 700; font-size: 1.15rem; display: flex; align-items: center; gap: 10px; }
-        .owner-nav .brand .mark { width: 34px; height: 34px; border-radius: 50%; background: #fff; border: 3px solid var(--orange);
-            display: inline-flex; align-items: center; justify-content: center; color: var(--navy); font-weight: 800; }
+        .owner-nav .brand .mark { width: 38px; height: 38px; border-radius: 50%; background: #fff; object-fit: contain; padding: 2px; }
         .owner-nav .nav-link { color: rgba(255,255,255,.8); border-radius: 8px; padding: 6px 14px; }
         .owner-nav .nav-link:hover { color: #fff; background: rgba(255,255,255,.1); }
         .owner-nav .nav-link.active { color: #fff; background: var(--orange); }
         .card { border: 0; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.07); }
+        .stat { background: var(--orange); color: #fff; }
+        .stat .label { color: rgba(255,255,255,.85) !important; }
+        .stat .value { color: #fff !important; }
+        .stat small, .stat .text-muted { color: rgba(255,255,255,.85) !important; }
+        .stat a { color: #fff; text-decoration: underline; }
         .stat .icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
         .stat .label { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: #6b7280; margin: 0; }
         .stat .value { font-size: 28px; font-weight: 700; margin: 0; line-height: 1.1; }
@@ -33,7 +37,7 @@
 <body>
 <nav class="owner-nav px-3 py-2 mb-4">
     <div class="container-fluid d-flex flex-wrap align-items-center justify-content-between" style="gap:10px;">
-        <div class="brand"><span class="mark">N</span> Nawema · System Owner</div>
+        <div class="brand"><img src="{{ asset('images/nawema-logo.png') }}" alt="Nawema" class="mark"> Nawema · System Owner</div>
         <div class="d-flex flex-wrap align-items-center" style="gap:4px;">
             <a href="{{ route('owner.dashboard') }}" class="nav-link {{ request()->routeIs('owner.dashboard') ? 'active' : '' }}"><i class="fas fa-chart-pie mr-1"></i> Dashboard</a>
             <a href="{{ route('owner.institutions') }}" class="nav-link {{ request()->routeIs('owner.institutions') ? 'active' : '' }}"><i class="fas fa-university mr-1"></i> Institutions</a>
