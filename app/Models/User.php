@@ -124,6 +124,20 @@ class User extends Authenticatable
         return $this->currentInstitutionId = $allowed->first();
     }
 
+    /** Superusers can use every feature; others need the permission (granted to their role on User Roles). */
+    public function hasAccess(string $permission): bool
+    {
+        if ($this->isSuperAdmin()) {
+            return true;
+        }
+
+        try {
+            return $this->hasPermissionTo($permission);
+        } catch (\Spatie\Permission\Exceptions\PermissionDoesNotExist $e) {
+            return false;
+        }
+    }
+
     /** Super admin has no parent user (user_id IS NULL) or holds the superuser role. */
     public function isSuperAdmin(): bool
     {

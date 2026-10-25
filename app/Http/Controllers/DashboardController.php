@@ -19,7 +19,7 @@ class DashboardController extends Controller
         $user = Auth::user();
 
         // Dashboard is superuser-only; send everyone else to their working page.
-        if (!$user->isSuperAdmin()) {
+        if (!$user->hasAccess('dashboard.view')) {
             return redirect()->route($user->can('lecture.manage') ? 'lecture-administereds.index' : 'lecturers.index');
         }
 
@@ -85,7 +85,7 @@ class DashboardController extends Controller
 
     public function report(Request $request)
     {
-        $this->authorizeSuperuser();
+        $this->authorizeAccess('payment-report.view');
 
         [$from, $to] = $this->period($request);
         $statuses     = $this->statuses($request);
@@ -137,7 +137,7 @@ class DashboardController extends Controller
     /** One lecturer's figures for the chosen payable statuses (used when a row's dropdown changes). */
     public function reportRow(Request $request)
     {
-        $this->authorizeSuperuser();
+        $this->authorizeAccess('payment-report.view');
 
         [$from, $to] = $this->period($request);
         $row = (new LecturerPayroll(Auth::user(), $from, $to, $this->statuses($request)))->rows()
@@ -193,7 +193,7 @@ class DashboardController extends Controller
 
     public function payslip(Request $request, $lecturerId)
     {
-        $this->authorizeSuperuser();
+        $this->authorizeAccess('dashboard.view', 'payment-report.view');
 
         [$from, $to] = $this->period($request);
         [$pdf, $lecturer] = $this->payslipPdf($lecturerId, $from, $to, $this->statuses($request));
@@ -204,7 +204,7 @@ class DashboardController extends Controller
     /** Emails a lecturer's payslip PDF (same period/statuses as on screen) through a chosen email account. */
     public function emailPayslip(Request $request, $lecturerId)
     {
-        $this->authorizeSuperuser();
+        $this->authorizeAccess('payslip.email');
 
         $data = $request->validate([
             'email_configuration_id' => 'required|integer',
@@ -312,8 +312,10 @@ class DashboardController extends Controller
         return ($from ?: 'Start') . ' to ' . ($to ?: 'Today');
     }
 
-    protected function authorizeSuperuser(): void
+    /** 403 unless the user is a superuser or has any of the given permissions. */
+    protected function authorizeAccess(string ...$permissions): void
     {
-        abort_unless(Auth::user()->isSuperAdmin(), 403);
+        $user = Auth::user();
+        abort_unless(collect($permissions)->contains(fn ($p) => $user->hasAccess($p)), 403);
     }
 }

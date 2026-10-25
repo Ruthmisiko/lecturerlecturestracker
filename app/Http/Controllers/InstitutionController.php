@@ -198,7 +198,7 @@ class InstitutionController extends Controller
 
         $this->activate($id);
 
-        return redirect()->route(Auth::user()->isSuperAdmin() ? 'dashboard' : 'lecturers.index');
+        return redirect()->route(Auth::user()->hasAccess('dashboard.view') ? 'dashboard' : 'lecturers.index');
     }
 
     private function activate(int $id): void
@@ -215,6 +215,6 @@ class InstitutionController extends Controller
 
     private function authorizeSuperuser(): void
     {
-        abort_unless(Auth::user()->isSuperAdmin(), 403);
+        abort_unless(Auth::user()->hasAccess('institution.manage'), 403);
     }
 }

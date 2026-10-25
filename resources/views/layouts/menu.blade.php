@@ -1,5 +1,5 @@
 
-@if (Auth::user()->isSuperAdmin())
+@if (Auth::user()->hasAccess('dashboard.view'))
 <a href="{{ route('dashboard') }}" class="nav-link text-white font-weight-bold {{ Request::is('dashboard*') ? 'active' : '' }}">
     <p>Dashboard</p>
 </a>
@@ -37,15 +37,19 @@
 </a>
 @endcan
 
-@if (Auth::user()->isSuperAdmin())
+@if (Auth::user()->hasAccess('semester.manage'))
 <a href="{{ route('semesters.index') }}" class="nav-link text-white font-weight-bold {{ Request::is('semesters*') ? 'active' : '' }}">
     <p>Semesters</p>
 </a>
+@endif
 
+@if (Auth::user()->hasAccess('email-settings.manage'))
 <a href="{{ route('email-configurations.index') }}" class="nav-link text-white font-weight-bold {{ Request::is('email-configurations*') ? 'active' : '' }}">
     <p>Email Settings</p>
 </a>
+@endif
 
+@if (Auth::user()->hasAccess('institution.manage'))
 <a href="{{ route('institutions.index') }}" class="nav-link text-white font-weight-bold {{ Request::is('institutions*') ? 'active' : '' }}">
     <p>Institutions</p>
 </a>

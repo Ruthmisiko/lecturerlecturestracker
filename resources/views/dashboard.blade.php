@@ -62,12 +62,16 @@
             <a href="#reports" class="btn btn-success" id="toReports">
                 <i class="fas fa-chart-bar mr-1"></i> Reports
             </a>
+            @if (Auth::user()->hasAccess('payment-schedule.manage'))
             <a href="{{ route('payment-schedules.index') }}" class="btn btn-brand">
                 <i class="fas fa-university mr-1"></i> Payment Schedule
             </a>
+            @endif
+            @if (Auth::user()->hasAccess('payment-report.view'))
             <a href="{{ route('dashboard.report', request()->only('from', 'to', 'statuses')) }}" class="btn btn-success">
                 <i class="fas fa-file-invoice-dollar mr-1"></i> Payment Report
             </a>
+            @endif
         </div>
     </div>
 </section>
@@ -386,6 +390,7 @@
     var rows = @json($rows->keyBy('id'));
     @php $payslipUrl = route('dashboard.payslip', array_merge(['lecturer' => '__ID__'], request()->only('from', 'to', 'statuses'))); @endphp
     var payslipUrl = @json($payslipUrl);
+    var canEmail = @json(Auth::user()->hasAccess('payslip.email'));
     var fmt = new Intl.NumberFormat('en-KE', { minimumFractionDigits: 4, maximumFractionDigits: 4 });
     var money = function (v) { return 'KES ' + fmt.format(v); };
     var esc = function (s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; };
@@ -456,7 +461,7 @@
                 '<div class="text-nowrap">' +
                     '<a href="{{ url('lecturers') }}/' + r.id + '" class="btn btn-sm btn-outline-brand mr-1">View lectures</a>' +
                     '<a href="' + payslipUrl.replace('__ID__', r.id) + '" class="btn btn-sm btn-success mr-1"><i class="fas fa-print mr-1"></i>Print Payslip</a>' +
-                    '<button type="button" class="btn btn-sm btn-brand email-payslip" data-id="' + r.id + '"><i class="far fa-envelope mr-1"></i>Email Payslip</button>' +
+                    (canEmail ? '<button type="button" class="btn btn-sm btn-brand email-payslip" data-id="' + r.id + '"><i class="far fa-envelope mr-1"></i>Email Payslip</button>' : '') +
                 '</div>' +
             '</div>' +
             (r.rate <= 0 && r.hours > 0 ? '<div class="alert alert-warning py-2 small">No rate per hour set for this lecturer.</div>' : '') +
