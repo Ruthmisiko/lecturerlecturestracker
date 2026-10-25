@@ -18,8 +18,7 @@
     ] as [$label, $value, $sub, $icon, $bg, $fg, $link])
         <div class="col-sm-6 col-xl-3 mb-3">
             <div class="card stat h-100">
-                <div class="card-body d-flex align-items-center" style="gap:14px;">
-                    <div class="icon" style="background:{{ $bg }}; color:{{ $fg }};"><i class="fas {{ $icon }}"></i></div>
+                <div class="card-body">
                     <div>
                         <p class="label">{{ $label }}</p>
                         <p class="value">{{ number_format($value) }}</p>

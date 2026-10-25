@@ -25,6 +25,9 @@ Route::middleware('auth')->prefix('owner')->name('owner.')->group(function () {
     Route::get('/users', [App\Http\Controllers\OwnerController::class, 'users'])->name('users');
     Route::post('/institutions/{institution}/toggle', [App\Http\Controllers\OwnerController::class, 'toggleInstitution'])->name('institutions.toggle');
     Route::post('/users/{user}/toggle', [App\Http\Controllers\OwnerController::class, 'toggleUser'])->name('users.toggle');
+    Route::get('/invoices/{invoice}/pdf', [App\Http\Controllers\OwnerInvoiceController::class, 'pdf'])->name('invoices.pdf');
+    Route::post('/invoices/{invoice}/status', [App\Http\Controllers\OwnerInvoiceController::class, 'status'])->name('invoices.status');
+    Route::resource('invoices', App\Http\Controllers\OwnerInvoiceController::class);
 });
 
 Route::middleware('auth')->group(function () {

@@ -38,6 +38,7 @@
             <a href="{{ route('owner.dashboard') }}" class="nav-link {{ request()->routeIs('owner.dashboard') ? 'active' : '' }}"><i class="fas fa-chart-pie mr-1"></i> Dashboard</a>
             <a href="{{ route('owner.institutions') }}" class="nav-link {{ request()->routeIs('owner.institutions') ? 'active' : '' }}"><i class="fas fa-university mr-1"></i> Institutions</a>
             <a href="{{ route('owner.users') }}" class="nav-link {{ request()->routeIs('owner.users') ? 'active' : '' }}"><i class="fas fa-users mr-1"></i> Users</a>
+            <a href="{{ route('owner.invoices.index') }}" class="nav-link {{ request()->routeIs('owner.invoices.*') ? 'active' : '' }}"><i class="fas fa-file-invoice-dollar mr-1"></i> Invoices</a>
             <form method="POST" action="{{ route('logout') }}" class="ml-2">
                 @csrf
                 <button class="btn btn-sm btn-outline-light"><i class="fas fa-sign-out-alt mr-1"></i> Logout</button>
