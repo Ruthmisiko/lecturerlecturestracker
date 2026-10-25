@@ -48,6 +48,35 @@
             </div>
         </div>
 
+        {{-- AI attendance reading --}}
+        <div class="card mb-3">
+            <div class="card-header font-weight-bold"><i class="fas fa-magic mr-1 text-success"></i> AI Attendance Reading</div>
+            <div class="card-body">
+                <p class="mb-2">
+                    Status:
+                    @if ($masked = $institution->maskedGeminiKey())
+                        <span class="badge badge-success">Key saved</span> <code>{{ $masked }}</code>
+                    @elseif (config('services.gemini.key'))
+                        <span class="badge badge-info">Using the server's key</span>
+                    @else
+                        <span class="badge badge-secondary">Not set up</span>
+                    @endif
+                </p>
+                <div class="form-group mb-1" style="max-width: 520px;">
+                    <label>{{ $institution->gemini_api_key ? 'Replace Gemini API key' : 'Gemini API key' }}</label>
+                    <input type="password" name="gemini_api_key" class="form-control" autocomplete="new-password"
+                           placeholder="Paste the key from aistudio.google.com">
+                    <small class="text-muted">Used to read uploaded attendance sheets. Leave blank to keep the current key. It is checked with Google and stored encrypted.</small>
+                </div>
+                @if ($institution->gemini_api_key)
+                    <div class="form-check mt-2">
+                        <input class="form-check-input" type="checkbox" name="remove_gemini_api_key" value="1" id="remove_gemini_api_key">
+                        <label class="form-check-label text-danger" for="remove_gemini_api_key">Remove saved key</label>
+                    </div>
+                @endif
+            </div>
+        </div>
+
         <div class="row">
             {{-- Logo --}}
             <div class="col-lg-4 mb-3">

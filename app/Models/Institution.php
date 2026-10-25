@@ -6,7 +6,19 @@ use Illuminate\Database\Eloquent\Model;
 
 class Institution extends Model
 {
-    protected $fillable = ['name', 'employer_pin', 'owner_id', 'logo_path', 'letterhead_path', 'primary_color', 'secondary_color'];
+    protected $fillable = ['name', 'employer_pin', 'gemini_api_key', 'owner_id', 'logo_path', 'letterhead_path', 'primary_color', 'secondary_color'];
+
+    /** The Gemini key is encrypted at rest and never sent out in arrays/JSON. */
+    protected $casts = ['gemini_api_key' => 'encrypted'];
+    protected $hidden = ['gemini_api_key'];
+
+    /** e.g. "AQ.Ab8…n3-Q" so the saved key can be recognised without showing it. */
+    public function maskedGeminiKey(): ?string
+    {
+        $key = $this->gemini_api_key;
+
+        return $key ? substr($key, 0, 6) . '…' . substr($key, -4) : null;
+    }
 
     public const DEFAULT_PRIMARY_COLOR   = '#28a745';
     public const DEFAULT_SECONDARY_COLOR = '#1e7e34';

@@ -17,7 +17,8 @@
     @unless ($configured)
         <div class="alert alert-warning">
             <i class="fas fa-exclamation-triangle mr-1"></i>
-            Reading sheets is not set up yet: the server needs a <strong>GEMINI_API_KEY</strong> in its <code>.env</code> file.
+            Reading sheets is not set up yet. A superuser can paste the Gemini API key under
+            <strong>Institutions → ⚙ Settings → AI Attendance Reading</strong>.
         </div>
     @endunless
 

@@ -118,6 +118,7 @@ class InstitutionController extends Controller
             'primary_color'     => ['required', 'regex:/^#[0-9a-fA-F]{6}$/'],
             'secondary_color'   => ['required', 'regex:/^#[0-9a-fA-F]{6}$/'],
             'employer_pin'      => 'nullable|string|max:30',
+            'gemini_api_key'    => 'nullable|string|max:200',
         ], [
             'primary_color.regex'   => 'Pick a valid primary colour.',
             'secondary_color.regex' => 'Pick a valid secondary colour.',
@@ -130,6 +131,17 @@ class InstitutionController extends Controller
             'secondary_color' => strtolower($request->secondary_color),
             'employer_pin'    => $request->filled('employer_pin') ? strtoupper(trim($request->employer_pin)) : null,
         ];
+
+        // Gemini key: blank keeps the saved one; a new one is checked with Google before saving.
+        if ($request->boolean('remove_gemini_api_key')) {
+            $data['gemini_api_key'] = null;
+        } elseif ($request->filled('gemini_api_key')) {
+            $newKey = preg_replace('/\s+/', '', $request->gemini_api_key);
+            if ($problem = \App\Services\AttendanceSheetReader::checkKey($newKey)) {
+                return back()->withInput($request->except('gemini_api_key'))->withErrors(['gemini_api_key' => $problem]);
+            }
+            $data['gemini_api_key'] = $newKey;
+        }
 
         foreach (Institution::ASSETS as $type => $column) {
             $remove = $request->boolean("remove_{$type}");

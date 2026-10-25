@@ -50,7 +50,33 @@ TXT;
 
     public static function configured(): bool
     {
-        return (bool) config('services.gemini.key');
+        return (bool) self::apiKey();
+    }
+
+    /** The current institution's key (Institution Settings), else the server's GEMINI_API_KEY. */
+    public static function apiKey(): ?string
+    {
+        $institution = ($id = \Illuminate\Support\Facades\Auth::user()?->currentInstitutionId())
+            ? \App\Models\Institution::find($id)
+            : null;
+
+        return $institution?->gemini_api_key ?: config('services.gemini.key');
+    }
+
+    /** Quick check that Google accepts a key. Returns null when OK, otherwise a reason. */
+    public static function checkKey(string $key): ?string
+    {
+        try {
+            $response = Http::timeout(20)
+                ->withHeaders(['x-goog-api-key' => $key])
+                ->get('https://generativelanguage.googleapis.com/v1beta/models', ['pageSize' => 1]);
+        } catch (\Throwable $e) {
+            return 'Could not reach Google to check the key. It was not saved; try again.';
+        }
+
+        return $response->successful()
+            ? null
+            : 'Google did not accept this key: ' . ($response->json('error.message') ?: 'HTTP ' . $response->status());
     }
 
     /**
@@ -58,10 +84,10 @@ TXT;
      */
     public function read(UploadedFile $file): array
     {
-        $key = config('services.gemini.key');
+        $key = self::apiKey();
 
         if (!$key) {
-            throw new RuntimeException('Attendance reading is not set up yet (GEMINI_API_KEY is missing on the server).');
+            throw new RuntimeException('Attendance reading is not set up yet. A superuser can add the Gemini API key under Institutions → Settings.');
         }
 
         $payload = [
