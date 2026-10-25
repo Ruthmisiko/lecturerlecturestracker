@@ -28,6 +28,9 @@ Route::middleware('auth')->group(function () {
     Route::resource('payment-schedules', App\Http\Controllers\PaymentScheduleController::class);
     Route::post('/semesters/{semester}/current', [App\Http\Controllers\SemesterController::class, 'makeCurrent'])->name('semesters.current');
     Route::resource('semesters', App\Http\Controllers\SemesterController::class)->except('show');
+    Route::get('/attendance-upload', [App\Http\Controllers\AttendanceUploadController::class, 'create'])->name('attendance-upload.create');
+    Route::post('/attendance-upload/read', [App\Http\Controllers\AttendanceUploadController::class, 'read'])->name('attendance-upload.read');
+    Route::post('/attendance-upload', [App\Http\Controllers\AttendanceUploadController::class, 'store'])->name('attendance-upload.store');
     Route::post('/institution/switch', [App\Http\Controllers\InstitutionController::class, 'switch'])->name('institution.switch');
     Route::get('/institutions/{institution}/settings', [App\Http\Controllers\InstitutionController::class, 'settings'])->name('institutions.settings');
     Route::put('/institutions/{institution}/settings', [App\Http\Controllers\InstitutionController::class, 'updateSettings'])->name('institutions.settings.update');

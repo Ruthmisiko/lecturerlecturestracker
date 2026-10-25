@@ -13,11 +13,16 @@
                         <a class="btn btn-success mr-2" href="{{ route('lecture-administereds.create') }}">
                             Add New
                         </a>
-                        <button class="btn btn-primary" data-toggle="modal" data-target="#uploadModal">
+                        <button class="btn btn-primary mr-2" data-toggle="modal" data-target="#uploadModal">
                             Upload Excel
                         </button>
                     </div>
                     @endcan
+                    @if (auth()->user()->can('lecture.create') || auth()->user()->isSuperAdmin())
+                        <a class="btn btn-info float-right mr-2" href="{{ route('attendance-upload.create') }}">
+                            <i class="fas fa-camera mr-1"></i> Upload Attendance
+                        </a>
+                    @endif
                 </div>
             </div>
         </div>

@@ -14,6 +14,12 @@ return [
     |
     */
 
+    // Reads uploaded attendance sheets (Google AI Studio key; free tier works).
+    'gemini' => [
+        'key'   => env('GEMINI_API_KEY'),
+        'model' => env('GEMINI_MODEL', 'gemini-2.5-flash'),
+    ],
+
     'mailgun' => [
         'domain' => env('MAILGUN_DOMAIN'),
         'secret' => env('MAILGUN_SECRET'),
