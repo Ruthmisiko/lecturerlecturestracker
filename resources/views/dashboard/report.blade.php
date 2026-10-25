@@ -288,7 +288,7 @@
     document.querySelectorAll('.pv-input').forEach(function (input) { input.addEventListener('input', refreshTotals); });
 
     // The table scrolls inside its card, so open Payable hrs menus as fixed overlays (not clipped).
-    $(document).on('shown.bs.dropdown', '.report-section .dropdown', function () {
+    if (window.jQuery && jQuery.fn.on) $(document).on('shown.bs.dropdown', '.report-section .dropdown', function () {
         var btn = this.querySelector('.payable-btn').getBoundingClientRect();
         var menu = this.querySelector('.payable-menu');
         menu.style.position = 'fixed';
@@ -297,7 +297,7 @@
         menu.style.right = 'auto';
     });
     // Close an open menu when the page or table scrolls, so it never floats away from its row.
-    var closeMenus = function () { $('.report-section .dropdown.show [data-toggle="dropdown"]').dropdown('hide'); };
+    var closeMenus = function () { if (window.jQuery && jQuery.fn.dropdown) $('.report-section .dropdown.show [data-toggle="dropdown"]').dropdown('hide'); };
     window.addEventListener('scroll', closeMenus, true);
 
     refreshTotals();
