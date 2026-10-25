@@ -57,6 +57,7 @@ require __DIR__.'/auth.php';
 Route::get('lecture-administereds/download-template', [LectureAdministeredController::class, 'downloadTemplate'])->name('lecture-administereds.download-template');
 Route::post('lecture-administereds/import', [LectureAdministeredController::class, 'import'])->name('lecture-administereds.import');
 Route::resource('classses', App\Http\Controllers\ClasssController::class);
+Route::post('lecture-administereds/bulk-delete', [LectureAdministeredController::class, 'bulkDestroy'])->name('lecture-administereds.bulk-destroy')->middleware('auth');
 Route::resource('lecture-administereds', App\Http\Controllers\LectureAdministeredController::class);
 Route::resource('roles', App\Http\Controllers\RoleController::class);
 Route::resource('users', App\Http\Controllers\UserController::class);

@@ -363,7 +363,7 @@ private function fetchExportData(Request $request): array
         if (empty($lectureAdministered)) {
             Flash::error('Lecture Administered not found');
 
-            return redirect(route('lectureAdministereds.index'));
+            return redirect(route('lecture-administereds.index'));
         }
 
         return view('lecture_administereds.show')->with('lectureAdministered', $lectureAdministered);
@@ -423,21 +423,46 @@ private function fetchExportData(Request $request): array
      *
      * @throws \Exception
      */
+    /** Deletes several lecture records at once (checkboxes on the list). */
+    public function bulkDestroy(Request $request)
+    {
+        $this->authorizeDelete();
+
+        $ids = collect($request->validate(['ids' => 'required|array|min:1', 'ids.*' => 'integer'], [
+            'ids.required' => 'Tick at least one lecture record to delete.',
+        ])['ids']);
+
+        // Only records of the current institution/account (global scope + owner).
+        $deleted = LectureAdministered::where('user_id', Auth::user()->ownerId())->whereIn('id', $ids)->delete();
+
+        Flash::success($deleted . ' lecture record(s) deleted.');
+
+        return redirect()->back(fallback: route('lecture-administereds.index'));
+    }
+
+    private function authorizeDelete(): void
+    {
+        $user = Auth::user();
+        abort_unless($user->can('lecture.delete') || $user->isSuperAdmin(), 403);
+    }
+
     public function destroy($id)
     {
+        $this->authorizeDelete();
+
         $lectureAdministered = $this->lectureAdministeredRepository->find($id);
 
         if (empty($lectureAdministered)) {
             Flash::error('Lecture Administered not found');
 
-            return redirect(route('lectureAdministereds.index'));
+            return redirect(route('lecture-administereds.index'));
         }
 
         $this->lectureAdministeredRepository->delete($id);
 
         Flash::success('Lecture Administered deleted successfully.');
 
-        return redirect(route('lectureAdministereds.index'));
+        return redirect()->back(fallback: route('lecture-administereds.index'));
     }
 
     public function downloadTemplate()

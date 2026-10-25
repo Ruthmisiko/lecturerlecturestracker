@@ -161,10 +161,23 @@
             <span class="ml-2 mb-0 text-nowrap">records per page</span>
         </div>
 
+        @if ((auth()->user()->can('lecture.delete') || auth()->user()->isSuperAdmin()))
+        <form method="POST" action="{{ route('lecture-administereds.bulk-destroy') }}" id="bulkDeleteForm"
+              onsubmit="return confirm('Delete ' + document.querySelectorAll('.bulk-check:checked').length + ' selected lecture record(s)? This cannot be undone.')">
+            @csrf
+        </form>
+        <div class="mb-2">
+            <button type="submit" form="bulkDeleteForm" class="btn btn-sm btn-danger" id="bulkDeleteBtn" disabled>
+                <i class="far fa-trash-alt mr-1"></i> Delete selected (<span id="bulkCount">0</span>)
+            </button>
+        </div>
+        @endif
+
         <table class="table table-bordered" id="lecturers-table">
 
             <thead>
                 <tr>
+                    @if ((auth()->user()->can('lecture.delete') || auth()->user()->isSuperAdmin()))<th style="width:36px;"><input type="checkbox" id="bulkAll" title="Select all on this page"></th>@endif
                     <th>Lecturer</th>
                     <th>Department</th>
                     <th>Class</th>
@@ -180,6 +193,7 @@
             <tbody>
                 @foreach($lectureAdministereds as $lectureAdministered)
                     <tr>
+                        @if ((auth()->user()->can('lecture.delete') || auth()->user()->isSuperAdmin()))<td><input type="checkbox" class="bulk-check" name="ids[]" value="{{ $lectureAdministered->id }}" form="bulkDeleteForm"></td>@endif
                         <td>{{ $lectureAdministered->lecturer->name ?? '-' }}</td>
                         <td>{{ $lectureAdministered->department->name ?? '-' }}</td>
                         <td>{{ $lectureAdministered->classs->name ?? '-' }}</td>
@@ -281,6 +295,25 @@
             </tbody>
         </table>
     </div>
+
+    @if ((auth()->user()->can('lecture.delete') || auth()->user()->isSuperAdmin()))
+    <script>
+    (function () {
+        var all = document.getElementById('bulkAll'), btn = document.getElementById('bulkDeleteBtn'), count = document.getElementById('bulkCount');
+        function refresh() {
+            var n = document.querySelectorAll('.bulk-check:checked').length;
+            count.textContent = n; btn.disabled = n === 0;
+            var boxes = document.querySelectorAll('.bulk-check');
+            all.checked = boxes.length > 0 && n === boxes.length;
+        }
+        all.addEventListener('change', function () {
+            document.querySelectorAll('.bulk-check').forEach(function (b) { b.checked = all.checked; });
+            refresh();
+        });
+        document.querySelectorAll('.bulk-check').forEach(function (b) { b.addEventListener('change', refresh); });
+    })();
+    </script>
+    @endif
 
     <div class="card-footer clearfix">
         <div class="float-right">
