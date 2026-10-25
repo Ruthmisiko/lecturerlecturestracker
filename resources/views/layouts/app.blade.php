@@ -41,7 +41,7 @@
     }
     .themed-sidebar .brand-logo {
         width: 64px; height: 64px; object-fit: contain; background: #fff;
-        border-radius: 14px; padding: 4px; box-shadow: 0 2px 6px rgba(0, 0, 0, .2);
+        border-radius: 14px; padding: 4px; border: 3px solid var(--secondary); box-shadow: 0 2px 6px rgba(0, 0, 0, .2);
     }
     .themed-sidebar .brand-text { color: var(--primary-text) !important; font-size: 1.15rem; margin: 0; }
     .sidebar-mini.sidebar-collapse .themed-sidebar .brand-logo { width: 38px; height: 38px; }
