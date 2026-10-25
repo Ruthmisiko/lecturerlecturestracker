@@ -26,6 +26,8 @@
     .bar { height: 8px; background: #e9ecef; border-radius: 4px; overflow: hidden; }
     .bar > span { display: block; height: 100%; background: var(--primary); }
     .empty-detail { color: #6c757d; text-align: center; padding: 60px 20px; }
+    .chart-box { position: relative; height: 260px; }
+    html { scroll-behavior: smooth; }
     .narration-box { background: #f8f9fa; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px 14px; }
     .narration-text { white-space: pre-line; font-size: 14px; line-height: 1.45; color: #333; }
 
@@ -57,6 +59,9 @@
             <small class="text-muted">Welcome back, {{ Auth::user()->name }}</small>
         </div>
         <div class="d-flex flex-wrap" style="gap:8px;">
+            <a href="#reports" class="btn btn-success" id="toReports">
+                <i class="fas fa-chart-bar mr-1"></i> Reports
+            </a>
             <a href="{{ route('payment-schedules.index') }}" class="btn btn-brand">
                 <i class="fas fa-university mr-1"></i> Payment Schedule
             </a>
@@ -236,6 +241,79 @@
             </div>
         </div>
     @endif
+
+    {{-- Reports (charts) --}}
+    <div id="reports" class="pt-2">
+        <h4 class="font-weight-bold mb-3"><i class="fas fa-chart-bar mr-1 text-success"></i> Reports</h4>
+
+        @if ($charts->isEmpty())
+            <div class="card panel"><div class="card-body text-muted">No departments yet.</div></div>
+        @else
+            <div class="row">
+                <div class="col-lg-6 mb-3">
+                    <div class="card panel h-100">
+                        <div class="card-header">Lecturers per Department</div>
+                        <div class="card-body"><div class="chart-box"><canvas id="chartLecturers" role="img" aria-label="Lecturers per department"></canvas></div></div>
+                    </div>
+                </div>
+                <div class="col-lg-6 mb-3">
+                    <div class="card panel h-100">
+                        <div class="card-header">Units per Department</div>
+                        <div class="card-body"><div class="chart-box"><canvas id="chartUnits" role="img" aria-label="Units per department"></canvas></div></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card panel mb-3">
+                <div class="card-header">Hours &amp; Payment per Department</div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-lg-6 mb-3 mb-lg-0">
+                            <h6 class="text-muted small text-uppercase mb-2">Total hours</h6>
+                            <div class="chart-box"><canvas id="chartHours" role="img" aria-label="Total hours per department"></canvas></div>
+                        </div>
+                        <div class="col-lg-6">
+                            <h6 class="text-muted small text-uppercase mb-2">Total net payment (KES)</h6>
+                            <div class="chart-box"><canvas id="chartPay" role="img" aria-label="Total net payment per department"></canvas></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card panel mb-4">
+                <div class="card-header">Approved vs Contracted Hours per Department</div>
+                <div class="card-body">
+                    <div class="chart-box"><canvas id="chartApproved" role="img" aria-label="Approved versus contracted hours per department"></canvas></div>
+                    <div class="table-responsive mt-3">
+                        <table class="table table-sm mb-0 small">
+                            <thead class="thead-light">
+                                <tr><th>Department</th><th class="text-right">Approved hrs</th><th class="text-right">Contracted hrs</th><th class="text-right">Difference</th></tr>
+                            </thead>
+                            <tbody>
+                                @foreach ($charts as $c)
+                                    <tr>
+                                        <td>{{ $c['name'] }}</td>
+                                        <td class="text-right">{{ $c['approved'] !== null ? number_format($c['approved'], 2) : 'Not set' }}</td>
+                                        <td class="text-right">{{ number_format($c['hours'], 2) }}</td>
+                                        <td class="text-right">
+                                            @if ($c['approved'] === null)
+                                                <span class="text-muted">—</span>
+                                            @elseif ($c['hours'] > $c['approved'])
+                                                <span class="text-danger font-weight-bold"><i class="fas fa-exclamation-triangle mr-1"></i>Over by {{ number_format($c['hours'] - $c['approved'], 2) }}</span>
+                                            @else
+                                                <span>{{ number_format($c['approved'] - $c['hours'], 2) }} remaining</span>
+                                            @endif
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                    <small class="text-muted d-block mt-2">Contracted hours are the lecture hours recorded in the system for the period and payable statuses chosen above. Approved hours are set on each department.</small>
+                </div>
+            </div>
+        @endif
+    </div>
 </div>
 </div>{{-- .dash-theme --}}
 @endsection
@@ -380,6 +458,121 @@
             e.preventDefault();
             alert('Tick at least one status.');
         }
+    });
+})();
+</script>
+@endpush
+
+@push('scripts')
+@php $chartTheme = \App\Support\Theme::current(); @endphp
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+(function () {
+    var data = @json($charts);
+    if (!data.length || !window.Chart) return;
+
+    var BRAND    = @json($chartTheme->primary);   // single-series bars use the institution colour
+    var APPROVED = '#2a78d6';                      // validated categorical pair (blue / orange)
+    var CONTRACT = '#eb6834';
+    var INK = '#52514e', GRID = 'rgba(0,0,0,.06)';
+    var names = data.map(function (d) { return d.name; });
+    var num = function (v, dp) { return Number(v || 0).toLocaleString('en-KE', { minimumFractionDigits: dp || 0, maximumFractionDigits: dp || 0 }); };
+
+    Chart.defaults.font.family = getComputedStyle(document.body).fontFamily;
+    Chart.defaults.color = INK;
+
+    // Writes each bar's value at its end (single-series charts only; few bars, so labels stay readable).
+    var valueLabels = {
+        id: 'valueLabels',
+        afterDatasetsDraw: function (chart, args, opts) {
+            if (!opts || !opts.format) return;
+            var ctx = chart.ctx;
+            ctx.save();
+            ctx.fillStyle = '#0b0b0b';
+            ctx.font = '600 12px ' + Chart.defaults.font.family;
+            ctx.textBaseline = 'middle';
+            chart.getDatasetMeta(0).data.forEach(function (bar, i) {
+                ctx.fillText(opts.format(chart.data.datasets[0].data[i]), bar.x + 6, bar.y);
+            });
+            ctx.restore();
+        }
+    };
+
+    function sizeBox(canvas, perBar) {
+        canvas.parentNode.style.height = Math.max(180, names.length * perBar + 60) + 'px';
+    }
+
+    function bar(id, values, label, format, dp) {
+        var canvas = document.getElementById(id);
+        sizeBox(canvas, 34);
+        return new Chart(canvas, {
+            type: 'bar',
+            plugins: [valueLabels],
+            data: { labels: names, datasets: [{ label: label, data: values, backgroundColor: BRAND,
+                borderRadius: 4, borderSkipped: 'start', maxBarThickness: 18 }] },
+            options: {
+                indexAxis: 'y', maintainAspectRatio: false,
+                layout: { padding: { right: 70 } },
+                plugins: {
+                    legend: { display: false },
+                    valueLabels: { format: format },
+                    tooltip: { callbacks: { label: function (c) { return ' ' + label + ': ' + format(c.raw); } } }
+                },
+                scales: {
+                    x: { beginAtZero: true, grid: { color: GRID }, border: { display: false },
+                         ticks: { precision: 0, callback: function (v) { return num(v); } } },
+                    y: { grid: { display: false }, border: { display: false } }
+                }
+            }
+        });
+    }
+
+    bar('chartLecturers', data.map(function (d) { return d.lecturers; }), 'Lecturers', function (v) { return num(v); });
+    bar('chartUnits', data.map(function (d) { return d.units; }), 'Units', function (v) { return num(v); });
+    bar('chartHours', data.map(function (d) { return d.hours; }), 'Hours', function (v) { return num(v, 2) + ' hrs'; });
+    bar('chartPay', data.map(function (d) { return d.net; }), 'Net payment', function (v) { return 'KES ' + num(v); });
+
+    // Approved vs contracted: grouped bars, one shared hours axis, legend + table below.
+    var canvas = document.getElementById('chartApproved');
+    sizeBox(canvas, 52);
+    new Chart(canvas, {
+        type: 'bar',
+        data: {
+            labels: names,
+            datasets: [
+                { label: 'Approved hours', data: data.map(function (d) { return d.approved; }), backgroundColor: APPROVED,
+                  borderRadius: 4, borderSkipped: 'start', maxBarThickness: 16, borderColor: '#fff', borderWidth: { right: 2 } },
+                { label: 'Contracted hours', data: data.map(function (d) { return d.hours; }), backgroundColor: CONTRACT,
+                  borderRadius: 4, borderSkipped: 'start', maxBarThickness: 16, borderColor: '#fff', borderWidth: { right: 2 } }
+            ]
+        },
+        options: {
+            indexAxis: 'y', maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'top', align: 'start', labels: { boxWidth: 12, boxHeight: 12, useBorderRadius: true, borderRadius: 3 } },
+                tooltip: {
+                    mode: 'index', intersect: false,
+                    callbacks: {
+                        label: function (c) { return ' ' + c.dataset.label + ': ' + (c.raw === null ? 'Not set' : num(c.raw, 2) + ' hrs'); },
+                        footer: function (items) {
+                            var d = data[items[0].dataIndex];
+                            if (d.approved === null) return 'Approved hours not set';
+                            var diff = d.hours - d.approved;
+                            return diff > 0 ? 'Over approved by ' + num(diff, 2) + ' hrs' : num(-diff, 2) + ' hrs remaining';
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: { beginAtZero: true, grid: { color: GRID }, border: { display: false }, title: { display: true, text: 'Hours' } },
+                y: { grid: { display: false }, border: { display: false } }
+            }
+        }
+    });
+
+    document.getElementById('toReports').addEventListener('click', function (e) {
+        e.preventDefault();
+        document.getElementById('reports').scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
 })();
 </script>

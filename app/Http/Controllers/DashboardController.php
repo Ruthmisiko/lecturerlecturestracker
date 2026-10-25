@@ -52,7 +52,30 @@ class DashboardController extends Controller
             ->sortByDesc('hours')
             ->values();
 
-        return view('dashboard', compact('rows', 'totals', 'stats', 'missingRate', 'departmentSummary', 'from', 'to', 'statuses'));
+        // Per-department figures for the reports charts (same period and payable statuses as the dashboard).
+        $lecturerCounts = Lecturer::where('user_id', $ownerId)
+            ->when($deptIds, fn ($q) => $q->whereIn('department_id', $deptIds))
+            ->selectRaw('department_id, count(*) as c')->groupBy('department_id')->pluck('c', 'department_id');
+        $unitCounts = Unit::where('user_id', $ownerId)
+            ->when($deptIds, fn ($q) => $q->whereIn('department_id', $deptIds))
+            ->selectRaw('department_id, count(*) as c')->groupBy('department_id')->pluck('c', 'department_id');
+        $byDept = $rows->groupBy('department_id');
+
+        $charts = Department::where('user_id', $ownerId)
+            ->when($deptIds, fn ($q) => $q->whereIn('id', $deptIds))
+            ->orderBy('name')
+            ->get(['id', 'name', 'approved_hours'])
+            ->map(fn ($d) => [
+                'name'       => $d->name,
+                'lecturers'  => (int) ($lecturerCounts[$d->id] ?? 0),
+                'units'      => (int) ($unitCounts[$d->id] ?? 0),
+                'hours'      => round($byDept->get($d->id, collect())->sum('hours'), 2),
+                'net'        => round($byDept->get($d->id, collect())->sum('net'), 2),
+                'approved'   => $d->approved_hours !== null ? (float) $d->approved_hours : null,
+            ])
+            ->values();
+
+        return view('dashboard', compact('rows', 'totals', 'stats', 'missingRate', 'departmentSummary', 'from', 'to', 'statuses', 'charts'));
     }
 
     public function report(Request $request)
