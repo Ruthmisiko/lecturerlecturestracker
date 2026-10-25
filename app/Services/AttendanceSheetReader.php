@@ -58,31 +58,55 @@ TXT;
      */
     public function read(UploadedFile $file): array
     {
-        $key   = config('services.gemini.key');
-        $model = config('services.gemini.model');
+        $key = config('services.gemini.key');
 
         if (!$key) {
             throw new RuntimeException('Attendance reading is not set up yet (GEMINI_API_KEY is missing on the server).');
         }
 
-        $response = Http::timeout(120)
-            ->withHeaders(['x-goog-api-key' => $key])
-            ->post("https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent", [
-                'contents' => [[
-                    'parts' => [
-                        ['text' => self::PROMPT],
-                        ['inline_data' => [
-                            'mime_type' => $file->getMimeType(),
-                            'data'      => base64_encode(file_get_contents($file->getRealPath())),
-                        ]],
-                    ],
-                ]],
-                'generationConfig' => [
-                    'temperature'      => 0,
-                    'responseMimeType' => 'application/json',
-                    'responseSchema'   => self::SCHEMA,
+        $payload = [
+            'contents' => [[
+                'parts' => [
+                    ['text' => self::PROMPT],
+                    ['inline_data' => [
+                        'mime_type' => $file->getMimeType(),
+                        'data'      => base64_encode(file_get_contents($file->getRealPath())),
+                    ]],
                 ],
-            ]);
+            ]],
+            'generationConfig' => [
+                'temperature'      => 0,
+                'responseMimeType' => 'application/json',
+                'responseSchema'   => self::SCHEMA,
+            ],
+        ];
+
+        // Free-tier models are often briefly busy or slow: try the main model, then the fallbacks.
+        $models = collect([config('services.gemini.model')])
+            ->merge(explode(',', (string) config('services.gemini.fallback_models')))
+            ->map(fn ($m) => trim($m))->filter()->unique()->values();
+
+        $response = null;
+        foreach ($models as $model) {
+            try {
+                $response = Http::timeout(40)
+                    ->withHeaders(['x-goog-api-key' => $key])
+                    ->post("https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent", $payload);
+            } catch (\Illuminate\Http\Client\ConnectionException $e) {
+                $response = null; // timed out: try the next model
+                continue;
+            }
+
+            // Busy (5xx) or model not offered to this key (404): try the next model.
+            if (in_array($response->status(), [404, 500, 502, 503, 504])) {
+                continue;
+            }
+            break;
+        }
+
+        if (!$response || in_array($response->status(), [404, 500, 502, 503, 504])) {
+            throw new RuntimeException('Google\'s free Gemini service is busy right now. Please try again in a few minutes.');
+        }
 
         if ($response->status() === 429) {
             throw new RuntimeException('The free Gemini limit was reached. Wait a minute (or until tomorrow for the daily limit) and try again.');
