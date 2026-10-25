@@ -14,6 +14,10 @@
     .payable-btn { font-size: 11px; padding: 0 6px; margin-top: 3px; white-space: nowrap; }
     .payable-menu { min-width: 260px; }
     tr.row-busy td { opacity: .5; }
+    /* Wide table scrolls inside its card instead of stretching the page */
+    .report-scroll { overflow-x: auto; max-width: 100%; }
+    .report-section { max-width: 100%; }
+    .content-wrapper { overflow-x: hidden; }
 </style>
 @endpush
 
@@ -76,7 +80,7 @@
             <div class="card-header">
                 <p class="section-title">{{ $section->name }}</p>
             </div>
-            <div class="card-body p-0 table-responsive" style="overflow: visible;">
+            <div class="card-body p-0 report-scroll">
                 <table class="table table-bordered table-striped mb-0 pay-report">
                     <thead class="thead-light">
                         <tr>
@@ -107,7 +111,7 @@
                                 <td class="num">
                                     <span class="c-gross" data-v="{{ $r->gross }}">{{ $n($r->gross) }}</span>
                                     <div class="dropdown">
-                                        <button type="button" class="btn btn-outline-secondary payable-btn dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+                                        <button type="button" class="btn btn-outline-secondary payable-btn dropdown-toggle" data-toggle="dropdown" data-display="static" aria-expanded="false">
                                             <i class="fas fa-filter mr-1"></i>Payable hrs: <strong class="payable-label">{{ $r->statuses ? collect($r->statuses)->map(fn ($s) => $statusOptions[$s])->join(', ') : 'All' }}</strong>
                                         </button>
                                         <div class="dropdown-menu dropdown-menu-right p-3 text-left payable-menu" onclick="event.stopPropagation()">
@@ -282,6 +286,19 @@
 
     // Typed PV numbers go into the Excel/PDF links.
     document.querySelectorAll('.pv-input').forEach(function (input) { input.addEventListener('input', refreshTotals); });
+
+    // The table scrolls inside its card, so open Payable hrs menus as fixed overlays (not clipped).
+    $(document).on('shown.bs.dropdown', '.report-section .dropdown', function () {
+        var btn = this.querySelector('.payable-btn').getBoundingClientRect();
+        var menu = this.querySelector('.payable-menu');
+        menu.style.position = 'fixed';
+        menu.style.top = (btn.bottom + 4) + 'px';
+        menu.style.left = Math.max(8, btn.right - menu.offsetWidth) + 'px';
+        menu.style.right = 'auto';
+    });
+    // Close an open menu when the page or table scrolls, so it never floats away from its row.
+    var closeMenus = function () { $('.report-section .dropdown.show [data-toggle="dropdown"]').dropdown('hide'); };
+    window.addEventListener('scroll', closeMenus, true);
 
     refreshTotals();
 })();
