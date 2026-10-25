@@ -18,6 +18,15 @@ Route::get('/', function () {
     return view('welcome');
 });
 
+// System owner console (above all institutions).
+Route::middleware('auth')->prefix('owner')->name('owner.')->group(function () {
+    Route::get('/', [App\Http\Controllers\OwnerController::class, 'dashboard'])->name('dashboard');
+    Route::get('/institutions', [App\Http\Controllers\OwnerController::class, 'institutions'])->name('institutions');
+    Route::get('/users', [App\Http\Controllers\OwnerController::class, 'users'])->name('users');
+    Route::post('/institutions/{institution}/toggle', [App\Http\Controllers\OwnerController::class, 'toggleInstitution'])->name('institutions.toggle');
+    Route::post('/users/{user}/toggle', [App\Http\Controllers\OwnerController::class, 'toggleUser'])->name('users.toggle');
+});
+
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [App\Http\Controllers\DashboardController::class, 'index'])->name('dashboard');
     Route::get('/dashboard/report', [App\Http\Controllers\DashboardController::class, 'report'])->name('dashboard.report');

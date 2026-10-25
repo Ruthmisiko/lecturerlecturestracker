@@ -86,7 +86,7 @@ class User extends Authenticatable
     /** Institutions this user may work in: superusers see all of the account's, others only their own. */
     public function accessibleInstitutions()
     {
-        $query = Institution::where('owner_id', $this->ownerId())->orderBy('name');
+        $query = Institution::where('owner_id', $this->ownerId())->where('is_active', true)->orderBy('name');
 
         if (!$this->isSuperAdmin() && $this->institution_id) {
             $query->where('id', $this->institution_id);
@@ -103,13 +103,19 @@ class User extends Authenticatable
      */
     public function currentInstitutionId(): ?int
     {
-        if ($this->currentInstitutionId) {
+        if ($this->currentInstitutionId !== null) {
             return $this->currentInstitutionId;
+        }
+
+        // The system owner sits above institutions (owner console reads across them explicitly).
+        if ($this->is_system_owner) {
+            return $this->currentInstitutionId = 0;
         }
 
         $allowed = $this->accessibleInstitutions()->pluck('id')->map(fn ($id) => (int) $id);
 
-        if ($allowed->isEmpty()) {
+        // Only create a first institution for brand-new accounts (never when the existing ones were deactivated).
+        if ($allowed->isEmpty() && !Institution::where('owner_id', $this->ownerId())->exists()) {
             $allowed = collect([Institution::create(['name' => 'Main Institution', 'owner_id' => $this->ownerId()])->id]);
         }
 
@@ -121,7 +127,8 @@ class User extends Authenticatable
             }
         }
 
-        return $this->currentInstitutionId = $allowed->first();
+        // No usable institution: 0 matches no records (never fall back to showing everything).
+        return $this->currentInstitutionId = $allowed->first() ?? 0;
     }
 
     /** Superusers can use every feature; others need the permission (granted to their role on User Roles). */

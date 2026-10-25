@@ -15,7 +15,7 @@ trait BelongsToInstitution
     public static function bootBelongsToInstitution(): void
     {
         static::addGlobalScope('institution', function (Builder $query) {
-            if ($id = static::currentInstitutionId()) {
+            if (($id = static::currentInstitutionId()) !== null) {
                 $query->where($query->getModel()->getTable() . '.institution_id', $id);
             }
         });
