@@ -265,7 +265,7 @@
             </div>
 
             <div class="card panel mb-3">
-                <div class="card-header">Hours &amp; Payment per Department</div>
+                <div class="card-header">Hours &amp; Net Payment per Department</div>
                 <div class="card-body">
                     <div class="row">
                         <div class="col-lg-6 mb-3 mb-lg-0">
@@ -273,7 +273,7 @@
                             <div class="chart-box"><canvas id="chartHours" role="img" aria-label="Total hours per department"></canvas></div>
                         </div>
                         <div class="col-lg-6">
-                            <h6 class="text-muted small text-uppercase mb-2">Total net payment (KES)</h6>
+                            <h6 class="text-muted small text-uppercase mb-2">Share of net payment (KES)</h6>
                             <div class="chart-box"><canvas id="chartPay" role="img" aria-label="Total net payment per department"></canvas></div>
                         </div>
                     </div>
@@ -481,73 +481,99 @@
     Chart.defaults.font.family = getComputedStyle(document.body).fontFamily;
     Chart.defaults.color = INK;
 
-    // Writes each bar's value at its end (single-series charts only; few bars, so labels stay readable).
-    var valueLabels = {
-        id: 'valueLabels',
-        afterDatasetsDraw: function (chart, args, opts) {
-            if (!opts || !opts.format) return;
-            var ctx = chart.ctx;
+    // Departments keep one colour across both round charts (fixed order, never re-assigned by size).
+    var SLOTS = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#6250d6', '#e34948'];
+    var deptColor = names.map(function (n, i) { return i < 8 ? SLOTS[i] : '#a8a7a0'; });
+
+    // Total in the middle of a doughnut.
+    var centerText = {
+        id: 'centerText',
+        afterDraw: function (chart, args, opts) {
+            if (!opts || !opts.text) return;
+            var a = chart.chartArea, ctx = chart.ctx, x = (a.left + a.right) / 2, y = (a.top + a.bottom) / 2;
             ctx.save();
-            ctx.fillStyle = '#0b0b0b';
-            ctx.font = '600 12px ' + Chart.defaults.font.family;
-            ctx.textBaseline = 'middle';
-            chart.getDatasetMeta(0).data.forEach(function (bar, i) {
-                ctx.fillText(opts.format(chart.data.datasets[0].data[i]), bar.x + 6, bar.y);
-            });
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillStyle = '#0b0b0b'; ctx.font = '700 22px ' + Chart.defaults.font.family;
+            ctx.fillText(opts.text, x, y - 8);
+            ctx.fillStyle = INK; ctx.font = '12px ' + Chart.defaults.font.family;
+            ctx.fillText(opts.sub || '', x, y + 14);
             ctx.restore();
         }
     };
 
-    function sizeBox(canvas, perBar) {
-        canvas.parentNode.style.height = Math.max(180, names.length * perBar + 60) + 'px';
-    }
-
-    function bar(id, values, label, format, dp) {
-        var canvas = document.getElementById(id);
-        sizeBox(canvas, 34);
-        return new Chart(canvas, {
-            type: 'bar',
-            plugins: [valueLabels],
-            data: { labels: names, datasets: [{ label: label, data: values, backgroundColor: BRAND,
-                borderRadius: 4, borderSkipped: 'start', maxBarThickness: 18 }] },
+    function round(id, type, values, unit, format, center) {
+        var total = values.reduce(function (t, v) { return t + v; }, 0);
+        return new Chart(document.getElementById(id), {
+            type: type,
+            plugins: [centerText],
+            data: { labels: names, datasets: [{ data: values, backgroundColor: deptColor, borderColor: '#fff', borderWidth: 2, hoverOffset: 6 }] },
             options: {
-                indexAxis: 'y', maintainAspectRatio: false,
-                layout: { padding: { right: 70 } },
+                maintainAspectRatio: false,
+                cutout: type === 'doughnut' ? '62%' : 0,
                 plugins: {
-                    legend: { display: false },
-                    valueLabels: { format: format },
-                    tooltip: { callbacks: { label: function (c) { return ' ' + label + ': ' + format(c.raw); } } }
-                },
-                scales: {
-                    x: { beginAtZero: true, grid: { color: GRID }, border: { display: false },
-                         ticks: { precision: 0, callback: function (v) { return num(v); } } },
-                    y: { grid: { display: false }, border: { display: false } }
+                    centerText: center ? { text: format(total), sub: center } : {},
+                    legend: {
+                        position: 'right',
+                        labels: {
+                            boxWidth: 12, boxHeight: 12, useBorderRadius: true, borderRadius: 3, padding: 12,
+                            // Legend shows value and share so identity never relies on colour alone.
+                            generateLabels: function (chart) {
+                                return names.map(function (n, i) {
+                                    var pct = total ? Math.round(values[i] / total * 100) : 0;
+                                    return { text: n + ': ' + format(values[i]) + ' (' + pct + '%)', fillStyle: deptColor[i],
+                                             strokeStyle: deptColor[i], fontColor: INK, index: i, hidden: !chart.getDataVisibility(i) };
+                                });
+                            }
+                        },
+                        onClick: function (e, item, legend) { legend.chart.toggleDataVisibility(item.index); legend.chart.update(); }
+                    },
+                    tooltip: { callbacks: { label: function (c) {
+                        var pct = total ? (c.raw / total * 100).toFixed(1) : 0;
+                        return ' ' + c.label + ': ' + format(c.raw) + (unit ? ' ' + unit : '') + ' (' + pct + '%)';
+                    } } }
                 }
             }
         });
     }
 
-    bar('chartLecturers', data.map(function (d) { return d.lecturers; }), 'Lecturers', function (v) { return num(v); });
-    bar('chartUnits', data.map(function (d) { return d.units; }), 'Units', function (v) { return num(v); });
-    bar('chartHours', data.map(function (d) { return d.hours; }), 'Hours', function (v) { return num(v, 2) + ' hrs'; });
-    bar('chartPay', data.map(function (d) { return d.net; }), 'Net payment', function (v) { return 'KES ' + num(v); });
+    function columns(id, values, label, format) {
+        return new Chart(document.getElementById(id), {
+            type: 'bar',
+            data: { labels: names, datasets: [{ label: label, data: values, backgroundColor: BRAND,
+                borderRadius: 4, borderSkipped: 'start', maxBarThickness: 46 }] },
+            options: {
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false },
+                    tooltip: { callbacks: { label: function (c) { return ' ' + label + ': ' + format(c.raw); } } } },
+                scales: {
+                    y: { beginAtZero: true, grid: { color: GRID }, border: { display: false },
+                         ticks: { precision: 0, callback: function (v) { return num(v); } } },
+                    x: { grid: { display: false }, border: { display: false } }
+                }
+            }
+        });
+    }
 
-    // Approved vs contracted: grouped bars, one shared hours axis, legend + table below.
-    var canvas = document.getElementById('chartApproved');
-    sizeBox(canvas, 52);
-    new Chart(canvas, {
+    round('chartLecturers', 'doughnut', data.map(function (d) { return d.lecturers; }), 'lecturers', function (v) { return num(v); }, 'lecturers');
+    columns('chartUnits', data.map(function (d) { return d.units; }), 'Units', function (v) { return num(v); });
+    columns('chartHours', data.map(function (d) { return d.hours; }), 'Hours', function (v) { return num(v, 2) + ' hrs'; });
+    round('chartPay', 'pie', data.map(function (d) { return d.net; }), '', function (v) { return 'KES ' + num(v); }, null);
+
+    // Approved vs contracted: paired columns on one hours axis, legend + table below.
+    new Chart(document.getElementById('chartApproved'), {
         type: 'bar',
         data: {
             labels: names,
             datasets: [
                 { label: 'Approved hours', data: data.map(function (d) { return d.approved; }), backgroundColor: APPROVED,
-                  borderRadius: 4, borderSkipped: 'start', maxBarThickness: 16, borderColor: '#fff', borderWidth: { right: 2 } },
+                  borderRadius: 4, borderSkipped: 'start', maxBarThickness: 40 },
                 { label: 'Contracted hours', data: data.map(function (d) { return d.hours; }), backgroundColor: CONTRACT,
-                  borderRadius: 4, borderSkipped: 'start', maxBarThickness: 16, borderColor: '#fff', borderWidth: { right: 2 } }
+                  borderRadius: 4, borderSkipped: 'start', maxBarThickness: 40 }
             ]
         },
         options: {
-            indexAxis: 'y', maintainAspectRatio: false,
+            maintainAspectRatio: false,
+            datasets: { bar: { categoryPercentage: 0.6, barPercentage: 0.9 } },
             plugins: {
                 legend: { position: 'top', align: 'start', labels: { boxWidth: 12, boxHeight: 12, useBorderRadius: true, borderRadius: 3 } },
                 tooltip: {
@@ -564,8 +590,8 @@
                 }
             },
             scales: {
-                x: { beginAtZero: true, grid: { color: GRID }, border: { display: false }, title: { display: true, text: 'Hours' } },
-                y: { grid: { display: false }, border: { display: false } }
+                y: { beginAtZero: true, grid: { color: GRID }, border: { display: false }, title: { display: true, text: 'Hours' } },
+                x: { grid: { display: false }, border: { display: false } }
             }
         }
     });
