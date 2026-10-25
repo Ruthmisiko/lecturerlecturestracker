@@ -175,33 +175,10 @@ class DashboardController extends Controller
 
     protected function excel($sections, $totals, string $period)
     {
-        $header = ['SNO', 'EMPLOYEE PIN', 'NAME', 'HOURS WORKED', 'RATE', 'GROSS AMOUNT', 'HOUSE LEVY', 'TAX DEDUCTED', 'NET AMOUNT', 'DEPARTMENT', 'PERIOD TAUGHT', 'PV NO VCH NO'];
-        $money  = fn ($v) => round($v, 2);
-        $data   = collect([['LECTURER PAYMENT REPORT — ' . strtoupper($period)], []]);
-
-        foreach ($sections as $section) {
-            $data->push([strtoupper($section->name)]);
-            $data->push($header);
-
-            foreach ($section->rows as $i => $r) {
-                $data->push([$i + 1, $r->kra_pin, $r->name, round($r->hours, 2), $money($r->rate), $money($r->gross),
-                    $money($r->housing), $money($r->tax), $money($r->net), $r->department, $r->period_taught, '']);
-            }
-
-            $t = $section->totals;
-            $data->push(['', '', 'TOTAL', round($t->hours, 2), '', $money($t->gross), $money($t->housing), $money($t->tax), $money($t->net)]);
-            $data->push(['', '', 'EMPLOYEE AHL', $money($t->housing)]);
-            $data->push(['', '', 'EMPLOYER AHL', $money($t->employer_levy)]);
-            $data->push(['', '', 'TOTAL AHL', $money($t->housing + $t->employer_levy)]);
-            $data->push(['', '', 'TAX DEDUCTED', $money($t->tax)]);
-            $data->push([]);
-        }
-
-        if ($sections->count() > 1) {
-            $data->push(['', '', 'GRAND TOTAL (ALL DEPARTMENTS)', round($totals->hours, 2), '', $money($totals->gross), $money($totals->housing), $money($totals->tax), $money($totals->net)]);
-        }
-
-        return Excel::download(new CollectionExport($data), 'lecturer_payment_report.xlsx');
+        return Excel::download(
+            new \App\Exports\PaymentReportExport($sections, $totals, \App\Support\Theme::current()),
+            'lecturer_payment_report.xlsx'
+        );
     }
 
     /** Optional date range from the request (Y-m-d), validated loosely. */

@@ -23,8 +23,12 @@
     </style>
 </head>
 <body>
-    <h2>Lecturer Payment Report</h2>
-    <div class="meta">Period: {{ $period }} &nbsp;|&nbsp; {{ $department->name ?? 'All departments' }} &nbsp;|&nbsp; Generated: {{ now()->format('d M Y, H:i') }} &nbsp;|&nbsp; Amounts in KES</div>
+    @php $letterheadPath = $theme->institution?->assetPath('letterhead'); @endphp
+    @if ($letterheadPath)
+        <div style="text-align:center; margin-bottom:8px;"><img src="{{ $letterheadPath }}" style="height:95px;" alt="Letterhead"></div>
+    @else
+        <h2>{{ $theme->institution->name ?? 'Lecturer Payment Report' }}</h2>
+    @endif
 
     @foreach ($sections as $section)
         <h3>{{ $section->name }}</h3>
