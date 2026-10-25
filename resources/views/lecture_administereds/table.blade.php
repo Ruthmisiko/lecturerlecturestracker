@@ -6,7 +6,7 @@
 <div class="card card-body mb-3">
     <form method="GET" action="{{ route('lecture-administereds.index') }}">
     <input type="hidden" name="per_page" value="{{ request('per_page', 10) }}">
-    <div class="row align-items-end g-2">
+    <div class="row align-items-start" style="row-gap:10px;">
 
 <div class="col-md-2">
     <select name="lecturer_id" class="form-control">
@@ -56,7 +56,13 @@
 </div>
 
 <div class="col-md-2">
-    <input type="date" name="lecture_date" class="form-control" value="{{ request('lecture_date') }}">
+    <input type="date" name="lecture_date" class="form-control" value="{{ request('lecture_date') }}" title="Lecture date">
+    <small class="text-muted">Lecture date</small>
+</div>
+
+<div class="col-md-2">
+    <input type="date" name="updated_on" class="form-control" value="{{ request('updated_on') }}" title="Records added or changed on this date">
+    <small class="text-muted">Added / updated on</small>
 </div>
 
 <div class="col-md-2">
@@ -86,12 +92,12 @@
 </div>
 @endif
 
-<!-- BUTTONS -->
-<div class="col-md-2 d-flex flex-wrap gap-1">
-    <button type="submit" class="btn btn-success btn-sm mr-1">Search</button>
-    <a href="{{ route('lecture-administereds.index') }}" class="btn btn-secondary btn-sm mr-1">Reset</a>
-    <a href="{{ route('lecture-administereds.export.pdf', request()->all()) }}" class="btn btn-danger btn-sm mr-1">PDF</a>
-    <a href="{{ route('lecture-administereds.export.excel', request()->all()) }}" class="btn btn-primary btn-sm">Excel</a>
+<!-- BUTTONS (own row, right-aligned) -->
+<div class="col-12 d-flex justify-content-end flex-wrap mt-1" style="gap:6px;">
+    <button type="submit" class="btn btn-success btn-sm px-3"><i class="fas fa-search mr-1"></i>Search</button>
+    <a href="{{ route('lecture-administereds.index') }}" class="btn btn-light border btn-sm px-3"><i class="fas fa-undo mr-1"></i>Reset</a>
+    <a href="{{ route('lecture-administereds.export.pdf', request()->all()) }}" class="btn btn-info btn-sm px-3"><i class="fas fa-file-pdf mr-1"></i>PDF</a>
+    <a href="{{ route('lecture-administereds.export.excel', request()->all()) }}" class="btn btn-outline-success btn-sm px-3"><i class="fas fa-file-excel mr-1"></i>Excel</a>
 </div>
 
 </div>

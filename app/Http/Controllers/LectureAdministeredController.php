@@ -80,6 +80,9 @@ class LectureAdministeredController extends AppBaseController
         if ($request->filled('lecture_date') && $item->lecture_date !== $request->lecture_date) {
             return false;
         }
+        if ($request->filled('updated_on') && optional($item->updated_at)->format('Y-m-d') !== $request->updated_on) {
+            return false;
+        }
         if ($request->filled('department_id') && $item->department_id != $request->department_id) {
             return false;
         }
@@ -259,6 +262,7 @@ private function fetchExportData(Request $request): array
         if ($request->filled('unit_id') && $item->unit_id != $request->unit_id) return false;
         if ($request->filled('semester_id') && $item->semester_id != $request->semester_id) return false;
         if ($request->filled('lecture_date') && $item->lecture_date !== $request->lecture_date) return false;
+        if ($request->filled('updated_on') && optional($item->updated_at)->format('Y-m-d') !== $request->updated_on) return false;
         if ($request->filled('department_id') && $item->department_id != $request->department_id) return false;
         if ($request->filled('status')) {
             $ownClash     = $this->isOwnClash($item, $ownClashPool);
