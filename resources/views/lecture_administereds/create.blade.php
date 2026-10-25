@@ -53,7 +53,7 @@
 
             <div class="card-body">
 
-                {{-- Department at top --}}
+                {{-- Department and semester at top --}}
                 <div class="form-group row align-items-center">
                     <label class="col-sm-2 col-form-label font-weight-bold">Department:</label>
                     <div class="col-sm-4">
@@ -62,6 +62,18 @@
                             @foreach($departments as $dept)
                                 <option value="{{ $dept->id }}">{{ $dept->name }}</option>
                             @endforeach
+                        </select>
+                    </div>
+                    <label class="col-sm-2 col-form-label font-weight-bold text-sm-right">Semester:</label>
+                    <div class="col-sm-4">
+                        <select name="semester_id" class="form-control">
+                            @forelse($semesters as $sem)
+                                <option value="{{ $sem->id }}" {{ $sem->is_current ? 'selected' : '' }}>
+                                    {{ $sem->name }}{{ $sem->is_current ? ' (current)' : '' }}
+                                </option>
+                            @empty
+                                <option value="">-- No semesters yet --</option>
+                            @endforelse
                         </select>
                     </div>
                 </div>

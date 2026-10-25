@@ -38,6 +38,10 @@
 @endcan
 
 @if (Auth::user()->isSuperAdmin())
+<a href="{{ route('semesters.index') }}" class="nav-link text-white font-weight-bold {{ Request::is('semesters*') ? 'active' : '' }}">
+    <p>Semesters</p>
+</a>
+
 <a href="{{ route('institutions.index') }}" class="nav-link text-white font-weight-bold {{ Request::is('institutions*') ? 'active' : '' }}">
     <p>Institutions</p>
 </a>

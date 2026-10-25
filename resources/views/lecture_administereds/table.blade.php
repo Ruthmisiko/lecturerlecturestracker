@@ -45,6 +45,17 @@
 </div>
 
 <div class="col-md-2">
+    <select name="semester_id" class="form-control">
+        <option value="">All Semesters</option>
+        @foreach($allSemesters as $sem)
+            <option value="{{ $sem->id }}" {{ request('semester_id') == $sem->id ? 'selected' : '' }}>
+                {{ $sem->name }}{{ $sem->is_current ? ' (current)' : '' }}
+            </option>
+        @endforeach
+    </select>
+</div>
+
+<div class="col-md-2">
     <input type="date" name="lecture_date" class="form-control" value="{{ request('lecture_date') }}">
 </div>
 
@@ -158,6 +169,7 @@
                     <th>Department</th>
                     <th>Class</th>
                     <th>Unit</th>
+                    <th>Semester</th>
                     <th>Start Time</th>
                     <th>End Time</th>
                     <th>Lecture Date</th>
@@ -172,6 +184,7 @@
                         <td>{{ $lectureAdministered->department->name ?? '-' }}</td>
                         <td>{{ $lectureAdministered->classs->name ?? '-' }}</td>
                         <td>{{ $lectureAdministered->unit->name ?? '-' }}</td>
+                        <td>{{ $lectureAdministered->semester->name ?? '-' }}</td>
                         <td>{{ $lectureAdministered->start_time }}</td>
                         <td>{{ $lectureAdministered->end_time }}</td>
                         <td>

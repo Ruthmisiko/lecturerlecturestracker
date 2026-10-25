@@ -22,7 +22,7 @@ class LectureExport implements FromCollection, WithHeadings, WithStyles
 
     public function headings(): array
     {
-        return ['Lecturer', 'Class', 'Unit', 'Department', 'Date', 'Start Time', 'End Time', 'Status'];
+        return ['Lecturer', 'Class', 'Unit', 'Department', 'Semester', 'Date', 'Start Time', 'End Time', 'Status'];
     }
 
     public function collection()
@@ -47,6 +47,7 @@ class LectureExport implements FromCollection, WithHeadings, WithStyles
                 $item->classs->name     ?? '-',
                 $item->unit->name       ?? '-',
                 $item->department->name ?? '-',
+                $item->semester->name   ?? '-',
                 $item->lecture_date,
                 $item->start_time,
                 $item->end_time,

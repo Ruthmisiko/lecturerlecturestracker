@@ -17,6 +17,7 @@ class LectureAdministered extends Model
         'classs_id',
         'department_id',
         'unit_id',
+        'semester_id',
         'start_time',
         'end_time',
         'lecture_date',
@@ -27,10 +28,23 @@ class LectureAdministered extends Model
     ];
 
     public static array $rules = [
-        
+
     ];
 
-   
+    protected static function booted(): void
+    {
+        // New lectures (form, import...) default to the institution's current semester.
+        static::creating(function (self $lecture) {
+            if (empty($lecture->semester_id)) {
+                $lecture->semester_id = Semester::current()?->id;
+            }
+        });
+    }
+
+    public function semester()
+    {
+        return $this->belongsTo(Semester::class);
+    }
 
     public function lecturer()
     {

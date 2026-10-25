@@ -4,6 +4,11 @@
 </div>
 
 <div class="form-group col-sm-6">
+    {!! Form::label('semester_id', 'Semester:') !!}
+    {!! Form::select('semester_id', $semesters ?? [], null, ['class' => 'form-control']) !!}
+</div>
+
+<div class="form-group col-sm-6">
     {!! Form::label('classs_id', 'Class:') !!}
     {!! Form::select('classs_id', \App\Models\Classs::pluck('name', 'id'), null, ['class' => 'form-control', 'placeholder' => 'Select Class']) !!}
 </div>

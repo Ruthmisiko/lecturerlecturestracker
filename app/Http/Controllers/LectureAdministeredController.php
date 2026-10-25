@@ -10,6 +10,7 @@ use App\Imports\LectureImport;
 use App\Models\Classs;
 use App\Models\Department;
 use App\Models\Lecturer;
+use App\Models\Semester;
 use App\Models\LectureAdministered;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -39,7 +40,7 @@ class LectureAdministeredController extends AppBaseController
     $ownerId = $user->ownerId();
 
     // Fetch ALL owner records once — used for clash detection and filtering
-    $allRecords = LectureAdministered::with(['lecturer', 'classs', 'unit', 'department'])
+    $allRecords = LectureAdministered::with(['lecturer', 'classs', 'unit', 'department', 'semester'])
         ->where('user_id', $ownerId)
         ->when($user->scopedDepartmentIds(), fn($q) => $q->whereIn('department_id', $user->scopedDepartmentIds()))
         ->get();
@@ -71,6 +72,9 @@ class LectureAdministeredController extends AppBaseController
             return false;
         }
         if ($request->filled('unit_id') && $item->unit_id != $request->unit_id) {
+            return false;
+        }
+        if ($request->filled('semester_id') && $item->semester_id != $request->semester_id) {
             return false;
         }
         if ($request->filled('lecture_date') && $item->lecture_date !== $request->lecture_date) {
@@ -121,13 +125,14 @@ class LectureAdministeredController extends AppBaseController
 
     $allLecturers = Lecturer::where('user_id', $ownerId)->orderBy('name')->get();
     $allClasses   = Classs::where('user_id', $ownerId)->orderBy('name')->get(['id', 'name']);
+    $allSemesters = Semester::orderByDesc('is_current')->orderByDesc('start_date')->orderByDesc('id')->get(['id', 'name', 'is_current']);
     $allUnits     = \App\Models\Unit::where('user_id', $ownerId)
         ->when($user->scopedDepartmentIds(), fn($q) => $q->whereIn('department_id', $user->scopedDepartmentIds()))
         ->orderBy('name')
         ->get(['id', 'name', 'unitCode']);
 
     return view('lecture_administereds.index',
-        compact('lectureAdministereds', 'duplicates', 'clashes', 'ownClashPool', 'departments', 'allLecturers', 'allClasses', 'allUnits', 'totalHours'));
+        compact('lectureAdministereds', 'duplicates', 'clashes', 'ownClashPool', 'departments', 'allLecturers', 'allClasses', 'allUnits', 'allSemesters', 'totalHours'));
 }
 
 private function buildClashPools($allRecords, $ownerId): array
@@ -137,7 +142,7 @@ private function buildClashPools($allRecords, $ownerId): array
     $lecturerIds = $allRecords->pluck('lecturer_id')->unique()->filter()->values();
 
     $crossDeptRecords = $lecturerIds->isNotEmpty()
-        ? LectureAdministered::with(['lecturer', 'classs', 'unit', 'department'])
+        ? LectureAdministered::with(['lecturer', 'classs', 'unit', 'department', 'semester'])
             ->where('user_id', $ownerId)
             ->whereIn('lecturer_id', $lecturerIds)
             ->get()
@@ -225,6 +230,7 @@ public function exportPdf(Request $request)
         'filters'      => $request->only('lecturer', 'class', 'lecture_date', 'department_id', 'status') + array_filter([
             'class' => $request->filled('classs_id') ? Classs::find($request->classs_id)?->name : null,
             'unit'  => $request->filled('unit_id') ? \App\Models\Unit::find($request->unit_id)?->name : null,
+            'semester' => $request->filled('semester_id') ? Semester::find($request->semester_id)?->name : null,
         ]),
     ])->setPaper('a4', 'landscape');
 
@@ -236,7 +242,7 @@ private function fetchExportData(Request $request): array
     $user    = Auth::user();
     $ownerId = $user->ownerId();
 
-    $allRecords = LectureAdministered::with(['lecturer', 'classs', 'unit', 'department'])
+    $allRecords = LectureAdministered::with(['lecturer', 'classs', 'unit', 'department', 'semester'])
         ->where('user_id', $ownerId)
         ->when($user->scopedDepartmentIds(), fn($q) => $q->whereIn('department_id', $user->scopedDepartmentIds()))
         ->get();
@@ -251,6 +257,7 @@ private function fetchExportData(Request $request): array
             !str_contains(strtolower($item->classs->name ?? ''), strtolower($request->class))) return false;
         if ($request->filled('classs_id') && $item->classs_id != $request->classs_id) return false;
         if ($request->filled('unit_id') && $item->unit_id != $request->unit_id) return false;
+        if ($request->filled('semester_id') && $item->semester_id != $request->semester_id) return false;
         if ($request->filled('lecture_date') && $item->lecture_date !== $request->lecture_date) return false;
         if ($request->filled('department_id') && $item->department_id != $request->department_id) return false;
         if ($request->filled('status')) {
@@ -295,7 +302,9 @@ private function fetchExportData(Request $request): array
         if ($deptScope) $uq->whereIn('department_id', $deptScope);
         $units = $uq->get(['id', 'name', 'unitCode', 'department_id']);
 
-        return view('lecture_administereds.create', compact('departments', 'lecturers', 'classes', 'units'));
+        $semesters = Semester::orderByDesc('is_current')->orderByDesc('start_date')->orderByDesc('id')->get();
+
+        return view('lecture_administereds.create', compact('departments', 'lecturers', 'classes', 'units', 'semesters'));
     }
 
     /**
@@ -305,6 +314,7 @@ private function fetchExportData(Request $request): array
     {
         $request->validate([
             'department_id'         => 'nullable|exists:departments,id',
+            'semester_id'           => 'nullable|exists:semesters,id',
             'records'               => 'required|array|min:1',
             'records.*.lecturer_id' => 'required|exists:lecturers,id',
             'records.*.classs_id'   => 'required|exists:classses,id',
@@ -317,8 +327,10 @@ private function fetchExportData(Request $request): array
         $user    = Auth::user();
         $ownerId = $user->ownerId();
         $deptId  = $request->department_id;
+        // Empty = the current semester (filled in by the model).
+        $semesterId = $request->semester_id ?: null;
 
-        DB::transaction(function () use ($request, $ownerId, $deptId) {
+        DB::transaction(function () use ($request, $ownerId, $deptId, $semesterId) {
             foreach ($request->records as $record) {
                 foreach ($record['dates'] as $date) {
                     LectureAdministered::create([
@@ -327,6 +339,7 @@ private function fetchExportData(Request $request): array
                         'lecturer_id'   => $record['lecturer_id'],
                         'classs_id'     => $record['classs_id'],
                         'unit_id'       => $record['unit_id'] ?? null,
+                        'semester_id'   => $semesterId,
                         'lecture_date'  => $date,
                         'start_time'    => $record['start_time'],
                         'end_time'      => $record['end_time'],
@@ -365,7 +378,8 @@ private function fetchExportData(Request $request): array
 
       $lecturers = \App\Models\Lecturer::where('user_id', Auth::user()->ownerId())->pluck('name', 'id');
     $classes = \App\Models\Classs::where('user_id', Auth::user()->ownerId())->pluck('name', 'id');
-    return view('lecture_administereds.edit', compact('lectureAdministered', 'lecturers', 'classes'));
+    $semesters = Semester::orderByDesc('is_current')->orderByDesc('start_date')->orderByDesc('id')->pluck('name', 'id');
+    return view('lecture_administereds.edit', compact('lectureAdministered', 'lecturers', 'classes', 'semesters'));
 }
 
     /**
@@ -378,7 +392,8 @@ private function fetchExportData(Request $request): array
             'classs_id' => 'required|exists:classses,id',
             'lecture_date' => 'required|date',
             'start_time' => 'required|date_format:H:i',
-            'end_time' => 'required|date_format:H:i|after:start_time'
+            'end_time' => 'required|date_format:H:i|after:start_time',
+            'semester_id' => 'nullable|exists:semesters,id'
         ]);
 
         $lectureAdministered = $this->lectureAdministeredRepository->find($id);
@@ -396,6 +411,7 @@ private function fetchExportData(Request $request): array
             'lecture_date' => $request->lecture_date,
             'start_time' => $request->start_time,
             'end_time' => $request->end_time,
+            'semester_id' => $request->semester_id ?: $lectureAdministered->semester_id,
         ]);
 
         Flash::success('Lecture Administered updated successfully.');
