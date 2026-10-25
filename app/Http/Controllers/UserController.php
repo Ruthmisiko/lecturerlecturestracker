@@ -59,7 +59,12 @@ class UserController extends Controller
         $user->assignRole($request->role);
         $user->departments()->sync($request->departments ?? []);
 
-        return redirect()->route('users.index')->with('success', 'User created successfully.');
+        $message = 'User created successfully.';
+        if ($request->boolean('send_login')) {
+            $message .= ' ' . $this->sendLoginDetails($user, $request->password, $request->role, $institutionId);
+        }
+
+        return redirect()->route('users.index')->with('success', $message);
     }
 
     public function edit($id)
@@ -109,6 +114,39 @@ class UserController extends Controller
                 ->orderBy('name')
                 ->get(),
         ];
+    }
+
+    /**
+     * Emails the new user their login details through the institution's default email account.
+     * Returns a sentence describing the outcome (the user is created either way).
+     */
+    private function sendLoginDetails(User $user, string $password, string $role, int $institutionId): string
+    {
+        $institution = \App\Models\Institution::find($institutionId);
+        $account = \App\Models\EmailConfiguration::withoutGlobalScope('institution')
+            ->where('institution_id', $institutionId)
+            ->orderByDesc('is_default')->orderBy('id')->first();
+
+        if (!$account) {
+            return 'Login details were NOT emailed: add an email account under Email Settings first.';
+        }
+
+        $theme = \App\Support\Theme::for($institution);
+
+        try {
+            $account->mailer()->to($user->email)->send(new \App\Mail\WelcomeUserMail(
+                $user->name, $user->email, $password, $role,
+                $institution->name ?? 'Lecturer Tracker',
+                route('login'),
+                $theme->primary, $theme->primaryText(),
+                $account->from_address, $account->from_name,
+            ));
+        } catch (\Throwable $e) {
+            report($e);
+            return 'Login details could NOT be emailed: ' . $e->getMessage();
+        }
+
+        return "Login details were emailed to {$user->email}.";
     }
 
     /** Superusers may place a user in any accessible institution; everyone else uses the current one. */

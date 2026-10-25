@@ -43,6 +43,14 @@
             'selectedDepartmentIds' => array_map('intval', old('departments', [])),
         ])
 
+        <div class="form-check mb-3">
+            <input type="hidden" name="send_login" value="0">
+            <input class="form-check-input" type="checkbox" name="send_login" value="1" id="send_login" {{ old('send_login', '1') ? 'checked' : '' }}>
+            <label class="form-check-label" for="send_login">
+                Email the login details and site link to this user
+            </label>
+        </div>
+
         <button type="submit" class="btn btn-success">Create</button>
         <a href="{{ route('users.index') }}" class="btn btn-secondary">Cancel</a>
     </form>
