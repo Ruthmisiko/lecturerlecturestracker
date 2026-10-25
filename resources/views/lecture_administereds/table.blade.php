@@ -92,8 +92,8 @@
 </div>
 @endif
 
-<!-- BUTTONS (own row, right-aligned) -->
-<div class="col-12 d-flex justify-content-end flex-wrap mt-1" style="gap:6px;">
+<!-- BUTTONS (right-aligned, same line as the last filters) -->
+<div class="col-md d-flex justify-content-end align-items-start flex-wrap pt-1" style="gap:6px;">
     <button type="submit" class="btn btn-success btn-sm px-3"><i class="fas fa-search mr-1"></i>Search</button>
     <a href="{{ route('lecture-administereds.index') }}" class="btn btn-light border btn-sm px-3"><i class="fas fa-undo mr-1"></i>Reset</a>
     <a href="{{ route('lecture-administereds.export.pdf', request()->all()) }}" class="btn btn-info btn-sm px-3"><i class="fas fa-file-pdf mr-1"></i>PDF</a>
