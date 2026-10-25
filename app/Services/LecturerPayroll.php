@@ -78,6 +78,7 @@ class LecturerPayroll
                 'id'                => $lecturer->id,
                 'name'              => $lecturer->name,
                 'department'        => $lecturer->department->name ?? '—',
+                'department_id'     => $lecturer->department_id,
                 'department_description' => trim($lecturer->department->description ?? '') ?: ($lecturer->department->name ?? ''),
                 'kra_pin'           => $lecturer->kra_pin ?: '—',
                 'sessions'          => $own->count(),
@@ -94,12 +95,27 @@ class LecturerPayroll
                 'employer_levy'     => $housing,
                 'net'               => round($gross - $tax - $housing, self::PRECISION),
                 'last_lecture'      => $own->max('lecture_date'),
+                'total_sessions'    => $all->count(),
+                'period_taught'     => self::periodTaught($own->min('lecture_date'), $own->max('lecture_date')),
                 'units'             => $own->groupBy(fn ($l) => $l->unit->name ?? 'No unit')
                     ->map(fn ($g) => round($g->sum(fn ($l) => self::minutes($l)) / 60, self::PRECISION))
                     ->sortDesc()
                     ->all(),
             ];
         })->values();
+    }
+
+    /** e.g. "SEP 24-FEB 25", or "MAR 26" when all lectures fall in one month. */
+    public static function periodTaught(?string $first, ?string $last): string
+    {
+        if (!$first) {
+            return '';
+        }
+
+        $from = strtoupper(Carbon::parse($first)->format('M y'));
+        $to   = strtoupper(Carbon::parse($last)->format('M y'));
+
+        return $from === $to ? $from : "{$from}-{$to}";
     }
 
     /** Column totals for a set of rows. */

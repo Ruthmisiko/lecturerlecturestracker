@@ -21,6 +21,7 @@ Route::get('/', function () {
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [App\Http\Controllers\DashboardController::class, 'index'])->name('dashboard');
     Route::get('/dashboard/report', [App\Http\Controllers\DashboardController::class, 'report'])->name('dashboard.report');
+    Route::get('/dashboard/report/row', [App\Http\Controllers\DashboardController::class, 'reportRow'])->name('dashboard.report.row');
     Route::get('/dashboard/payslip/{lecturer}', [App\Http\Controllers\DashboardController::class, 'payslip'])->name('dashboard.payslip');
     Route::get('/payment-schedules/amounts', [App\Http\Controllers\PaymentScheduleController::class, 'amounts'])->name('payment-schedules.amounts');
     Route::get('/payment-schedules/{payment_schedule}/pdf', [App\Http\Controllers\PaymentScheduleController::class, 'pdf'])->name('payment-schedules.pdf');

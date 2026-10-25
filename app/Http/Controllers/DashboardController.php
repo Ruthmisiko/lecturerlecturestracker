@@ -60,22 +60,98 @@ class DashboardController extends Controller
         $this->authorizeSuperuser();
 
         [$from, $to] = $this->period($request);
-        $statuses    = $this->statuses($request);
-        $rows   = (new LecturerPayroll(Auth::user(), $from, $to, $statuses))->rows();
-        $totals = LecturerPayroll::totals($rows);
+        $statuses     = $this->statuses($request);
+        $overrides    = $this->rowStatuses($request);
+        $departmentId = $request->integer('department_id') ?: null;
+
+        $rows = $this->reportRows($from, $to, $statuses, $overrides)
+            // Only lecturers who taught in the period (or whose row was adjusted).
+            ->filter(fn ($r) => $r->total_sessions > 0 || array_key_exists($r->id, $overrides))
+            ->when($departmentId, fn ($c) => $c->where('department_id', $departmentId))
+            ->values();
+
+        $sections = $rows->groupBy('department')
+            ->map(fn ($group, $name) => (object) [
+                'name'   => $name,
+                'rows'   => $group->values(),
+                'totals' => LecturerPayroll::totals($group),
+            ])
+            ->sortBy('name')
+            ->values();
+
+        $totals      = LecturerPayroll::totals($rows);
+        $period      = $this->periodLabel($from, $to);
+        $departments = Department::orderBy('name')->get(['id', 'name']);
+        $department  = $departmentId ? $departments->firstWhere('id', $departmentId) : null;
 
         if ($request->get('format') === 'excel') {
-            return $this->excel($rows, $totals, $from, $to, $statuses);
+            return $this->excel($sections, $totals, $period);
         }
 
         if ($request->get('format') === 'pdf') {
-            $period = $this->periodLabel($from, $to);
-            return PDF::loadView('dashboard.report_pdf', compact('rows', 'totals', 'period', 'statuses'))
+            return PDF::loadView('dashboard.report_pdf', compact('sections', 'totals', 'period', 'statuses', 'department'))
                 ->setPaper('a4', 'landscape')
                 ->download('lecturer_payment_report.pdf');
         }
 
-        return view('dashboard.report', compact('rows', 'totals', 'from', 'to', 'statuses'));
+        return view('dashboard.report', compact('sections', 'totals', 'from', 'to', 'statuses', 'departments', 'department', 'overrides'));
+    }
+
+    /** One lecturer's figures for the chosen payable statuses (used when a row's dropdown changes). */
+    public function reportRow(Request $request)
+    {
+        $this->authorizeSuperuser();
+
+        [$from, $to] = $this->period($request);
+        $row = (new LecturerPayroll(Auth::user(), $from, $to, $this->statuses($request)))->rows()
+            ->firstWhere('id', $request->integer('lecturer'));
+
+        abort_unless($row, 404);
+
+        return response()->json($row);
+    }
+
+    /**
+     * Payroll rows using the report's statuses, with individual lecturers recalculated
+     * for any per-row statuses chosen on the report ("rs" = [lecturerId => "ok,own_clash" | "all"]).
+     */
+    protected function reportRows(?string $from, ?string $to, ?array $statuses, array $overrides)
+    {
+        $user = Auth::user();
+        $rows = (new LecturerPayroll($user, $from, $to, $statuses))->rows()->keyBy('id');
+
+        foreach ($rows as $row) {
+            $row->statuses = $statuses;
+        }
+
+        // One payroll run per distinct status set chosen on rows.
+        foreach (collect($overrides)->groupBy(fn ($s) => $s ? implode(',', $s) : 'all', true) as $group) {
+            $set     = $group->first();
+            $special = (new LecturerPayroll($user, $from, $to, $set))->rows()->keyBy('id');
+
+            foreach ($group->keys() as $lecturerId) {
+                if ($special->has($lecturerId)) {
+                    $row = $special->get($lecturerId);
+                    $row->statuses = $set;
+                    $rows->put($lecturerId, $row);
+                }
+            }
+        }
+
+        return $rows->sortBy('name')->values();
+    }
+
+    /** Per-row payable statuses from the query string: lecturer id => statuses (null = all). */
+    protected function rowStatuses(Request $request): array
+    {
+        $out = [];
+        foreach ((array) $request->input('rs', []) as $id => $value) {
+            if (ctype_digit((string) $id)) {
+                $out[(int) $id] = $value === 'all' ? null : LecturerPayroll::normaliseStatuses(explode(',', (string) $value));
+            }
+        }
+
+        return $out;
     }
 
     public function payslip(Request $request, $lecturerId)
@@ -97,19 +173,33 @@ class DashboardController extends Controller
             ->download('payslip_' . str($lecturer->name)->slug('_') . '.pdf');
     }
 
-    protected function excel($rows, $totals, $from, $to, ?array $statuses)
+    protected function excel($sections, $totals, string $period)
     {
-        $data = collect([
-            ['Lecturer Payment Report — ' . $this->periodLabel($from, $to) . ' — Payable: ' . self::statusLabel($statuses)],
-            [],
-            ['Lecturer', 'Department', 'KRA PIN', 'Sessions', 'Total Hours', 'Rate / Hr', 'Gross Amount', 'Tax', 'Housing Levy', 'Net Pay'],
-        ]);
+        $header = ['SNO', 'EMPLOYEE PIN', 'NAME', 'HOURS WORKED', 'RATE', 'GROSS AMOUNT', 'HOUSE LEVY', 'TAX DEDUCTED', 'NET AMOUNT', 'DEPARTMENT', 'PERIOD TAUGHT', 'PV NO VCH NO'];
+        $money  = fn ($v) => round($v, 2);
+        $data   = collect([['LECTURER PAYMENT REPORT — ' . strtoupper($period)], []]);
 
-        foreach ($rows as $r) {
-            $data->push([$r->name, $r->department, $r->kra_pin, $r->sessions, $r->hours, $r->rate, $r->gross, $r->tax, $r->housing, $r->net]);
+        foreach ($sections as $section) {
+            $data->push([strtoupper($section->name)]);
+            $data->push($header);
+
+            foreach ($section->rows as $i => $r) {
+                $data->push([$i + 1, $r->kra_pin, $r->name, round($r->hours, 2), $money($r->rate), $money($r->gross),
+                    $money($r->housing), $money($r->tax), $money($r->net), $r->department, $r->period_taught, '']);
+            }
+
+            $t = $section->totals;
+            $data->push(['', '', 'TOTAL', round($t->hours, 2), '', $money($t->gross), $money($t->housing), $money($t->tax), $money($t->net)]);
+            $data->push(['', '', 'EMPLOYEE AHL', $money($t->housing)]);
+            $data->push(['', '', 'EMPLOYER AHL', $money($t->employer_levy)]);
+            $data->push(['', '', 'TOTAL AHL', $money($t->housing + $t->employer_levy)]);
+            $data->push(['', '', 'TAX DEDUCTED', $money($t->tax)]);
+            $data->push([]);
         }
 
-        $data->push(['TOTAL', '', '', $totals->sessions, $totals->hours, '', $totals->gross, $totals->tax, $totals->housing, $totals->net]);
+        if ($sections->count() > 1) {
+            $data->push(['', '', 'GRAND TOTAL (ALL DEPARTMENTS)', round($totals->hours, 2), '', $money($totals->gross), $money($totals->housing), $money($totals->tax), $money($totals->net)]);
+        }
 
         return Excel::download(new CollectionExport($data), 'lecturer_payment_report.xlsx');
     }
