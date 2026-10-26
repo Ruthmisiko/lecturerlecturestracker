@@ -91,15 +91,9 @@ class AttendanceUploadController extends Controller
         }
 
         $created = 0;
-        $skipped = 0;
 
-        DB::transaction(function () use ($chosen, $selection, &$created, &$skipped) {
+        DB::transaction(function () use ($chosen, $selection, &$created) {
             foreach ($chosen as $r) {
-                if ($this->alreadyRecorded($selection['lecturer']->id, $r['date'], $r['start_time'])) {
-                    $skipped++;
-                    continue;
-                }
-
                 LectureAdministered::create([
                     'user_id'       => Auth::user()->ownerId(),
                     'lecturer_id'   => $selection['lecturer']->id,
@@ -115,11 +109,7 @@ class AttendanceUploadController extends Controller
             }
         });
 
-        $message = "{$created} lecture record(s) created for {$selection['lecturer']->name}.";
-        if ($skipped) {
-            $message .= " {$skipped} skipped because they were already recorded.";
-        }
-        $created ? Flash::success($message) : Flash::warning($message);
+        Flash::success("{$created} lecture record(s) created for {$selection['lecturer']->name}.");
 
         return redirect()->route('lecture-administereds.index', ['lecturer_id' => $selection['lecturer']->id]);
     }
@@ -189,11 +179,9 @@ class AttendanceUploadController extends Controller
                 $key = $row['date'] . ' ' . $row['start_time'];
 
                 if ($this->alreadyRecorded($selection['lecturer']->id, $row['date'], $row['start_time'])) {
-                    $notes[] = 'Already recorded';
-                    $row['duplicate'] = true;
+                    $notes[] = 'Already recorded (will be added again if saved)';
                 } elseif (isset($seen[$key])) {
                     $notes[] = 'Appears twice in the uploads';
-                    $row['duplicate'] = true;
                 }
                 $seen[$key] = true;
 
@@ -204,7 +192,7 @@ class AttendanceUploadController extends Controller
             }
 
             $row['notes']   = $notes;
-            $row['include'] = !$row['problem'] && empty($row['duplicate']);
+            $row['include'] = !$row['problem'];
         }
 
         return collect($rows)->sortBy(fn ($r) => ($r['date'] ?? '9999') . ($r['start_time'] ?? ''))->values()->all();
