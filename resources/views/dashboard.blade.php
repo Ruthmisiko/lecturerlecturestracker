@@ -2,15 +2,12 @@
 
 @push('styles')
 <style>
-    .dash-stat { border: 0; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
-    .dash-stat .card-body { display: flex; align-items: center; gap: 16px; padding: 20px; }
-    .dash-stat .icon { width: 52px; height: 52px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; }
-    .dash-stat .label { font-size: 13px; color: #6c757d; text-transform: uppercase; letter-spacing: .04em; margin: 0; }
-    .dash-stat .value { font-size: 26px; font-weight: 700; margin: 0; line-height: 1.2; color: #212529; }
-    .money-card { border: 0; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
-    .money-card .card-body { padding: 14px 18px; }
-    .money-card .label { font-size: 12px; color: #6c757d; text-transform: uppercase; margin: 0; }
-    .money-card .value { font-size: 18px; font-weight: 700; margin: 0; }
+    .metric { border: 0; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,.08); position: relative; border-left: 4px solid var(--primary); }
+    .metric .card-body { padding: 18px 20px; }
+    .metric .label { font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: .05em; margin: 0 0 4px; }
+    .metric .value { font-size: 26px; font-weight: 700; margin: 0; line-height: 1.2; color: #1f2937; }
+    .metric.metric-money .value { font-size: 20px; }
+    .metric .metric-icon { position: absolute; top: 16px; right: 16px; width: 22px; height: 22px; color: #b6bcc8; }
     .panel { border: 0; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
     .panel .card-header { background: #fff; border-bottom: 1px solid #eef0f2; font-weight: 600; }
     .lecturer-list { max-height: 460px; overflow-y: auto; }
@@ -104,21 +101,33 @@
     </form>
 
     {{-- Headline stats --}}
+    @php
+        // Heroicons (outline, MIT) – 24x24 stroke paths.
+        $icons = [
+            'lecturers'   => 'M4.26 10.147a60.436 60.436 0 00-.491 6.347A48.627 48.627 0 0112 20.904a48.627 48.627 0 018.232-4.41 60.46 60.46 0 00-.491-6.347m-15.482 0a50.57 50.57 0 00-2.658-.813A59.905 59.905 0 0112 3.493a59.902 59.902 0 0110.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.697 50.697 0 0112 13.489a50.702 50.702 0 017.74-3.342M6.75 15a.75.75 0 100-1.5.75.75 0 000 1.5zm0 0v-3.675A55.378 55.378 0 0112 8.443m-7.007 11.55A5.981 5.981 0 006.75 15.75v-1.5',
+            'units'       => 'M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25',
+            'departments' => 'M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 3.75h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008z',
+            'hours'       => 'M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z',
+            'gross'       => 'M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 00-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 01-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 003 15h-.75M15 10.5a3 3 0 11-6 0 3 3 0 016 0zm3 0h.008v.008H18V10.5zm-12 0h.008v.008H6V10.5z',
+            'tax'         => 'M9 14.25l6-6m4.5-3.493V21.75l-3.75-1.5-3.75 1.5-3.75-1.5-3.75 1.5V4.757c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0c1.1.128 1.907 1.077 1.907 2.185zM9.75 9h.008v.008H9.75V9zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm4.125 4.5h.008v.008h-.008V13.5zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z',
+            'levy'        => 'M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25',
+            'employer'    => 'M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-2.625c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21',
+        ];
+        $svg = fn ($key) => '<svg class="metric-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="' . $icons[$key] . '"/></svg>';
+    @endphp
     <div class="row">
         @foreach ([
-            ['Total Lecturers', $stats['lecturers'], 'fa-chalkboard-teacher', 'var(--primary-soft)', 'var(--primary)'],
-            ['Total Units', $stats['units'], 'fa-book', '#e3f2fd', '#1e88e5'],
-            ['Total Departments', $stats['departments'], 'fa-building', '#fff3e0', '#fb8c00'],
-            ['Hours Administered', number_format($stats['hours'], 2), 'fa-clock', '#f3e5f5', '#8e24aa'],
-        ] as [$label, $value, $icon, $bg, $fg])
+            ['Total Lecturers', $stats['lecturers'], 'lecturers'],
+            ['Total Units', $stats['units'], 'units'],
+            ['Total Departments', $stats['departments'], 'departments'],
+            ['Hours Administered', number_format($stats['hours'], 2), 'hours'],
+        ] as [$label, $value, $icon])
             <div class="col-sm-6 col-xl-3 mb-3">
-                <div class="card dash-stat h-100">
+                <div class="card metric h-100">
                     <div class="card-body">
-                        <div class="icon" style="background:{{ $bg }};color:{{ $fg }};"><i class="fas {{ $icon }}"></i></div>
-                        <div>
-                            <p class="label">{{ $label }}</p>
-                            <p class="value">{{ $value }}</p>
-                        </div>
+                        {!! $svg($icon) !!}
+                        <p class="label">{{ $label }}</p>
+                        <p class="value">{{ $value }}</p>
                     </div>
                 </div>
             </div>
@@ -134,15 +143,16 @@
     @endphp
     <div class="row">
         @foreach ([
-            ['Total Gross Amount', $totals->gross, '', 'fa-money-bill-wave'],
-            ['Total Tax (PAYE)' . $rateLabel('tax_rate'), $totals->tax, 'deduction', 'fa-receipt'],
-            ['Housing Levy' . $rateLabel('housing_levy_rate'), $totals->housing, 'deduction', 'fa-home'],
-            ['Employer Levy' . $rateLabel('housing_levy_rate'), $totals->employer_levy, '', 'fa-building'],
+            ['Total Gross Amount', $totals->gross, '', 'gross'],
+            ['Total Tax (PAYE)' . $rateLabel('tax_rate'), $totals->tax, 'deduction', 'tax'],
+            ['Housing Levy' . $rateLabel('housing_levy_rate'), $totals->housing, 'deduction', 'levy'],
+            ['Employer Levy' . $rateLabel('housing_levy_rate'), $totals->employer_levy, '', 'employer'],
         ] as [$label, $value, $class, $icon])
             <div class="col-sm-6 col-xl-3 mb-3">
-                <div class="card money-card h-100">
+                <div class="card metric metric-money h-100">
                     <div class="card-body">
-                        <p class="label"><i class="fas {{ $icon }} mr-1"></i> {{ $label }}</p>
+                        {!! $svg($icon) !!}
+                        <p class="label">{{ $label }}</p>
                         <p class="value {{ $class }}">{{ $money($value) }}</p>
                     </div>
                 </div>
