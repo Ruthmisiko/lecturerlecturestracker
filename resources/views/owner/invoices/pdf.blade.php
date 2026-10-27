@@ -11,6 +11,6 @@
     </style>
 </head>
 <body>
-    @include('owner.invoices._document')
+    @include('owner.invoices._document', ['forPdf' => true])
 </body>
 </html>

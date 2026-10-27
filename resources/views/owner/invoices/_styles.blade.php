@@ -17,4 +17,9 @@
 .inv-items td { padding: 8px 10px; border-bottom: 1px solid #e5e7eb; }
 .inv-items tfoot td { font-weight: bold; font-size: 15px; border-top: 2px solid #2d2a6b; border-bottom: 0; padding-top: 12px; }
 .inv-notes { margin-top: 18px; padding: 12px 14px; background: #f8f9fb; border-radius: 6px; font-size: 12px; line-height: 1.6; }
+.inv-brandrow td { vertical-align: middle; padding: 0 0 14px; border: 0; }
+.inv-logo-cell { width: 70px; padding-right: 12px !important; }
+.inv-logo { width: 58px; height: 58px; }
 .inv-foot { margin-top: 28px; text-align: center; color: #9ca3af; font-size: 11px; }
+.inv-qr { width: 78px; height: 78px; margin-bottom: 4px; }
+.inv-scan { color: #6b7280; font-size: 10px; }

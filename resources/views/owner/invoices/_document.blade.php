@@ -3,17 +3,32 @@
     $b = config('billing');
     $money = fn ($v) => $invoice->currency . ' ' . number_format($v, 2);
     $status = $invoice->displayStatus();
+
+    // PDFs read the images from disk; the web page uses URLs.
+    $forPdf  = $forPdf ?? false;
+    $imgPath = fn ($name) => file_exists(public_path("images/{$name}")) ? ($forPdf ? public_path("images/{$name}") : asset("images/{$name}")) : null;
+    $logoSrc = $imgPath('nawema-logo.png');
+    $qrSrc   = $imgPath('nawema-qr.png');
 @endphp
 <div class="inv">
     <table class="inv-head">
         <tr>
             <td>
-                <div class="inv-brand">{{ $b['name'] }}</div>
-                <div class="inv-muted">
-                    @if ($b['address']){{ $b['address'] }}<br>@endif
-                    {{ $b['email'] }}@if ($b['phone']) · {{ $b['phone'] }}@endif<br>
-                    {{ $b['website'] }}
-                </div>
+                <table class="inv-brandrow">
+                    <tr>
+                        @if ($logoSrc)
+                            <td class="inv-logo-cell"><img src="{{ $logoSrc }}" alt="{{ $b['name'] }}" class="inv-logo"></td>
+                        @endif
+                        <td>
+                            <div class="inv-brand">{{ $b['name'] }}</div>
+                            <div class="inv-muted">
+                                @if ($b['address']){{ $b['address'] }}<br>@endif
+                                {{ $b['email'] }}@if ($b['phone']) · {{ $b['phone'] }}@endif<br>
+                                {{ $b['website'] }}
+                            </div>
+                        </td>
+                    </tr>
+                </table>
             </td>
             <td class="inv-right">
                 <div class="inv-title">INVOICE</div>
@@ -65,5 +80,11 @@
         </div>
     @endif
 
-    <div class="inv-foot">Thank you for using Lecturer Tracker · {{ $b['website'] }}</div>
+    <div class="inv-foot">
+        @if ($qrSrc)
+            <img src="{{ $qrSrc }}" alt="{{ $b['website'] }}" class="inv-qr"><br>
+            <span class="inv-scan">Scan to visit {{ $b['website'] }}</span><br>
+        @endif
+        Thank you for using Lecturer Tracker · {{ $b['website'] }}
+    </div>
 </div>
