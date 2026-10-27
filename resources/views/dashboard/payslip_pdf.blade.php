@@ -87,8 +87,8 @@
     @if (!empty($row->units))
         <h4>Hours by unit</h4>
         <table class="units">
-            @foreach ($row->units as $unit => $hours)
-                <tr><td>{{ $unit }}</td><td class="v">{{ number_format($hours, 1) }} hrs</td></tr>
+            @foreach ($row->unit_details as $u)
+                <tr><td>{{ $u['name'] }}@if ($u['capped']) (max {{ rtrim(rtrim(number_format($u['max'], 2), '0'), '.') }} hrs)@endif</td><td class="v">{{ number_format($u['counted'], 1) }} hrs</td></tr>
             @endforeach
         </table>
     @endif

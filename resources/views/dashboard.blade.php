@@ -451,8 +451,14 @@
         var r = rows[id];
         if (!r) return;
 
-        var units = Object.keys(r.units).map(function (u) {
-            return '<li class="d-flex justify-content-between"><span>' + esc(u) + '</span><span>' + r.units[u].toFixed(4) + ' hrs</span></li>';
+        var units = (r.unit_details || []).map(function (u) {
+            var tag = u.max !== null
+                ? ' <span class="text-muted">(max ' + num(u.max, 2) + ' hrs)</span>' : '';
+            var over = u.capped
+                ? '<div class="text-danger font-weight-bold" style="font-size:12px;"><i class="fas fa-exclamation-triangle mr-1"></i>Exceeded max: ' +
+                  num(u.actual, 2) + ' hrs recorded, only ' + num(u.counted, 2) + ' paid</div>' : '';
+            return '<li class="mb-1"><div class="d-flex justify-content-between"><span>' + esc(u.name) + tag + '</span><span>' +
+                u.counted.toFixed(4) + ' hrs</span></div>' + over + '</li>';
         }).join('');
 
         detail.innerHTML =
@@ -478,6 +484,7 @@
             line('Housing levy (' + r.housing_levy_rate + '%)', '− ' + money(r.housing), 'deduction') +
             line('Net pay', money(r.net), 'net') +
             (units ? '<h6 class="mt-4 font-weight-bold">Hours by unit</h6><ul class="list-unstyled small mb-0">' + units + '</ul>' : '') +
+            (r.capped_hours > 0 ? '<p class="small text-danger mt-2 mb-0">' + num(r.capped_hours, 2) + ' hrs above unit maximums are not paid.</p>' : '') +
             (r.gross > 0
                 ? '<div class="narration-box mt-3">' +
                       '<div class="d-flex justify-content-between align-items-center mb-2">' +

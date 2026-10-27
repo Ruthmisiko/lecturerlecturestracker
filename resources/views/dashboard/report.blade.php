@@ -106,7 +106,7 @@
                                 <td>{{ $i + 1 }}</td>
                                 <td>{{ $r->kra_pin }}</td>
                                 <td><a href="{{ route('lecturers.show', $r->id) }}">{{ $r->name }}</a></td>
-                                <td class="num c-hours" data-v="{{ $r->hours }}">{{ $n($r->hours) }}</td>
+                                <td class="num"><span class="c-hours" data-v="{{ $r->hours }}">{{ $n($r->hours) }}</span><div class="c-capped small text-danger" title="Hours above a unit's max hours are not paid">{{ $r->capped_hours > 0 ? 'capped: ' . $n($r->capped_hours) . ' over max' : '' }}</div></td>
                                 <td class="num">{{ $n($r->rate) }}</td>
                                 <td class="num">
                                     <span class="c-gross" data-v="{{ $r->gross }}">{{ $n($r->gross) }}</span>
@@ -277,6 +277,7 @@
                 .then(function (row) {
                     ['hours', 'gross', 'housing', 'tax', 'net'].forEach(function (k) { setCell(tr, 'c-' + k, row[k]); });
                     tr.querySelector('.c-period').textContent = row.period_taught || '';
+                    tr.querySelector('.c-capped').textContent = row.capped_hours > 0 ? 'capped: ' + fmt(row.capped_hours) + ' over max' : '';
                     refreshTotals();
                 })
                 .catch(function () { alert('Could not recalculate this lecturer. Please try again.'); })

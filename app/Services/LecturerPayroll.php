@@ -63,9 +63,28 @@ class LecturerPayroll
         return $lecturers->map(function (Lecturer $lecturer) use ($payableByLecturer, $allByLecturer) {
             $own      = $payableByLecturer->get($lecturer->id, collect());
             $all      = $allByLecturer->get($lecturer->id, collect());
-            $exactHours = $own->sum(fn ($l) => self::minutes($l)) / 60;
-            $hours      = round($exactHours, self::PRECISION);
-            $allHours   = round($all->sum(fn ($l) => self::minutes($l)) / 60, self::PRECISION);
+            // Hours per unit, capped at the unit's max hours when one is set (units with no max are unchanged).
+            $unitDetails = $own->groupBy(fn ($l) => $l->unit_id ?? 0)->map(function ($group) {
+                $unit   = $group->first()->unit;
+                $actual = $group->sum(fn ($l) => self::minutes($l)) / 60;
+                $max    = $unit?->max_hours;
+                $counted = $max !== null ? min($actual, (float) $max) : $actual;
+
+                return [
+                    'name'    => $unit->name ?? 'No unit',
+                    'actual'  => round($actual, self::PRECISION),
+                    'counted' => round($counted, self::PRECISION),
+                    'max'     => $max !== null ? (float) $max : null,
+                    'capped'  => $max !== null && $actual > (float) $max,
+                    '_exact'  => $counted,
+                ];
+            })->sortByDesc('counted')->values();
+
+            $statusHours = $own->sum(fn ($l) => self::minutes($l)) / 60;   // before the unit caps
+            $exactHours  = $unitDetails->sum('_exact');
+            $hours       = round($exactHours, self::PRECISION);
+            $allHours    = round($all->sum(fn ($l) => self::minutes($l)) / 60, self::PRECISION);
+            $unitDetails = $unitDetails->map(fn ($d) => array_diff_key($d, ['_exact' => 1]))->all();
 
             $rate    = (float) $lecturer->rate_per_hour;
             // Work from the exact hours; keep every amount to 4 decimal places.
@@ -85,7 +104,9 @@ class LecturerPayroll
                 'sessions'          => $own->count(),
                 'hours'             => $hours,
                 'excluded_sessions' => $all->count() - $own->count(),
-                'excluded_hours'    => round($allHours - $hours, self::PRECISION),
+                'excluded_hours'    => round($allHours - round($statusHours, self::PRECISION), self::PRECISION),
+                // Hours above a unit's max that are not paid (0 when no unit is over its max).
+                'capped_hours'      => round($statusHours - $exactHours, self::PRECISION),
                 'rate'              => $rate,
                 'tax_rate'          => (float) $lecturer->tax_rate,
                 'housing_levy_rate' => (float) $lecturer->housing_levy_rate,
@@ -98,10 +119,9 @@ class LecturerPayroll
                 'last_lecture'      => $own->max('lecture_date'),
                 'total_sessions'    => $all->count(),
                 'period_taught'     => self::periodTaught($own->min('lecture_date'), $own->max('lecture_date')),
-                'units'             => $own->groupBy(fn ($l) => $l->unit->name ?? 'No unit')
-                    ->map(fn ($g) => round($g->sum(fn ($l) => self::minutes($l)) / 60, self::PRECISION))
-                    ->sortDesc()
-                    ->all(),
+                // name => paid hours (kept for existing displays); unit_details has actual/max/capped.
+                'units'             => collect($unitDetails)->mapWithKeys(fn ($d) => [$d['name'] => $d['counted']])->all(),
+                'unit_details'      => $unitDetails,
             ];
         })->values();
     }
