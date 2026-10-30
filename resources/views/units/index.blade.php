@@ -16,11 +16,9 @@
                 <div class="col-sm-6">
                     <h1>Units</h1>
                 </div>
-                <div class="col-sm-6">
-                    <a class="btn btn-primary float-right"
-                       href="{{ route('units.create') }}">
-                        Add New
-                    </a>
+                <div class="col-sm-6 d-flex justify-content-end">
+                    @include('bulk._modal', ['id' => 'bulkUnits', 'title' => 'Bulk Upload Units', 'templateRoute' => route('bulk.units.template'), 'importRoute' => route('bulk.units.import')])
+                    <a class="btn btn-primary" href="{{ route('units.create') }}">Add New</a>
                 </div>
             </div>
         </div>

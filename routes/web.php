@@ -38,6 +38,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/email-configurations/{email_configuration}/test', [App\Http\Controllers\EmailConfigurationController::class, 'test'])->name('email-configurations.test');
     Route::post('/email-configurations/{email_configuration}/default', [App\Http\Controllers\EmailConfigurationController::class, 'makeDefault'])->name('email-configurations.default');
     Route::resource('email-configurations', App\Http\Controllers\EmailConfigurationController::class)->except('show');
+    Route::post('/email-templates/{email_template}/default', [App\Http\Controllers\EmailTemplateController::class, 'makeDefault'])->name('email-templates.default');
+    Route::resource('email-templates', App\Http\Controllers\EmailTemplateController::class)->except('show');
     Route::get('/dashboard/payslip/{lecturer}', [App\Http\Controllers\DashboardController::class, 'payslip'])->name('dashboard.payslip');
     Route::get('/payment-schedules/amounts', [App\Http\Controllers\PaymentScheduleController::class, 'amounts'])->name('payment-schedules.amounts');
     Route::get('/payment-schedules/{payment_schedule}/pdf', [App\Http\Controllers\PaymentScheduleController::class, 'pdf'])->name('payment-schedules.pdf');
@@ -62,6 +64,12 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
     Route::resource('lecturers', App\Http\Controllers\LecturerController::class);
 
+    Route::prefix('bulk')->name('bulk.')->group(function () {
+        Route::get('lecturers/template', [App\Http\Controllers\BulkImportController::class, 'lecturerTemplate'])->name('lecturers.template');
+        Route::post('lecturers/import', [App\Http\Controllers\BulkImportController::class, 'importLecturers'])->name('lecturers.import');
+        Route::get('units/template', [App\Http\Controllers\BulkImportController::class, 'unitTemplate'])->name('units.template');
+        Route::post('units/import', [App\Http\Controllers\BulkImportController::class, 'importUnits'])->name('units.import');
+    });
 });
 
 require __DIR__.'/auth.php';

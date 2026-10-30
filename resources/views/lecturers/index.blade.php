@@ -7,11 +7,9 @@
                 <div class="col-sm-6">
                     <h1 class="font-weight-bold">Lecturers</h1>
                 </div>
-                <div class="col-sm-6">
-                    <a class="btn btn-success float-right"
-                       href="{{ route('lecturers.create') }}">
-                        Add New
-                    </a>
+                <div class="col-sm-6 d-flex justify-content-end">
+                    @include('bulk._modal', ['id' => 'bulkLecturers', 'title' => 'Bulk Upload Lecturers', 'templateRoute' => route('bulk.lecturers.template'), 'importRoute' => route('bulk.lecturers.import')])
+                    <a class="btn btn-success" href="{{ route('lecturers.create') }}">Add New</a>
                 </div>
             </div>
         </div>

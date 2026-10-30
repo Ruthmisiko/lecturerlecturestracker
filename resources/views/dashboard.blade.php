@@ -2,7 +2,7 @@
 
 @push('styles')
 <style>
-    .metric { border: 0; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,.08); position: relative; border-left: 4px solid var(--primary); }
+    .metric { border: 0; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,.08); position: relative; border-left: 4px solid {{ AppSupportTheme::current()->primary }}; }
     .metric .card-body { padding: 18px 20px; }
     .metric .label { font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: .05em; margin: 0 0 4px; }
     .metric .value { font-size: 26px; font-weight: 700; margin: 0; line-height: 1.2; color: #1f2937; }
@@ -297,13 +297,33 @@
                             </div>
                         </div>
                         <div class="form-group">
+                            <label for="emailTemplate">Template</label>
+                            <select id="emailTemplate" class="form-control">
+                                <option value="">Standard message</option>
+                                @foreach ($emailTemplates as $tpl)
+                                    <option value="{{ $tpl->id }}">{{ $tpl->name }}{{ $tpl->is_default ? ' (default)' : '' }}</option>
+                                @endforeach
+                            </select>
+                            <small class="text-muted">
+                                Picking a template fills in the subject and message below.
+                                @if (Auth::user()->hasAccess('email-settings.manage'))
+                                    <a href="{{ route('email-templates.index') }}">Manage templates</a>
+                                @endif
+                            </small>
+                        </div>
+                        <div class="form-group">
                             <label>Subject</label>
-                            <input type="text" name="subject" id="emailSubject" class="form-control" required maxlength="200">
+                            <input type="text" name="subject" id="emailSubject" class="form-control" required maxlength="200" data-placeholder-target>
                         </div>
                         <div class="form-group">
                             <label>Message</label>
-                            <textarea name="body" id="emailBody" class="form-control" rows="9" required maxlength="10000"></textarea>
+                            <textarea name="body" id="emailBody" class="form-control" rows="9" required maxlength="10000" data-placeholder-target></textarea>
                         </div>
+                        <details class="mb-3">
+                            <summary class="small font-weight-bold" style="cursor:pointer;"><i class="fas fa-plus-circle mr-1"></i> Insert lecturer details</summary>
+                            <p class="small text-muted mt-2 mb-2">Click in the subject or message, then click a detail to insert this lecturer's value there.</p>
+                            @include('email_templates._placeholders')
+                        </details>
                         <div class="small text-muted"><i class="fas fa-paperclip mr-1"></i> Attachment: <span id="emailAttachment"></span> (payslip for the period and payable hours shown on the dashboard)</div>
                         <div class="alert mt-3 mb-0 d-none" id="emailResult"></div>
                     @endif
@@ -532,7 +552,50 @@
     var lastEmailed  = @json($lastEmailedJs);
     var periodText   = @json($periodText);
     var senderName   = @json($institutionName ?? '');
+    var templates    = @json($emailTemplates->keyBy('id'));
+    var defaultTpl   = @json($emailTemplates->firstWhere('is_default', true)?->id);
     var emailFor     = null;
+
+    // Fills the subject and message from the chosen template ('' = the standard message).
+    function applyTemplate(tplId) {
+        var r = rows[emailFor], tpl = templates[tplId];
+        var subject = tpl ? tpl.subject : 'Payslip – {name} – {period}';
+        var body = tpl ? tpl.body :
+            'Dear {name},\n\nPlease find attached your payslip for {period}.\n\n' +
+            'Hours: {hours}\nGross amount: {gross}\nNet pay: {net}\n\nKind regards,\n{institution}';
+        document.getElementById('emailSubject').value = fillPlaceholders(subject);
+        document.getElementById('emailBody').value = fillPlaceholders(body);
+    }
+
+    // The selected lecturer's value for each {placeholder} (see EmailTemplate::PLACEHOLDERS).
+    function placeholderValues(r) {
+        var missing = '(not on record)';
+        var date = function (d) {
+            return d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+        };
+        var units = (r.unit_details || []).map(function (u) {
+            return '- ' + (u.code ? u.code + ' ' : '') + u.name + ': ' + num(u.counted, 2) + ' hrs';
+        }).join('\n');
+
+        return {
+            name: r.name, email: r.email || missing, phone: r.phone || missing, id_number: r.id_number || missing,
+            kra_pin: r.kra_pin && r.kra_pin !== '—' ? r.kra_pin : missing, department: r.department || '',
+            account_number: r.account_number || missing, bank: r.bank_name || missing, branch: r.bank_branch || missing,
+            period: periodText, period_taught: r.period_taught || '—', sessions: r.sessions, hours: num(r.hours, 2),
+            units: units || 'No units', last_lecture: date(r.last_lecture),
+            rate: ksh(r.rate), gross: ksh(r.gross), tax_rate: num(r.tax_rate, 2) + '%', tax: ksh(r.tax),
+            housing_levy_rate: num(r.housing_levy_rate, 2) + '%', housing_levy: ksh(r.housing), net: ksh(r.net),
+            institution: senderName || 'Accounts Office', date: date(new Date())
+        };
+    }
+
+    function fillPlaceholders(text) {
+        var values = placeholderValues(rows[emailFor]);
+        return text.replace(/\{(\w+)\}/g, function (m, key) { return values.hasOwnProperty(key) ? values[key] : m; });
+    }
+
+    // Clicking a detail in the Email Payslip window inserts the lecturer's value, not the tag.
+    window.resolvePlaceholder = function (tag) { return emailFor ? fillPlaceholders(tag) : tag; };
 
     function openEmail(id) {
         var r = rows[id];
@@ -540,14 +603,8 @@
         emailFor = id;
         document.getElementById('emailTo').value = r.email || '';
         document.getElementById('saveEmail').checked = false;
-        document.getElementById('emailSubject').value = 'Payslip – ' + r.name + ' – ' + periodText;
-        document.getElementById('emailBody').value =
-            'Dear ' + r.name + ',\n\n' +
-            'Please find attached your payslip for ' + periodText + '.\n\n' +
-            'Hours: ' + num(r.hours, 2) + '\n' +
-            'Gross amount: ' + ksh(r.gross) + '\n' +
-            'Net pay: ' + ksh(r.net) + '\n\n' +
-            'Kind regards,\n' + (senderName || 'Accounts Office');
+        document.getElementById('emailTemplate').value = defaultTpl || '';
+        applyTemplate(defaultTpl || '');
         document.getElementById('emailAttachment').textContent =
             'payslip_' + r.name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') + '.pdf';
         document.getElementById('emailResult').className = 'alert mt-3 mb-0 d-none';
@@ -559,10 +616,20 @@
         if (btn) openEmail(btn.dataset.id);
     });
 
+    var templateSelect = document.getElementById('emailTemplate');
+    if (templateSelect) {
+        templateSelect.addEventListener('change', function () { if (emailFor) applyTemplate(this.value); });
+    }
+
     var emailForm = document.getElementById('emailForm');
     emailForm.addEventListener('submit', function (e) {
         e.preventDefault();
         if (!emailFor) return;
+        // Fill any {placeholders} typed by hand.
+        ['emailSubject', 'emailBody'].forEach(function (id) {
+            var field = document.getElementById(id);
+            field.value = fillPlaceholders(field.value);
+        });
         var send = document.getElementById('emailSend'), res = document.getElementById('emailResult');
         send.disabled = true;
         send.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Sending…';
