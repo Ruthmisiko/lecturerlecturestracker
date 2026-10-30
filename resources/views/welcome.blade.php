@@ -26,7 +26,7 @@
     }
     .brand-logo:hover { transform: scale(1.05); }
     .brand-logo img { width: 70%; height: 70%; object-fit: contain; }
-    .btn-orange { background: var(--orange); color: #fff; border-radius: 9999px; }
+    .btn-orange { background: var(--orange); color: #fff; border-radius: 0; }
     .btn-orange:hover { background: var(--orange-dark); }
 </style>
 
