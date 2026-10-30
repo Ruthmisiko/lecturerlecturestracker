@@ -2,7 +2,7 @@
 
 @push('styles')
 <style>
-    .metric { border: 0; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,.08); position: relative; border-left: 4px solid {{ AppSupportTheme::current()->primary }}; }
+    .metric { border: 0; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,.08); position: relative; border-left: 4px solid {{ \App\Support\Theme::current()->primary }}; }
     .metric .card-body { padding: 18px 20px; }
     .metric .label { font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: .05em; margin: 0 0 4px; }
     .metric .value { font-size: 26px; font-weight: 700; margin: 0; line-height: 1.2; color: #1f2937; }

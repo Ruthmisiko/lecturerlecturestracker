@@ -40,6 +40,9 @@ Route::middleware('auth')->group(function () {
     Route::resource('email-configurations', App\Http\Controllers\EmailConfigurationController::class)->except('show');
     Route::post('/email-templates/{email_template}/default', [App\Http\Controllers\EmailTemplateController::class, 'makeDefault'])->name('email-templates.default');
     Route::resource('email-templates', App\Http\Controllers\EmailTemplateController::class)->except('show');
+    Route::get('/bulk-email', [App\Http\Controllers\BulkEmailController::class, 'create'])->name('bulk-email.create');
+    Route::post('/bulk-email', [App\Http\Controllers\BulkEmailController::class, 'send'])->name('bulk-email.send');
+    Route::get('/bulk-email/sent', [App\Http\Controllers\BulkEmailController::class, 'sent'])->name('bulk-email.sent');
     Route::get('/dashboard/payslip/{lecturer}', [App\Http\Controllers\DashboardController::class, 'payslip'])->name('dashboard.payslip');
     Route::get('/payment-schedules/amounts', [App\Http\Controllers\PaymentScheduleController::class, 'amounts'])->name('payment-schedules.amounts');
     Route::get('/payment-schedules/{payment_schedule}/pdf', [App\Http\Controllers\PaymentScheduleController::class, 'pdf'])->name('payment-schedules.pdf');

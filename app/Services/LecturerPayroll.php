@@ -72,6 +72,7 @@ class LecturerPayroll
 
                 return [
                     'name'    => $unit->name ?? 'No unit',
+                    'code'    => $unit->unitCode ?? null,
                     'actual'  => round($actual, self::PRECISION),
                     'counted' => round($counted, self::PRECISION),
                     'max'     => $max !== null ? (float) $max : null,
@@ -101,6 +102,11 @@ class LecturerPayroll
                 'department_description' => trim($lecturer->department->description ?? '') ?: ($lecturer->department->name ?? ''),
                 'kra_pin'           => $lecturer->kra_pin ?: '—',
                 'email'             => $lecturer->email,
+                'phone'             => $lecturer->phone,
+                'id_number'         => $lecturer->id_number,
+                'account_number'    => $lecturer->account_number,
+                'bank_name'         => $lecturer->bank_name,
+                'bank_branch'       => $lecturer->bank_branch,
                 'sessions'          => $own->count(),
                 'hours'             => $hours,
                 'excluded_sessions' => $all->count() - $own->count(),

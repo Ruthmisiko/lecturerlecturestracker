@@ -76,11 +76,12 @@ class DashboardController extends Controller
             ->values();
 
         $emailConfigs = \App\Models\EmailConfiguration::orderByDesc('is_default')->orderBy('name')->get(['id', 'name', 'from_address', 'is_default']);
+        $emailTemplates = \App\Models\EmailTemplate::orderByDesc('is_default')->orderBy('name')->get(['id', 'name', 'subject', 'body', 'is_default']);
         $lastEmailed  = \App\Models\PayslipEmail::whereIn('lecturer_id', $rows->pluck('id'))
             ->latest()->get(['lecturer_id', 'to', 'created_at'])->unique('lecturer_id')
             ->mapWithKeys(fn ($e) => [$e->lecturer_id => ['to' => $e->to, 'at' => $e->created_at->format('d M Y, H:i')]]);
 
-        return view('dashboard', compact('rows', 'totals', 'stats', 'missingRate', 'departmentSummary', 'from', 'to', 'statuses', 'charts', 'emailConfigs', 'lastEmailed'));
+        return view('dashboard', compact('rows', 'totals', 'stats', 'missingRate', 'departmentSummary', 'from', 'to', 'statuses', 'charts', 'emailConfigs', 'emailTemplates', 'lastEmailed'));
     }
 
     public function report(Request $request)
@@ -263,13 +264,17 @@ class DashboardController extends Controller
 
         abort_unless($row, 404);
 
+        return [$this->payslipPdfFor($lecturer, $row, $from, $to, $statuses), $lecturer];
+    }
+
+    /** Payslip PDF from an already-calculated payroll row (lets bulk sending calculate once). */
+    protected function payslipPdfFor(Lecturer $lecturer, object $row, ?string $from, ?string $to, ?array $statuses)
+    {
         $period = $this->periodLabel($from, $to);
         $slipNo = 'PS-' . str_pad($lecturer->id, 4, '0', STR_PAD_LEFT) . '-' . ($to ? str_replace('-', '', substr($to, 0, 7)) : now()->format('Ym'));
 
-        $pdf = PDF::loadView('dashboard.payslip_pdf', compact('lecturer', 'row', 'period', 'slipNo', 'statuses'))
+        return PDF::loadView('dashboard.payslip_pdf', compact('lecturer', 'row', 'period', 'slipNo', 'statuses'))
             ->setPaper([0, 0, 297.64, 595.28]); // half-width A4: 105 × 210 mm
-
-        return [$pdf, $lecturer];
     }
 
     protected function payslipFileName(Lecturer $lecturer): string
