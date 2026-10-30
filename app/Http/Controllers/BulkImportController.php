@@ -6,6 +6,7 @@ use App\Exports\Bulk\BulkTemplateExport;
 use App\Exports\Bulk\InstructionSheet;
 use App\Exports\Bulk\TemplateSheet;
 use App\Imports\RowsImport;
+use App\Models\Classs;
 use App\Models\Department;
 use App\Models\Lecturer;
 use App\Models\Unit;
@@ -15,7 +16,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Maatwebsite\Excel\Facades\Excel;
 
-/** Bulk upload of lecturers and units from an Excel template. */
+/** Bulk upload of lecturers, units and classes from an Excel template. */
 class BulkImportController extends Controller
 {
     private const MAX_ROWS = 1000;
@@ -24,7 +25,9 @@ class BulkImportController extends Controller
     {
         $this->middleware(function ($request, $next) {
             $user = Auth::user();
-            abort_unless($user && ($user->isSuperAdmin() || $user->can('lecturer.create') || $user->can('lecturer.manage')), 403);
+            // Classes need the class permissions; lecturers and units the lecturer ones.
+            $area = str_contains(strtolower($request->route()->getActionMethod()), 'class') ? 'class' : 'lecturer';
+            abort_unless($user && ($user->isSuperAdmin() || $user->can("{$area}.create") || $user->can("{$area}.manage")), 403);
             return $next($request);
         });
     }
@@ -97,6 +100,27 @@ class BulkImportController extends Controller
                 'Fill in from row 3. Row 2 is only an example (it is ignored while its name starts with "EXAMPLE").',
                 'Do not rename or reorder the column headings.',
                 'A unit with the same name in the same department that already exists is skipped.',
+                'Up to ' . self::MAX_ROWS . ' rows per file.',
+            ]);
+    }
+
+    public function classTemplate()
+    {
+        return $this->download('classes_template.xlsx', 'Bulk upload of classes',
+            ['name', 'code', 'description', 'units'],
+            ['EXAMPLE - delete this row', 'KRCHN-SEP26', 'Kenya Registered Community Health Nursing, September 2026 intake', 'Unit one; Unit two'],
+            [
+                ['name', 'Yes', 'Class name. A class whose name already exists is skipped.'],
+                ['code', 'No', 'Class code.'],
+                ['description', 'No', 'Short description.'],
+                ['units', 'No', 'Units this class takes, separated by ; (name or unit code). Unknown units are ignored with a warning.'],
+            ],
+            [],
+            ['code'],
+            [
+                'Fill in from row 3. Row 2 is only an example (it is ignored while its name starts with "EXAMPLE").',
+                'Do not rename or reorder the column headings.',
+                'Rows with a problem are skipped and listed after the upload; the good rows are still added.',
                 'Up to ' . self::MAX_ROWS . ' rows per file.',
             ]);
     }
@@ -302,6 +326,73 @@ class BulkImportController extends Controller
         }
 
         return $this->result($report, route('units.index'), 'Back to Units');
+    }
+
+    public function importClasses(Request $request)
+    {
+        $rows = $this->readRows($request);
+        if (is_string($rows)) {
+            return back()->withErrors(['file' => $rows]);
+        }
+
+        $ownerId = Auth::user()->ownerId();
+        $units   = Unit::where('user_id', $ownerId)->get(['id', 'name', 'unitCode']);
+        $report  = $this->newReport('Classes');
+
+        foreach ($rows as $i => $row) {
+            $n    = $i + 2;
+            $name = $this->text($row['name'] ?? null);
+            if ($this->skip($row, $name)) {
+                continue;
+            }
+
+            $data = [
+                'name'        => $name,
+                'code'        => $this->text($row['code'] ?? null),
+                'description' => $this->text($row['description'] ?? null),
+            ];
+
+            $problems = Validator::make($data, [
+                'name'        => 'required|string|max:255',
+                'code'        => 'nullable|string|max:255',
+                'description' => 'nullable|string|max:255',
+            ])->errors()->all();
+
+            if (!$problems && Classs::where('user_id', $ownerId)->whereRaw('LOWER(name) = ?', [mb_strtolower($name)])->exists()) {
+                $problems[] = 'a class with this name already exists';
+            }
+
+            if ($problems) {
+                $this->skipRow($report, $n, $name, $problems);
+                continue;
+            }
+
+            $unitIds  = [];
+            $warnings = [];
+            foreach (array_filter(array_map('trim', preg_split('/[;,\n]+/', $this->text($row['units'] ?? null)))) as $ref) {
+                $match = $units->first(fn ($u) => strcasecmp($u->name, $ref) === 0 || ($u->unitCode && strcasecmp($u->unitCode, $ref) === 0));
+                $match ? $unitIds[] = $match->id : $warnings[] = "unit \"{$ref}\" not found";
+            }
+
+            DB::transaction(function () use ($data, $ownerId, $unitIds) {
+                $class = Classs::create([
+                    'user_id'     => $ownerId,
+                    'name'        => $data['name'],
+                    'code'        => $data['code'] ?: null,
+                    'description' => $data['description'] ?: null,
+                ]);
+                if ($unitIds) {
+                    $class->units()->sync($unitIds);
+                }
+            });
+
+            $report['created']++;
+            foreach ($warnings as $w) {
+                $report['warnings'][] = ['row' => $n, 'name' => $name, 'message' => $w];
+            }
+        }
+
+        return $this->result($report, route('classses.index'), 'Back to Classes');
     }
 
     // ------------------------------------------------------------------ helpers

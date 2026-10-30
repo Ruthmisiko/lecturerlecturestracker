@@ -15,7 +15,7 @@ class Classs extends Model
         'user_id',
         'name',
         'code',
-        'desciription',
+        'description',
     ];
 
     protected $casts = [

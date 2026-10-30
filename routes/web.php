@@ -72,6 +72,8 @@ Route::middleware('auth')->group(function () {
         Route::post('lecturers/import', [App\Http\Controllers\BulkImportController::class, 'importLecturers'])->name('lecturers.import');
         Route::get('units/template', [App\Http\Controllers\BulkImportController::class, 'unitTemplate'])->name('units.template');
         Route::post('units/import', [App\Http\Controllers\BulkImportController::class, 'importUnits'])->name('units.import');
+        Route::get('classes/template', [App\Http\Controllers\BulkImportController::class, 'classTemplate'])->name('classes.template');
+        Route::post('classes/import', [App\Http\Controllers\BulkImportController::class, 'importClasses'])->name('classes.import');
     });
 });
 
