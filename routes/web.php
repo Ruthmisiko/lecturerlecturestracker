@@ -85,6 +85,7 @@ Route::resource('classses', App\Http\Controllers\ClasssController::class);
 Route::post('lecture-administereds/bulk-delete', [LectureAdministeredController::class, 'bulkDestroy'])->name('lecture-administereds.bulk-destroy')->middleware('auth');
 Route::resource('lecture-administereds', App\Http\Controllers\LectureAdministeredController::class);
 Route::resource('roles', App\Http\Controllers\RoleController::class);
+Route::post('users/{user}/toggle-active', [App\Http\Controllers\UserController::class, 'toggleActive'])->name('users.toggle-active')->middleware('auth');
 Route::resource('users', App\Http\Controllers\UserController::class);
 Route::resource('units', App\Http\Controllers\UnitController::class);
 Route::resource('departments', App\Http\Controllers\DepartmentController::class);

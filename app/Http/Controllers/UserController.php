@@ -99,6 +99,54 @@ class UserController extends Controller
         return redirect()->route('users.index')->with('success', $message);
     }
 
+    /** Superusers can deactivate a user (signed out and blocked from logging in) or turn them back on. */
+    public function toggleActive($id)
+    {
+        abort_unless(Auth::user()->isSuperAdmin(), 403);
+
+        $user = $this->institutionUsers()->findOrFail($id);
+        if ($user->id === Auth::id()) {
+            return back()->with('error', 'You cannot deactivate your own account.');
+        }
+
+        $user->forceFill(['is_active' => !$user->is_active])->save();
+
+        return back()->with('success', $user->name . ($user->is_active
+            ? ' is active again and can log in.'
+            : ' has been deactivated and can no longer log in.'));
+    }
+
+    public function destroy($id)
+    {
+        abort_unless(Auth::user()->isSuperAdmin(), 403);
+
+        $user = $this->institutionUsers()->findOrFail($id);
+        if ($user->id === Auth::id()) {
+            return back()->with('error', 'You cannot delete your own account.');
+        }
+
+        // These records are deleted along with the user they point to, so never delete a user that still owns any.
+        $owns = collect([
+            'users'                 => 'users',
+            'lecturers'             => 'lecturers',
+            'units'                 => 'units',
+            'classses'              => 'classes',
+            'lecture_administereds' => 'lecture records',
+        ])->filter(fn ($label, $table) => \Illuminate\Support\Facades\DB::table($table)->where('user_id', $user->id)->exists());
+
+        if ($owns->isNotEmpty()) {
+            return back()->with('error', "{$user->name} cannot be deleted because " . $owns->join(', ', ' and ')
+                . ' are linked to their account. Deactivate them instead.');
+        }
+
+        $name = $user->name;
+        $user->syncRoles([]);
+        $user->departments()->detach();
+        $user->delete();
+
+        return back()->with('success', "{$name} has been deleted.");
+    }
+
     /** Roles, the institutions the current user may assign, and every department of those institutions. */
     private function formData(): array
     {
