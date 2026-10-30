@@ -273,7 +273,7 @@ class DashboardController extends Controller
         $period = $this->periodLabel($from, $to);
         $slipNo = 'PS-' . str_pad($lecturer->id, 4, '0', STR_PAD_LEFT) . '-' . ($to ? str_replace('-', '', substr($to, 0, 7)) : now()->format('Ym'));
 
-        return PDF::loadView('dashboard.payslip_pdf', compact('lecturer', 'row', 'period', 'slipNo', 'statuses'))
+        return PDF::loadView('dashboard.payslip_pdf', compact('lecturer', 'row', 'period', 'slipNo', 'statuses', 'from', 'to'))
             ->setPaper([0, 0, 297.64, 595.28]); // half-width A4: 105 × 210 mm
     }
 

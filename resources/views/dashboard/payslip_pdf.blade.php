@@ -65,8 +65,20 @@
         <div class="employer">Employer PIN: <strong>{{ $employerPin }}</strong></div>
     @endif
 
+    @php
+        $slipSemester = \App\Models\Semester::query()
+            ->when($to ?? null, fn ($q) => $q->whereDate('start_date', '<=', $to)->whereDate('end_date', '>=', $to))
+            ->orderByDesc('is_current')->orderByDesc('start_date')->first()
+            ?? \App\Models\Semester::current();
+        $slipRange = ($from ?? null) || ($to ?? null)
+            ? (($from ?? null) ? \Illuminate\Support\Carbon::parse($from)->format('d M Y') : 'Start') . ' – ' . (($to ?? null) ? \Illuminate\Support\Carbon::parse($to)->format('d M Y') : 'Today')
+            : null;
+    @endphp
     <div class="box">
         <table class="grid">
+            @if ($slipSemester || $slipRange)
+                <tr><td class="k">Period</td><td><strong>{{ $slipSemester?->name ?? 'All time' }}</strong>@if ($slipRange)<br><span style="font-size:8px;color:#6b7280;">{{ $slipRange }}</span>@endif</td></tr>
+            @endif
             <tr><td class="k">Lecturer</td><td><strong>{{ $lecturer->name }}</strong></td></tr>
             <tr><td class="k">Department</td><td>{{ $lecturer->department->name ?? '—' }}</td></tr>
             <tr><td class="k">KRA PIN</td><td>{{ $lecturer->kra_pin ?: '—' }}</td></tr>
