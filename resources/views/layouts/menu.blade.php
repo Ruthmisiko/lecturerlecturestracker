@@ -43,7 +43,7 @@
 </a>
 @endif
 
-@if (Auth::user()->hasAccess('payslip.email'))
+@if (Auth::user()->hasAccess('bulk-email.send'))
 <a href="{{ route('bulk-email.create') }}" class="nav-link text-white font-weight-bold {{ Request::is('bulk-email*') ? 'active' : '' }}">
     <p>Bulk Email</p>
 </a>
@@ -53,6 +53,9 @@
 <a href="{{ route('email-configurations.index') }}" class="nav-link text-white font-weight-bold {{ Request::is('email-configurations*') ? 'active' : '' }}">
     <p>Email Settings</p>
 </a>
+@endif
+
+@if (Auth::user()->hasAccess('email-template.manage'))
 <a href="{{ route('email-templates.index') }}" class="nav-link text-white font-weight-bold {{ Request::is('email-templates*') ? 'active' : '' }}">
     <p>Email Templates</p>
 </a>

@@ -13,7 +13,7 @@
             <h1 class="font-weight-bold mb-0">Bulk Email</h1>
             <small class="text-muted">Email many lecturers at once, with or without their payslips. Each email is filled in with that lecturer's own details.</small>
         </div>
-        @if (Auth::user()->hasAccess('email-settings.manage'))
+        @if (Auth::user()->hasAccess('email-template.manage'))
             <a href="{{ route('email-templates.index') }}" class="btn btn-outline-secondary"><i class="far fa-file-alt mr-1"></i> Email Templates</a>
         @endif
     </div>

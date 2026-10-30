@@ -24,7 +24,7 @@ class BulkEmailController extends DashboardController
 
     public function create(Request $request)
     {
-        $this->authorizeAccess('payslip.email');
+        $this->authorizeAccess('bulk-email.send');
 
         [$from, $to] = $this->period($request);
         $statuses    = $this->statuses($request);
@@ -43,7 +43,7 @@ class BulkEmailController extends DashboardController
 
     public function send(Request $request)
     {
-        $this->authorizeAccess('payslip.email');
+        $this->authorizeAccess('bulk-email.send');
 
         $data = $request->validate([
             'email_configuration_id' => 'required|integer',
@@ -128,7 +128,7 @@ class BulkEmailController extends DashboardController
 
     public function sent()
     {
-        $this->authorizeAccess('payslip.email');
+        $this->authorizeAccess('bulk-email.send');
 
         $sent = session('bulkEmail');
         if (!$sent) {

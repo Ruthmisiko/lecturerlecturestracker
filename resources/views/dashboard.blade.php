@@ -69,6 +69,11 @@
                 <i class="fas fa-file-invoice-dollar mr-1"></i> Payment Report
             </a>
             @endif
+            @if (Auth::user()->hasAccess('bulk-email.send'))
+            <a href="{{ route('bulk-email.create', request()->only('from', 'to', 'statuses')) }}" class="btn btn-brand">
+                <i class="fas fa-mail-bulk mr-1"></i> Bulk Email
+            </a>
+            @endif
         </div>
     </div>
 </section>
@@ -306,7 +311,7 @@
                             </select>
                             <small class="text-muted">
                                 Picking a template fills in the subject and message below.
-                                @if (Auth::user()->hasAccess('email-settings.manage'))
+                                @if (Auth::user()->hasAccess('email-template.manage'))
                                     <a href="{{ route('email-templates.index') }}">Manage templates</a>
                                 @endif
                             </small>

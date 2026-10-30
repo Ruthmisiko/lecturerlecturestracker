@@ -12,7 +12,7 @@ class EmailTemplateController extends Controller
     public function __construct()
     {
         $this->middleware(function ($request, $next) {
-            abort_unless(Auth::user()?->hasAccess('email-settings.manage'), 403);
+            abort_unless(Auth::user()?->hasAccess('email-template.manage'), 403);
             return $next($request);
         });
     }
