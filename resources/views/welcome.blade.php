@@ -34,9 +34,11 @@
                 @else
                     <a href="{{ route('login') }}" class="bg-blue-500 hover:bg-blue-600 px-6 py-3 rounded text-white font-semibold">Login</a>
 
+                    {{-- Register button hidden for now; remove this comment wrapper to show it again.
                     @if (Route::has('register'))
                         <a href="{{ route('register') }}" class="bg-green-500 hover:bg-green-600 px-6 py-3 rounded text-white font-semibold">Register</a>
                     @endif
+                    --}}
                 @endauth
             @endif
         </div>
