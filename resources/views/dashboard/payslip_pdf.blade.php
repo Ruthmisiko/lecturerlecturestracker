@@ -100,7 +100,11 @@
         <h4>Hours by unit</h4>
         <table class="units">
             @foreach ($row->unit_details as $u)
-                <tr><td>{{ $u['name'] }}@if ($u['capped']) (max {{ rtrim(rtrim(number_format($u['max'], 2), '0'), '.') }} hrs)@endif</td><td class="v">{{ number_format($u['counted'], 1) }} hrs</td></tr>
+                @php $fmt = fn ($n) => rtrim(rtrim(number_format($n, 2), '0'), '.'); @endphp
+                <tr><td>{{ $u['name'] }}@if ($u['max'] !== null) <span style="color:#6b7280;">(max {{ $fmt($u['max']) }} hrs)</span>@endif</td><td class="v">{{ number_format($u['counted'], 1) }} hrs</td></tr>
+                @if ($u['capped'])
+                    <tr><td colspan="2" style="color:#b91c1c;font-weight:bold;padding-bottom:3px;">&#9650; Exceeded max: {{ $fmt($u['actual']) }} hrs recorded, only {{ $fmt($u['counted']) }} paid</td></tr>
+                @endif
             @endforeach
         </table>
     @endif
