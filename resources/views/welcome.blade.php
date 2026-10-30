@@ -14,12 +14,10 @@
         background: url('{{ asset('images/image.png') }}') no-repeat center center;
         background-size: cover;
     }
-    /* Light wash so the navy heading reads clearly over the photo */
     .overlay {
-        background: linear-gradient(135deg, rgba(255, 237, 228, 0.92) 0%, rgba(255, 255, 255, 0.9) 45%, rgba(240, 240, 248, 0.92) 100%);
+        background-color: rgba(0, 0, 0, 0.6);
     }
     .brand-heading { color: var(--navy); }
-    .brand-text { color: #4b4f6b; }
     .brand-logo {
         width: 64px; height: 64px; border-radius: 50%;
         background: #fff; border: 3px solid var(--orange);
@@ -34,7 +32,7 @@
 </style>
 
 </head>
-<body class="antialiased">
+<body class="antialiased text-white">
     <div class="overlay min-h-screen flex flex-col">
         <header class="px-6 sm:px-10 py-5">
             <a href="https://nawema.co.ke" target="_blank" rel="noopener" class="brand-logo" title="Visit nawema.co.ke">
@@ -43,9 +41,9 @@
         </header>
 
         <main class="flex-1 flex flex-col items-center justify-center px-6 pb-16 text-center">
-            <h1 class="brand-heading text-4xl sm:text-6xl font-extrabold mb-6 tracking-tight">Lecture Management System</h1>
+            <h1 class="brand-heading text-4xl sm:text-5xl font-bold mb-6">Lecture Management System</h1>
 
-            <p class="brand-text max-w-2xl text-lg sm:text-xl mb-10 leading-relaxed">
+            <p class="max-w-2xl text-lg sm:text-xl mb-10 leading-relaxed">
                 This system helps accountants and administrators track lecturers’ teaching activities—dates, hours taught,
                 and more—for accurate and efficient payment processing.
             </p>
