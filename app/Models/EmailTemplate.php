@@ -52,7 +52,7 @@ class EmailTemplate extends Model
     protected $casts = ['is_default' => 'boolean'];
 
     /** Replaces the placeholders in $text with one lecturer's details (same values as the Email Payslip window). */
-    public static function fill(string $text, object $row, string $period, string $institution): string
+    public static function fillPlaceholders(string $text, object $row, string $period, string $institution): string
     {
         $missing = '(not on record)';
         $num     = fn ($v) => rtrim(rtrim(number_format((float) $v, 2), '0'), '.');

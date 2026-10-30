@@ -87,8 +87,8 @@ class BulkEmailController extends DashboardController
                 continue;
             }
 
-            $subject = EmailTemplate::fill($data['subject'], $row, $period, $institution);
-            $body    = EmailTemplate::fill($data['body'], $row, $period, $institution);
+            $subject = EmailTemplate::fillPlaceholders($data['subject'], $row, $period, $institution);
+            $body    = EmailTemplate::fillPlaceholders($data['body'], $row, $period, $institution);
 
             try {
                 $mailer->to($lecturer->email)->send(new PayslipMail(
