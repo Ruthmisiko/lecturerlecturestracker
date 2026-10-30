@@ -17,7 +17,6 @@
     .overlay {
         background-color: rgba(0, 0, 0, 0.6);
     }
-    .brand-heading { color: var(--navy); }
     .brand-logo {
         width: 64px; height: 64px; border-radius: 50%;
         background: #fff; border: 3px solid var(--orange);
@@ -41,7 +40,7 @@
         </header>
 
         <main class="flex-1 flex flex-col items-center justify-center px-6 pb-16 text-center">
-            <h1 class="brand-heading text-4xl sm:text-5xl font-bold mb-6">Lecture Management System</h1>
+            <h1 class="text-4xl sm:text-5xl font-bold mb-6">Lecture Management System</h1>
 
             <p class="max-w-2xl text-lg sm:text-xl mb-10 leading-relaxed">
                 This system helps accountants and administrators track lecturers’ teaching activities—dates, hours taught,
