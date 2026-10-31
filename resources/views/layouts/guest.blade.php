@@ -14,10 +14,10 @@
         <!-- Scripts -->
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
-    <body class="font-sans text-gray-900 antialiased">
-        <div class="min-h-screen flex flex-col sm:justify-center items-center ">
+    <body class="font-sans text-gray-900 antialiased" style="background: url('{{ asset('images/image.png') }}') no-repeat center center / cover fixed;">
+        <div class="min-h-screen flex flex-col sm:justify-center items-center px-4" style="background-color: rgba(0, 0, 0, 0.6);">
             <div>
-                <h1><b>Lecture Tracker</b></h1>
+                <h1 style="color:#fff;font-size:1.75rem;"><b>Lecture Tracker</b></h1>
             </div>
 
             <div class="w-full sm:max-w-md mt-6 px-6 py-4 bg-white shadow-md overflow-hidden sm:rounded-lg">
