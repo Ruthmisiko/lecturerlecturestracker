@@ -12,14 +12,15 @@
 .inv-meta td { vertical-align: top; padding: 16px 0; line-height: 1.7; }
 .inv-label { color: #6b7280; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
 .inv-strong { font-weight: bold; font-size: 15px; }
-.inv-items th { background: #2d2a6b; color: #fff; padding: 8px 10px; text-align: left; font-size: 12px; }
+.inv-items th { background: none; color: #111827; padding: 8px 10px; text-align: left; font-size: 12px; border-top: 1px solid #111827; border-bottom: 1px solid #111827; }
 .inv-items th.inv-right { text-align: right; }
 .inv-items td { padding: 8px 10px; border-bottom: 1px solid #e5e7eb; }
 .inv-items tfoot td { font-weight: bold; font-size: 15px; border-top: 2px solid #2d2a6b; border-bottom: 0; padding-top: 12px; }
 .inv-notes { margin-top: 18px; padding: 12px 14px; background: #f8f9fb; border-radius: 6px; font-size: 12px; line-height: 1.6; }
 .inv-brandrow td { vertical-align: middle; padding: 0 0 14px; border: 0; }
 .inv-logo-cell { width: 70px; padding-right: 12px !important; }
-.inv-logo { width: 58px; height: 58px; }
+.inv-logo-circle { width: 52px; height: 52px; border: 3px solid #f26a2e; border-radius: 50%; background: #fff; text-align: center; }
+.inv-logo { width: 34px; height: 34px; margin-top: 9px; }
 .inv-foot { margin-top: 28px; text-align: center; color: #9ca3af; font-size: 11px; }
 .inv-qr { width: 78px; height: 78px; margin-bottom: 4px; }
 .inv-scan { color: #6b7280; font-size: 10px; }

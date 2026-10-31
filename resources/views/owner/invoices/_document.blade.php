@@ -17,7 +17,7 @@
                 <table class="inv-brandrow">
                     <tr>
                         @if ($logoSrc)
-                            <td class="inv-logo-cell"><img src="{{ $logoSrc }}" alt="{{ $b['name'] }}" class="inv-logo"></td>
+                            <td class="inv-logo-cell"><div class="inv-logo-circle"><img src="{{ $logoSrc }}" alt="{{ $b['name'] }}" class="inv-logo"></div></td>
                         @endif
                         <td>
                             <div class="inv-brand">{{ $b['name'] }}</div>
