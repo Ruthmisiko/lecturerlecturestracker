@@ -12,7 +12,7 @@
 .inv-meta td { vertical-align: top; padding: 16px 0; line-height: 1.7; }
 .inv-label { color: #6b7280; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
 .inv-strong { font-weight: bold; font-size: 15px; }
-.inv-items th { background: none; color: #111827; padding: 8px 10px; text-align: left; font-size: 12px; border-top: 1px solid #111827; border-bottom: 1px solid #111827; }
+.inv-items th { background: #2d2a6b; color: #fff; padding: 8px 10px; text-align: left; font-size: 12px; }
 .inv-items th.inv-right { text-align: right; }
 .inv-items td { padding: 8px 10px; border-bottom: 1px solid #e5e7eb; }
 .inv-items tfoot td { font-weight: bold; font-size: 15px; border-top: 2px solid #2d2a6b; border-bottom: 0; padding-top: 12px; }
