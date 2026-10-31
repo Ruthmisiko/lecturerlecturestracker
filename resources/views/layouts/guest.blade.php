@@ -15,7 +15,11 @@
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
     <body class="font-sans text-gray-900 antialiased" style="background: url('{{ asset('images/image.png') }}') no-repeat center center / cover fixed;">
-        <div class="min-h-screen flex flex-col sm:justify-center items-center px-4" style="background-color: rgba(0, 0, 0, 0.6);">
+        <div class="min-h-screen flex flex-col sm:justify-center items-center px-4" style="background-color: rgba(0, 0, 0, 0.6); position: relative;">
+            <a href="https://nawema.co.ke" target="_blank" rel="noopener" title="Visit nawema.co.ke"
+               style="position:absolute; top:20px; left:24px; width:64px; height:64px; border-radius:50%; background:#fff; border:3px solid #f26a2e; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 14px rgba(45,42,107,.15);">
+                <img src="{{ asset('images/nawema-logo.png') }}" alt="Nawema" style="width:70%; height:70%; object-fit:contain;">
+            </a>
             <div>
                 <h1 style="color:#fff;font-size:1.75rem;"><b>Lecture Tracker</b></h1>
             </div>
