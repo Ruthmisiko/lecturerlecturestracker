@@ -122,7 +122,7 @@ class BulkEmailController extends DashboardController
         return redirect()->route('bulk-email.sent')->with('bulkEmail', [
             'results' => $results,
             'subject' => $data['subject'],
-            'backUrl' => route('bulk-email.create', array_filter(['from' => $from, 'to' => $to, 'statuses' => $statuses])),
+            'backUrl' => route('bulk-email.create', array_filter(['from' => $from, 'to' => $to, 'statuses' => $statuses ?: 'all'])),
         ]);
     }
 

@@ -298,10 +298,14 @@ class DashboardController extends Controller
         return [$valid($request->get('from')), $valid($request->get('to'))];
     }
 
-    /** Clash statuses whose hours are payable; null = all statuses. */
+    /** Clash statuses whose hours are payable; null = all statuses. Defaults to OK only when none is chosen. */
     protected function statuses(Request $request): ?array
     {
-        return LecturerPayroll::normaliseStatuses($request->input('statuses'));
+        if (!$request->has('statuses')) {
+            return ['ok'];
+        }
+
+        return LecturerPayroll::normaliseStatuses((array) $request->input('statuses'));
     }
 
     public static function statusLabel(?array $statuses): string

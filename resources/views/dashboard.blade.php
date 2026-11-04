@@ -91,7 +91,7 @@
                 <label class="small text-muted mb-1">To</label>
                 <input type="date" name="to" value="{{ $to }}" class="form-control form-control-sm">
             </div>
-            @foreach ($statuses ?? [] as $s)<input type="hidden" name="statuses[]" value="{{ $s }}">@endforeach
+            @foreach ($statuses ?? ["all"] as $s)<input type="hidden" name="statuses[]" value="{{ $s }}">@endforeach
             <button class="btn btn-sm btn-success">Apply</button>
             <div class="btn-group btn-group-sm ml-md-2">
                 <a class="btn btn-outline-secondary" href="{{ route('dashboard', ['from' => now()->startOfMonth()->toDateString(), 'to' => now()->endOfMonth()->toDateString()] + $keep) }}">This month</a>
