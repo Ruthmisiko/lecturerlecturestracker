@@ -68,7 +68,7 @@
                     @endforeach
                 </select>
             </div>
-            @foreach ($statuses ?? [] as $s)<input type="hidden" name="statuses[]" value="{{ $s }}">@endforeach
+            @foreach ($statuses ?? ["all"] as $s)<input type="hidden" name="statuses[]" value="{{ $s }}">@endforeach
             <button class="btn btn-sm btn-success">Apply</button>
             <a href="{{ route('dashboard.report', request()->only('statuses')) }}" class="btn btn-sm btn-outline-secondary">Clear</a>
             <small class="text-muted ml-auto">Use <strong>Payable hrs</strong> under a lecturer's gross amount to choose which statuses count for that lecturer.</small>

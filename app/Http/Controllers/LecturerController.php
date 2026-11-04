@@ -31,7 +31,20 @@ class LecturerController extends AppBaseController
         $user    = Auth::user();
         $ownerId = $user->ownerId();
 
-        $query = Lecturer::where('user_id', $ownerId)->with('department');
+        $lecturers = $this->listQuery($request)->paginate(10)->withQueryString();
+
+        $departments = $user->isSuperAdmin()
+            ? Department::orderBy('name')->get()
+            : Department::where('user_id', $ownerId)->orderBy('name')->get();
+
+        return view('lecturers.index', compact('lecturers', 'departments'));
+    }
+
+    /** Lecturers list with the index page's name/department filters applied. */
+    private function listQuery(Request $request)
+    {
+        $user  = Auth::user();
+        $query = Lecturer::where('user_id', $user->ownerId())->with('department');
 
         if ($user->scopedDepartmentIds()) {
             $query->whereIn('department_id', $user->scopedDepartmentIds());
@@ -45,13 +58,34 @@ class LecturerController extends AppBaseController
             $query->where('department_id', $request->department_id);
         }
 
-        $lecturers = $query->paginate(10)->withQueryString();
+        return $query;
+    }
 
-        $departments = $user->isSuperAdmin()
-            ? Department::orderBy('name')->get()
-            : Department::where('user_id', $ownerId)->orderBy('name')->get();
+    public function exportListPdf(Request $request)
+    {
+        $lecturers = $this->listQuery($request)->orderBy('name')->get();
 
-        return view('lecturers.index', compact('lecturers', 'departments'));
+        $pdf = PDF::loadView('lecturers.list_pdf', compact('lecturers'))
+                  ->setPaper('a4', 'landscape');
+        return $pdf->download('lecturers_' . now()->format('Y-m-d') . '.pdf');
+    }
+
+    public function exportListExcel(Request $request)
+    {
+        $rows = $this->listQuery($request)->orderBy('name')->get()->map(fn ($l, $i) => [
+            $i + 1,
+            $l->name,
+            $l->department->name ?? '-',
+            $l->email,
+            $l->phone,
+            $l->id_number,
+            $l->kra_pin,
+            $l->specialization,
+        ]);
+
+        return Excel::download(new CollectionExport(
+            collect([['#', 'Name', 'Department', 'Email', 'Phone', 'ID Number', 'KRA PIN', 'Specialization']])->merge($rows)
+        ), 'lecturers_' . now()->format('Y-m-d') . '.xlsx');
     }
 
     public function create()

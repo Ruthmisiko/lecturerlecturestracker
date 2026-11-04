@@ -57,7 +57,7 @@
         @csrf
         @if ($from)<input type="hidden" name="from" value="{{ $from }}">@endif
         @if ($to)<input type="hidden" name="to" value="{{ $to }}">@endif
-        @foreach ($statuses ?? [] as $s)<input type="hidden" name="statuses[]" value="{{ $s }}">@endforeach
+        @foreach ($statuses ?? ["all"] as $s)<input type="hidden" name="statuses[]" value="{{ $s }}">@endforeach
 
         <div class="row">
             {{-- Recipients --}}
