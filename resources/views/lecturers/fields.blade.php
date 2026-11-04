@@ -1,7 +1,20 @@
 <div class="form-group col-md-6">
-    {!! Form::label('department_id', 'Department:') !!}
-    {!! Form::select('department_id', $departments ?? [], null, ['class' => 'form-control']) !!}
+    <label for="departments">Departments:</label>
+    <select name="departments[]" id="departments" class="form-control departments-select" multiple>
+        @foreach($departments ?? [] as $id => $name)
+            <option value="{{ $id }}" {{ in_array($id, old('departments', $selectedDepartments ?? [])) ? 'selected' : '' }}>{{ $name }}</option>
+        @endforeach
+    </select>
+    <small class="text-muted">Payment reports list the lecturer under their main department{{ isset($lecturer) && $lecturer->department ? ' (' . $lecturer->department->name . ')' : '' }}.</small>
 </div>
+
+@push('scripts')
+<script>
+    $(function () {
+        $('.departments-select').select2({ theme: 'bootstrap4', width: '100%', placeholder: 'Select departments…', closeOnSelect: false });
+    });
+</script>
+@endpush
 
 <div class="form-group col-md-6">
     {!! Form::label('name', 'Name:') !!}

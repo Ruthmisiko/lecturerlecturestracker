@@ -44,10 +44,10 @@ class LecturerController extends AppBaseController
     private function listQuery(Request $request)
     {
         $user  = Auth::user();
-        $query = Lecturer::where('user_id', $user->ownerId())->with('department');
+        $query = Lecturer::where('user_id', $user->ownerId())->with('department', 'departments');
 
         if ($user->scopedDepartmentIds()) {
-            $query->whereIn('department_id', $user->scopedDepartmentIds());
+            $query->inDepartments($user->scopedDepartmentIds());
         }
 
         if ($request->filled('name')) {
@@ -55,7 +55,7 @@ class LecturerController extends AppBaseController
         }
 
         if ($request->filled('department_id')) {
-            $query->where('department_id', $request->department_id);
+            $query->inDepartments($request->department_id);
         }
 
         return $query;
@@ -75,7 +75,7 @@ class LecturerController extends AppBaseController
         $rows = $this->listQuery($request)->orderBy('name')->get()->map(fn ($l, $i) => [
             $i + 1,
             $l->name,
-            $l->department->name ?? '-',
+            $l->departmentNames(),
             $l->email,
             $l->phone,
             $l->id_number,
@@ -84,7 +84,7 @@ class LecturerController extends AppBaseController
         ]);
 
         return Excel::download(new CollectionExport(
-            collect([['#', 'Name', 'Department', 'Email', 'Phone', 'ID Number', 'KRA PIN', 'Specialization']])->merge($rows)
+            collect([['#', 'Name', 'Departments', 'Email', 'Phone', 'ID Number', 'KRA PIN', 'Specialization']])->merge($rows)
         ), 'lecturers_' . now()->format('Y-m-d') . '.xlsx');
     }
 
@@ -111,7 +111,8 @@ class LecturerController extends AppBaseController
         $ownerId = $user->ownerId();
 
         $request->validate([
-            'department_id' => 'nullable|exists:departments,id',
+            'departments' => 'nullable|array',
+            'departments.*' => 'exists:departments,id',
             'lecturers' => 'required|array|min:1',
             'lecturers.*.name' => 'required|string|max:255',
             'lecturers.*.email' => 'nullable|email|max:255',
@@ -124,10 +125,10 @@ class LecturerController extends AppBaseController
             'lecturers.*.housing_levy_rate' => 'nullable|numeric|min:0|max:100',
         ]);
 
-        $departmentId = $request->department_id;
-        $canSetPay    = $user->isSuperAdmin();
+        $departmentIds = $request->input('departments', []);
+        $canSetPay     = $user->isSuperAdmin();
 
-        DB::transaction(function () use ($request, $ownerId, $departmentId, $canSetPay) {
+        DB::transaction(function () use ($request, $ownerId, $departmentIds, $canSetPay) {
             foreach ($request->lecturers as $data) {
                 // Non-superusers always get the defaults; the superuser can adjust later.
                 $pay = [
@@ -138,7 +139,6 @@ class LecturerController extends AppBaseController
 
                 $lecturer = Lecturer::create($pay + [
                     'user_id'        => $ownerId,
-                    'department_id'  => $departmentId,
                     'name'           => $data['name'],
                     'email'          => $data['email'] ?? null,
                     'phone'          => $data['phone'] ?? null,
@@ -146,6 +146,8 @@ class LecturerController extends AppBaseController
                     'kra_pin'        => $data['kra_pin'] ?? null,
                     'specialization' => $data['specialization'] ?? null,
                 ]);
+
+                $lecturer->setDepartments($departmentIds);
 
                 if (!empty($data['units'])) {
                     $lecturer->units()->sync($data['units']);
@@ -337,11 +339,13 @@ class LecturerController extends AppBaseController
         $user = Auth::user();
         $ownerId = $user->ownerId();
 
-        $departments = Department::where('user_id', $ownerId)->pluck('name', 'id')->prepend('-- Select Department --', '');
+        $departments = Department::where('user_id', $ownerId)->orderBy('name')->pluck('name', 'id');
         $units = Unit::where('user_id', $ownerId)->pluck('name', 'id');
         $selectedUnits = $lecturer->units()->pluck('units.id')->toArray();
+        $selectedDepartments = $lecturer->departments()->pluck('departments.id')->toArray()
+            ?: array_filter([$lecturer->department_id]);
 
-        return view('lecturers.edit', compact('lecturer', 'departments', 'units', 'selectedUnits'));
+        return view('lecturers.edit', compact('lecturer', 'departments', 'units', 'selectedUnits', 'selectedDepartments'));
     }
 
     public function update($id, UpdateLecturerRequest $request)
@@ -357,12 +361,14 @@ class LecturerController extends AppBaseController
             'rate_per_hour'     => 'nullable|numeric|min:0',
             'tax_rate'          => 'nullable|numeric|min:0|max:100',
             'housing_levy_rate' => 'nullable|numeric|min:0|max:100',
+            'departments'       => 'nullable|array',
+            'departments.*'     => 'exists:departments,id',
         ]);
 
         // Only the superuser may change pay settings.
         $data = Auth::user()->isSuperAdmin()
-            ? $request->except('units')
-            : $request->except(array_merge(['units'], Lecturer::PAY_FIELDS, ['account_number', 'bank_name', 'bank_branch']));
+            ? $request->except('units', 'departments', 'department_id')
+            : $request->except(array_merge(['units', 'departments', 'department_id'], Lecturer::PAY_FIELDS, ['account_number', 'bank_name', 'bank_branch']));
 
         foreach (Lecturer::PAY_FIELDS as $field) {
             if (array_key_exists($field, $data) && $data[$field] === null) {
@@ -373,6 +379,7 @@ class LecturerController extends AppBaseController
         $lecturer = $this->lecturerRepository->update($data, $id);
 
         $lecturer->units()->sync($request->input('units', []));
+        $lecturer->setDepartments($request->input('departments', []));
 
         Flash::success('Lecturer updated successfully.');
 

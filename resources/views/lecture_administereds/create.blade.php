@@ -166,10 +166,14 @@
         updateRowNumbers();
     }
 
+    function inDept(l, deptId) {
+        return !deptId || l.department_ids.indexOf(Number(deptId)) !== -1;
+    }
+
     function buildLecturerOptions(deptId, index) {
         var html = '';
         lecturersData.forEach(function(l) {
-            if (!deptId || l.department_id == deptId) {
+            if (inDept(l, deptId)) {
                 html += '<option value="' + l.id + '">' + l.name + '</option>';
             }
         });
@@ -226,7 +230,7 @@
             var current = select.value;
             select.innerHTML = '<option value="">-- Select Lecturer --</option>';
             lecturersData.forEach(function(l) {
-                if (!deptId || l.department_id == deptId) {
+                if (inDept(l, deptId)) {
                     var opt = document.createElement('option');
                     opt.value = l.id;
                     opt.text  = l.name;

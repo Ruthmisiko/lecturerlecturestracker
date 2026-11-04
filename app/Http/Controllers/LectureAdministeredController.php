@@ -296,9 +296,14 @@ private function fetchExportData(Request $request): array
         if ($deptScope) $dq->whereIn('id', $deptScope);
         $departments = $dq->get();
 
-        $lq        = Lecturer::where('user_id', $ownerId);
-        if ($deptScope) $lq->whereIn('department_id', $deptScope);
-        $lecturers = $lq->get(['id', 'name', 'department_id']);
+        $lq        = Lecturer::where('user_id', $ownerId)->with('departments:id');
+        if ($deptScope) $lq->inDepartments($deptScope);
+        $lecturers = $lq->get(['id', 'name', 'department_id'])->map(fn ($l) => [
+            'id'             => $l->id,
+            'name'           => $l->name,
+            'department_id'  => $l->department_id,
+            'department_ids' => $l->departments->pluck('id')->push($l->department_id)->filter()->unique()->values(),
+        ]);
 
         $classes   = Classs::where('user_id', $ownerId)->pluck('name', 'id');
 

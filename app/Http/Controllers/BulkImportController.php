@@ -241,6 +241,9 @@ class BulkImportController extends Controller
                 }
 
                 $lecturer = Lecturer::create($attrs);
+                if ($department) {
+                    $lecturer->departments()->sync([$department->id]);
+                }
                 if ($unitIds) {
                     $lecturer->units()->sync($unitIds);
                 }

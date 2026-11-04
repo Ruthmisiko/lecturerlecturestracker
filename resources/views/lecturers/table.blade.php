@@ -29,7 +29,7 @@
             <thead>
                 <tr>
                     <th>Name</th>
-                    <th>Department</th>
+                    <th>Departments</th>
                     <th>Email</th>
                     <th>Phone</th>
                     <th>ID Number</th>
@@ -41,7 +41,7 @@
                 @foreach($lecturers as $lecturer)
                     <tr>
                         <td>{{ $lecturer->name }}</td>
-                        <td>{{ $lecturer->department->name ?? '-' }}</td>
+                        <td>{{ $lecturer->departmentNames() }}</td>
                         <td>{{ $lecturer->email }}</td>
                         <td>{{ $lecturer->phone }}</td>
                         <td>{{ $lecturer->id_number }}</td>

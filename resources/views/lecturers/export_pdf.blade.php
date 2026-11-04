@@ -20,7 +20,7 @@
 <body>
     <h2>Lectures Administered — {{ $lecturer->name }}</h2>
     <div class="meta">
-        Department: {{ $lecturer->department->name ?? '-' }} &nbsp;|&nbsp;
+        Departments: {{ $lecturer->departmentNames() }} &nbsp;|&nbsp;
         ID Number: {{ $lecturer->id_number ?? '-' }} &nbsp;|&nbsp;
         Generated: {{ now()->format('Y-m-d H:i') }}
     </div>

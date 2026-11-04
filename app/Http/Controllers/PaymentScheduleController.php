@@ -33,7 +33,8 @@ class PaymentScheduleController extends Controller
     public function create(Request $request)
     {
         [$from, $to, $statuses] = $this->filters($request);
-        $amounts   = $this->netPay($from, $to, $statuses);
+        $rowStatuses = $statuses ?? ['ok']; // only OK hours count until the user ticks more on a row
+        $amounts   = $this->netPay($from, $to, $rowStatuses);
         $lecturers = $this->lecturers();
 
         // Start with every lecturer, pre-filled from their saved details.
@@ -42,7 +43,7 @@ class PaymentScheduleController extends Controller
             'name'           => $l->name,
             'account_number' => $l->account_number,
             'amount'         => $amounts[$l->id] ?? 0,
-            'statuses'       => null, // all statuses until changed on the row
+            'statuses'       => $rowStatuses,
             'bank'           => $l->bank_name,
             'branch'         => $l->bank_branch,
             'id_number'      => $l->id_number,
@@ -166,7 +167,7 @@ class PaymentScheduleController extends Controller
         $deptIds = $user->scopedDepartmentIds();
 
         return Lecturer::where('user_id', $user->ownerId())
-            ->when($deptIds, fn ($q) => $q->whereIn('department_id', $deptIds))
+            ->when($deptIds, fn ($q) => $q->inDepartments($deptIds))
             ->orderBy('name')
             ->get(['id', 'name', 'account_number', 'bank_name', 'bank_branch', 'id_number']);
     }

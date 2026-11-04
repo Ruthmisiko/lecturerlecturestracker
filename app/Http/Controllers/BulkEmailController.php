@@ -87,35 +87,47 @@ class BulkEmailController extends DashboardController
                 continue;
             }
 
-            $subject = EmailTemplate::fillPlaceholders($data['subject'], $row, $period, $institution);
-            $body    = EmailTemplate::fillPlaceholders($data['body'], $row, $period, $institution);
+            // With payslips, a lecturer who taught in several departments gets one email per department.
+            $slips = $attach ? LecturerPayroll::slips($row) : [$row];
+            $split = count($slips) > 1;
 
-            try {
-                $mailer->to($lecturer->email)->send(new PayslipMail(
-                    $subject, $body,
-                    $attach ? $this->payslipPdfFor($lecturer, $row, $from, $to, $statuses)->output() : null,
-                    $attach ? $this->payslipFileName($lecturer) : null,
-                    $config->from_address, $config->from_name,
-                ));
-            } catch (\Throwable $e) {
-                report($e);
-                $results[] = $result + ['status' => 'failed', 'note' => $e->getMessage()];
-                continue;
+            foreach ($slips as $slip) {
+                $label   = $split ? ['name' => "{$lecturer->name} ({$slip->department})"] : [];
+                $subject = EmailTemplate::fillPlaceholders($data['subject'], $slip, $period, $institution);
+                $body    = EmailTemplate::fillPlaceholders($data['body'], $slip, $period, $institution);
+
+                if ($attach && $slip->hours <= 0) {
+                    $results[] = $label + $result + ['status' => 'skipped', 'note' => 'No payable hours in this department, so no payslip'];
+                    continue;
+                }
+
+                try {
+                    $mailer->to($lecturer->email)->send(new PayslipMail(
+                        $subject, $body,
+                        $attach ? $this->payslipPdfFor($lecturer, [$slip], $from, $to, $statuses)->output() : null,
+                        $attach ? $this->payslipFileName($lecturer, $split ? $slip : null) : null,
+                        $config->from_address, $config->from_name,
+                    ));
+                } catch (\Throwable $e) {
+                    report($e);
+                    $results[] = $label + $result + ['status' => 'failed', 'note' => $e->getMessage()];
+                    continue;
+                }
+
+                if ($attach) {
+                    PayslipEmail::create([
+                        'lecturer_id'            => $lecturer->id,
+                        'email_configuration_id' => $config->id,
+                        'to'                     => $lecturer->email,
+                        'subject'                => $subject,
+                        'period_from'            => $from,
+                        'period_to'              => $to,
+                        'user_id'                => Auth::id(),
+                    ]);
+                }
+
+                $results[] = $label + $result + ['status' => 'sent', 'note' => $attach ? 'With payslip' : ''];
             }
-
-            if ($attach) {
-                PayslipEmail::create([
-                    'lecturer_id'            => $lecturer->id,
-                    'email_configuration_id' => $config->id,
-                    'to'                     => $lecturer->email,
-                    'subject'                => $subject,
-                    'period_from'            => $from,
-                    'period_to'              => $to,
-                    'user_id'                => Auth::id(),
-                ]);
-            }
-
-            $results[] = $result + ['status' => 'sent', 'note' => $attach ? 'With payslip' : ''];
         }
 
         // Redirect so a page refresh can't send everything again.

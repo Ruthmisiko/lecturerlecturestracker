@@ -11,7 +11,7 @@
                     <a class="btn btn-outline-success mr-2" href="{{ route('lecturers.list.excel', request()->only('name', 'department_id')) }}">
                         <i class="fas fa-file-excel mr-1"></i> Excel
                     </a>
-                    <a class="btn btn-outline-danger mr-2" href="{{ route('lecturers.list.pdf', request()->only('name', 'department_id')) }}">
+                    <a class="btn btn-info mr-2" href="{{ route('lecturers.list.pdf', request()->only('name', 'department_id')) }}">
                         <i class="fas fa-file-pdf mr-1"></i> PDF
                     </a>
                     @include('bulk._modal', ['id' => 'bulkLecturers', 'title' => 'Bulk Upload Lecturers', 'templateRoute' => route('bulk.lecturers.template'), 'importRoute' => route('bulk.lecturers.import')])

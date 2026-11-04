@@ -4,8 +4,8 @@
         <select name="records[{{ $index }}][lecturer_id]" class="form-control lecturer-select" required>
             <option value="">-- Select Lecturer --</option>
             @foreach($lecturers as $lecturer)
-                <option value="{{ $lecturer->id }}" data-department="{{ $lecturer->department_id }}">
-                    {{ $lecturer->name }}
+                <option value="{{ $lecturer['id'] }}" data-department="{{ $lecturer['department_id'] }}">
+                    {{ $lecturer['name'] }}
                 </option>
             @endforeach
         </select>

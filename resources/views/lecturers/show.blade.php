@@ -27,8 +27,8 @@
                         <p class="fw-bold">{{ $lecturer->name }}</p>
                     </div>
                     <div class="mb-3">
-                        {!! Form::label('department', 'Department:') !!}
-                        <p class="fw-bold">{{ $lecturer->department->name ?? '-' }}</p>
+                        {!! Form::label('department', 'Departments:') !!}
+                        <p class="fw-bold">{{ $lecturer->departmentNames() }}</p>
                     </div>
                     <div class="mb-3">
                         {!! Form::label('email', 'Email:') !!}

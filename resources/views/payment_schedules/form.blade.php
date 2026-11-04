@@ -291,7 +291,7 @@
         var l = lecturers[document.getElementById('addLecturer').value];
         if (!l) return;
         var tr = addRow({ lecturer_id: l.id, name: l.name, account_number: l.account_number, bank: l.bank_name,
-                          branch: l.bank_branch, id_number: l.id_number, amount: 0, statuses: null });
+                          branch: l.bank_branch, id_number: l.id_number, amount: 0, statuses: ['ok'] });
         refreshRow(tr);
         tr.querySelector('input[name$="[account_number]"]').focus();
     });

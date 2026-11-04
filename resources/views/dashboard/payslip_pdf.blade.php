@@ -49,6 +49,10 @@
         $pct   = fn ($v) => rtrim(rtrim(number_format($v, 2), '0'), '.') . '%';
     @endphp
 
+    {{-- One slip (page) per department --}}
+    @foreach ($slips as $row)
+    <div style="{{ $loop->last ? '' : 'page-break-after: always;' }}">
+
     {{-- Letterhead (or logo / name when no letterhead is uploaded) --}}
     <div class="header">
         @if ($letterheadPath)
@@ -80,7 +84,7 @@
                 <tr><td class="k">Period</td><td><strong>{{ $slipSemester?->name ?? 'All time' }}</strong>@if ($slipRange)<br><span style="font-size:8px;color:#6b7280;">{{ $slipRange }}</span>@endif</td></tr>
             @endif
             <tr><td class="k">Lecturer</td><td><strong>{{ $lecturer->name }}</strong></td></tr>
-            <tr><td class="k">Department</td><td>{{ $lecturer->department->name ?? '—' }}</td></tr>
+            <tr><td class="k">Department</td><td>{{ $row->department }}</td></tr>
             <tr><td class="k">KRA PIN</td><td>{{ $lecturer->kra_pin ?: '—' }}</td></tr>
             <tr><td class="k">Phone</td><td>{{ $lecturer->phone ?: '—' }}</td></tr>
         </table>
@@ -119,6 +123,9 @@
             <td><div class="line">Approved by<div class="role">PRINCIPAL</div></div></td>
         </tr>
     </table>
+
+    </div>
+    @endforeach
 
     <div class="powered">
         <table>

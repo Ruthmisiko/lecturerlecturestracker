@@ -243,9 +243,16 @@ class DashboardController extends Controller
         $this->authorizeAccess('dashboard.view', 'payment-report.view');
 
         [$from, $to] = $this->period($request);
-        [$pdf, $lecturer] = $this->payslipPdf($lecturerId, $from, $to, $this->statuses($request));
+        $statuses = $this->statuses($request);
+        $deptKey  = $request->filled('department') ? $request->integer('department') : null;
 
-        return $pdf->download($this->payslipFileName($lecturer));
+        [$lecturer, $row] = $this->payslipRow($lecturerId, $from, $to, $statuses);
+        $slips = LecturerPayroll::slips($row, $deptKey);
+        abort_unless($slips, 404);
+
+        // One page per department when no single department was asked for.
+        return $this->payslipPdfFor($lecturer, $slips, $from, $to, $statuses)
+            ->download($this->payslipFileName($lecturer, count($slips) === 1 && count($row->departments) > 1 ? $slips[0] : null));
     }
 
     /** Emails a lecturer's payslip PDF (same period/statuses as on screen) through a chosen email account. */
@@ -270,16 +277,31 @@ class DashboardController extends Controller
         }
 
         [$from, $to] = $this->period($request);
-        [$pdf, $lecturer] = $this->payslipPdf($lecturerId, $from, $to, $this->statuses($request));
+        $statuses = $this->statuses($request);
+        [$lecturer, $row] = $this->payslipRow($lecturerId, $from, $to, $statuses);
 
-        try {
-            $config->mailer()->to($data['to'])->send(new \App\Mail\PayslipMail(
-                $data['subject'], $data['body'], $pdf->output(), $this->payslipFileName($lecturer),
-                $config->from_address, $config->from_name,
-            ));
-        } catch (\Throwable $e) {
-            report($e);
-            return response()->json(['message' => 'Sending failed: ' . $e->getMessage()], 422);
+        // A lecturer who taught in several departments gets one email per department, each with that payslip.
+        $slips       = LecturerPayroll::slips($row);
+        $split       = count($slips) > 1;
+        $period      = mb_substr(trim((string) $request->input('period_text')), 0, 100) ?: $this->periodLabel($from, $to);
+        $institution = \App\Models\Institution::find(Auth::user()->currentInstitutionId())?->name ?: 'Accounts Office';
+        $sent        = [];
+
+        foreach ($slips as $slip) {
+            try {
+                $config->mailer()->to($data['to'])->send(new \App\Mail\PayslipMail(
+                    \App\Models\EmailTemplate::fillPlaceholders($data['subject'], $slip, $period, $institution),
+                    \App\Models\EmailTemplate::fillPlaceholders($data['body'], $slip, $period, $institution),
+                    $this->payslipPdfFor($lecturer, [$slip], $from, $to, $statuses)->output(),
+                    $this->payslipFileName($lecturer, $split ? $slip : null),
+                    $config->from_address, $config->from_name,
+                ));
+            } catch (\Throwable $e) {
+                report($e);
+                $done = $sent ? ' (already sent for ' . implode(', ', $sent) . ')' : '';
+                return response()->json(['message' => "Sending failed for {$slip->department}{$done}: " . $e->getMessage()], 422);
+            }
+            $sent[] = $slip->department;
         }
 
         if ($request->boolean('save_email') && $lecturer->email !== $data['to']) {
@@ -299,33 +321,37 @@ class DashboardController extends Controller
             'user_id'                => Auth::id(),
         ]);
 
-        return response()->json(['message' => "Payslip sent to {$data['to']}.", 'sent_at' => now()->format('d M Y, H:i')]);
+        $message = $split
+            ? count($slips) . " payslips (one per department: " . implode(', ', $sent) . ") sent to {$data['to']}."
+            : "Payslip sent to {$data['to']}.";
+
+        return response()->json(['message' => $message, 'sent_at' => now()->format('d M Y, H:i')]);
     }
 
-    /** [Pdf, Lecturer] for a lecturer's payslip. */
-    protected function payslipPdf($lecturerId, ?string $from, ?string $to, ?array $statuses): array
+    /** [Lecturer, payroll row] for a lecturer's payslip. */
+    protected function payslipRow($lecturerId, ?string $from, ?string $to, ?array $statuses): array
     {
         $lecturer = Lecturer::with('department', 'institution')->findOrFail($lecturerId);
         $row      = (new LecturerPayroll(Auth::user(), $from, $to, $statuses))->rows()->firstWhere('id', $lecturer->id);
 
         abort_unless($row, 404);
 
-        return [$this->payslipPdfFor($lecturer, $row, $from, $to, $statuses), $lecturer];
+        return [$lecturer, $row];
     }
 
-    /** Payslip PDF from an already-calculated payroll row (lets bulk sending calculate once). */
-    protected function payslipPdfFor(Lecturer $lecturer, object $row, ?string $from, ?string $to, ?array $statuses)
+    /** Payslip PDF, one page per slip (see LecturerPayroll::slips), from already-calculated figures. */
+    protected function payslipPdfFor(Lecturer $lecturer, array $slips, ?string $from, ?string $to, ?array $statuses)
     {
         $period = $this->periodLabel($from, $to);
-        $slipNo = 'PS-' . str_pad($lecturer->id, 4, '0', STR_PAD_LEFT) . '-' . ($to ? str_replace('-', '', substr($to, 0, 7)) : now()->format('Ym'));
 
-        return PDF::loadView('dashboard.payslip_pdf', compact('lecturer', 'row', 'period', 'slipNo', 'statuses', 'from', 'to'))
+        return PDF::loadView('dashboard.payslip_pdf', compact('lecturer', 'slips', 'period', 'statuses', 'from', 'to'))
             ->setPaper([0, 0, 297.64, 595.28]); // half-width A4: 105 × 210 mm
     }
 
-    protected function payslipFileName(Lecturer $lecturer): string
+    /** e.g. payslip_akello_shem_juma.pdf, or payslip_akello_shem_juma_clinical_medicine.pdf for one department's slip. */
+    protected function payslipFileName(Lecturer $lecturer, ?object $slip = null): string
     {
-        return 'payslip_' . str($lecturer->name)->slug('_') . '.pdf';
+        return 'payslip_' . str($lecturer->name)->slug('_') . ($slip ? '_' . str($slip->department)->slug('_') : '') . '.pdf';
     }
 
     protected function excel($sections, $totals, string $period)

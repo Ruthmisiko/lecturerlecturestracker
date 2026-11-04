@@ -124,7 +124,7 @@ class AttendanceUploadController extends Controller
 
         return [
             'lecturers'   => Lecturer::where('user_id', $ownerId)
-                ->when($deptIds, fn ($q) => $q->whereIn('department_id', $deptIds))
+                ->when($deptIds, fn ($q) => $q->inDepartments($deptIds))
                 ->orderBy('name')->get(['id', 'name', 'department_id']),
             'departments' => Department::where('user_id', $ownerId)
                 ->when($deptIds, fn ($q) => $q->whereIn('id', $deptIds))

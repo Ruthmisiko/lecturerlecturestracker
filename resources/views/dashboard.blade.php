@@ -478,14 +478,22 @@
     }
 
     detail.addEventListener('click', function (e) {
-        var btn = e.target.closest('#copyNarration');
-        if (btn) copyText(document.getElementById('narrationText').textContent, btn);
+        var btn = e.target.closest('.copy-narration');
+        if (btn) copyText(btn.closest('.narration-box').querySelector('.narration-text').textContent, btn);
     });
 
-    function show(id) {
-        var r = rows[id];
-        if (!r) return;
+    // Payslip link; with a department key, just that department's slip.
+    function slipUrl(id, deptKey) {
+        var url = payslipUrl.replace('__ID__', id);
+        return deptKey == null ? url : url + (url.indexOf('?') === -1 ? '?' : '&') + 'department=' + deptKey;
+    }
 
+    // Departments the lecturer taught in during the period (more than one = one payslip each).
+    function parts(r) { return r.departments || []; }
+    function isSplit(r) { return parts(r).length > 1; }
+
+    // Sessions, hours, pay, units and narration for a lecturer row or one department of it.
+    function figures(r) {
         var units = (r.unit_details || []).map(function (u) {
             var tag = u.max !== null
                 ? ' <span class="text-muted">(max ' + num(u.max, 2) + ' hrs)</span>' : '';
@@ -496,18 +504,7 @@
                 u.counted.toFixed(4) + ' hrs</span></div>' + over + '</li>';
         }).join('');
 
-        detail.innerHTML =
-            '<div class="d-flex justify-content-between align-items-start mb-3">' +
-                '<div><h4 class="mb-0 font-weight-bold">' + esc(r.name) + '</h4><span class="text-muted">' + esc(r.department) + '</span></div>' +
-                '<div class="text-nowrap">' +
-                    '<a href="{{ url('lecturers') }}/' + r.id + '" class="btn btn-sm btn-outline-brand mr-1">View lectures</a>' +
-                    '<a href="' + payslipUrl.replace('__ID__', r.id) + '" class="btn btn-sm btn-success mr-1"><i class="fas fa-print mr-1"></i>Print Payslip</a>' +
-                    (canEmail ? '<button type="button" class="btn btn-sm btn-brand email-payslip" data-id="' + r.id + '"><i class="far fa-envelope mr-1"></i>Email Payslip</button>' : '') +
-                '</div>' +
-            '</div>' +
-            (r.rate <= 0 && r.hours > 0 ? '<div class="alert alert-warning py-2 small">No rate per hour set for this lecturer.</div>' : '') +
-            line('KRA PIN', esc(r.kra_pin)) +
-            (r.excluded_sessions > 0
+        return (r.excluded_sessions > 0
                 ? '<div class="alert alert-light border small py-2 my-2"><i class="fas fa-filter mr-1"></i>' +
                   r.excluded_sessions + ' session(s) / ' + r.excluded_hours.toFixed(4) + ' hrs not counted (status filter).</div>'
                 : '') +
@@ -524,11 +521,52 @@
                 ? '<div class="narration-box mt-3">' +
                       '<div class="d-flex justify-content-between align-items-center mb-2">' +
                           '<strong><i class="fas fa-align-left mr-1 text-success"></i> Narration</strong>' +
-                          '<button type="button" class="btn btn-sm btn-outline-success" id="copyNarration"><i class="far fa-copy mr-1"></i>Copy</button>' +
+                          '<button type="button" class="btn btn-sm btn-outline-success copy-narration"><i class="far fa-copy mr-1"></i>Copy</button>' +
                       '</div>' +
-                      '<div class="narration-text" id="narrationText">' + esc(narration(r)) + '</div>' +
+                      '<div class="narration-text">' + esc(narration(r)) + '</div>' +
                   '</div>'
-                : '') +
+                : '');
+    }
+
+    // A department's figures merged over the lecturer row (same idea as LecturerPayroll::slips).
+    function slip(r, d) { return Object.assign({}, r, d, { departments: [] }); }
+
+    function show(id) {
+        var r = rows[id];
+        if (!r) return;
+
+        var split = isSplit(r);
+        var body;
+        if (split) {
+            body = '<div class="alert alert-info small py-2 my-2"><i class="fas fa-layer-group mr-1"></i>Taught in ' + parts(r).length +
+                    ' departments: one payslip per department. Total net pay <strong>' + money(r.net) + '</strong> for ' + r.hours.toFixed(4) + ' hrs.</div>' +
+                parts(r).map(function (d) {
+                    var s = slip(r, d);
+                    return '<div class="border rounded p-3 mt-3">' +
+                        '<div class="d-flex justify-content-between align-items-center mb-2">' +
+                            '<h5 class="mb-0 font-weight-bold">' + esc(s.department) + '</h5>' +
+                            '<a href="' + slipUrl(r.id, d.department_key) + '" class="btn btn-sm btn-outline-success"><i class="fas fa-print mr-1"></i>Print</a>' +
+                        '</div>' + figures(s) + '</div>';
+                }).join('');
+        } else {
+            body = figures(parts(r).length ? slip(r, parts(r)[0]) : r);
+        }
+
+        var deptLabel = split ? parts(r).map(function (d) { return d.department; }).join(', ')
+            : (parts(r).length ? parts(r)[0].department : r.department);
+
+        detail.innerHTML =
+            '<div class="d-flex justify-content-between align-items-start mb-3">' +
+                '<div><h4 class="mb-0 font-weight-bold">' + esc(r.name) + '</h4><span class="text-muted">' + esc(deptLabel) + '</span></div>' +
+                '<div class="text-nowrap">' +
+                    '<a href="{{ url('lecturers') }}/' + r.id + '" class="btn btn-sm btn-outline-brand mr-1">View lectures</a>' +
+                    '<a href="' + slipUrl(r.id) + '" class="btn btn-sm btn-success mr-1"><i class="fas fa-print mr-1"></i>Print Payslip' + (split ? 's' : '') + '</a>' +
+                    (canEmail ? '<button type="button" class="btn btn-sm btn-brand email-payslip" data-id="' + r.id + '"><i class="far fa-envelope mr-1"></i>Email Payslip' + (split ? 's' : '') + '</button>' : '') +
+                '</div>' +
+            '</div>' +
+            (r.rate <= 0 && r.hours > 0 ? '<div class="alert alert-warning py-2 small">No rate per hour set for this lecturer.</div>' : '') +
+            line('KRA PIN', esc(r.kra_pin)) +
+            body +
             (lastEmailed[r.id] ? '<p class="small text-success mt-3 mb-0"><i class="far fa-envelope mr-1"></i>Payslip last emailed to ' + esc(lastEmailed[r.id].to) + ' on ' + esc(lastEmailed[r.id].at) + '</p>' : '') +
             (r.last_lecture ? '<p class="small text-muted mt-3 mb-0">Last lecture: ' + esc(r.last_lecture) + '</p>' : '');
 
@@ -568,8 +606,10 @@
         var body = tpl ? tpl.body :
             'Dear {name},\n\nPlease find attached your payslip for {period}.\n\n' +
             'Hours: {hours}\nGross amount: {gross}\nNet pay: {net}\n\nKind regards,\n{institution}';
-        document.getElementById('emailSubject').value = fillPlaceholders(subject);
-        document.getElementById('emailBody').value = fillPlaceholders(body);
+        // Split lecturers keep the {tags}: the server fills them separately for each department's email.
+        var fill = isSplit(r) ? function (t) { return t; } : fillPlaceholders;
+        document.getElementById('emailSubject').value = fill(subject);
+        document.getElementById('emailBody').value = fill(body);
     }
 
     // The selected lecturer's value for each {placeholder} (see EmailTemplate::PLACEHOLDERS).
@@ -595,12 +635,14 @@
     }
 
     function fillPlaceholders(text) {
-        var values = placeholderValues(rows[emailFor]);
+        var r = rows[emailFor];
+        var values = placeholderValues(parts(r).length === 1 ? slip(r, parts(r)[0]) : r);
         return text.replace(/\{(\w+)\}/g, function (m, key) { return values.hasOwnProperty(key) ? values[key] : m; });
     }
 
-    // Clicking a detail in the Email Payslip window inserts the lecturer's value, not the tag.
-    window.resolvePlaceholder = function (tag) { return emailFor ? fillPlaceholders(tag) : tag; };
+    // Clicking a detail in the Email Payslip window inserts the lecturer's value, not the tag
+    // (split lecturers keep the tag, since each department's email gets its own values).
+    window.resolvePlaceholder = function (tag) { return emailFor && !isSplit(rows[emailFor]) ? fillPlaceholders(tag) : tag; };
 
     function openEmail(id) {
         var r = rows[id];
@@ -610,8 +652,12 @@
         document.getElementById('saveEmail').checked = false;
         document.getElementById('emailTemplate').value = defaultTpl || '';
         applyTemplate(defaultTpl || '');
-        document.getElementById('emailAttachment').textContent =
-            'payslip_' + r.name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') + '.pdf';
+        var slug = function (s) { return s.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, ''); };
+        document.getElementById('emailAttachment').textContent = isSplit(r)
+            ? parts(r).length + ' separate emails, one per department, each with its payslip (' +
+              parts(r).map(function (d) { return 'payslip_' + slug(r.name) + '_' + slug(d.department) + '.pdf'; }).join(', ') +
+              '). {Details} are filled in for each department'
+            : 'payslip_' + slug(r.name) + '.pdf';
         document.getElementById('emailResult').className = 'alert mt-3 mb-0 d-none';
         $('#emailModal').modal('show');
     }
@@ -630,18 +676,22 @@
     emailForm.addEventListener('submit', function (e) {
         e.preventDefault();
         if (!emailFor) return;
-        // Fill any {placeholders} typed by hand.
-        ['emailSubject', 'emailBody'].forEach(function (id) {
-            var field = document.getElementById(id);
-            field.value = fillPlaceholders(field.value);
-        });
+        // Fill any {placeholders} typed by hand (split lecturers: the server fills them per department).
+        if (!isSplit(rows[emailFor])) {
+            ['emailSubject', 'emailBody'].forEach(function (id) {
+                var field = document.getElementById(id);
+                field.value = fillPlaceholders(field.value);
+            });
+        }
         var send = document.getElementById('emailSend'), res = document.getElementById('emailResult');
         send.disabled = true;
         send.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Sending…';
+        var formData = new FormData(emailForm);
+        formData.append('period_text', periodText);
         fetch(emailUrl.replace('__ID__', emailFor), {
             method: 'POST', credentials: 'same-origin',
             headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': @json(csrf_token()) },
-            body: new FormData(emailForm)
+            body: formData
         })
             .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
             .then(function (x) {

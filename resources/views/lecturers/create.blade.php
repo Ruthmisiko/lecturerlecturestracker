@@ -51,14 +51,14 @@
 
                 {{-- Department selector at top --}}
                 <div class="form-group row">
-                    <label class="col-sm-2 col-form-label font-weight-bold">Department:</label>
-                    <div class="col-sm-4">
-                        <select name="department_id" id="department_id" class="form-control" required>
-                            <option value="">-- Select Department --</option>
+                    <label class="col-sm-2 col-form-label font-weight-bold">Departments:</label>
+                    <div class="col-sm-6">
+                        <select name="departments[]" id="departments" class="form-control" multiple required>
                             @foreach($departments as $dept)
-                                <option value="{{ $dept->id }}">{{ $dept->name }}</option>
+                                <option value="{{ $dept->id }}" {{ in_array($dept->id, old('departments', [])) ? 'selected' : '' }}>{{ $dept->name }}</option>
                             @endforeach
                         </select>
+                        <small class="text-muted">Pick one or more. All lecturers below are added to these departments.</small>
                     </div>
                 </div>
 
@@ -102,7 +102,7 @@
         var index = rowCount;
         rowCount++;
 
-        var departmentId = document.getElementById('department_id').value;
+        var departmentIds = selectedDepartments();
 
         var html = '<div class="lecturer-row" data-index="' + index + '">' +
             '<div class="row-number">Lecturer #' + rowCount + '</div>' +
@@ -120,7 +120,7 @@
                   buildNumberField(index, 'tax_rate', 'Tax (%)', {{ \App\Models\Lecturer::DEFAULT_TAX_RATE }}) +
                   buildNumberField(index, 'housing_levy_rate', 'Housing Levy (%)', {{ \App\Models\Lecturer::DEFAULT_HOUSING_LEVY_RATE }})
                 : '') +
-            buildUnitsField(index, departmentId) +
+            buildUnitsField(index, departmentIds) +
             '</div></div>';
 
         document.getElementById('lecturer-rows').insertAdjacentHTML('beforeend', html);
@@ -149,11 +149,15 @@
         return d.innerHTML;
     }
 
-    // <option> tags for units in the chosen department (all units when none chosen).
-    function unitOptions(departmentId, selected) {
+    function selectedDepartments() {
+        return ($('#departments').val() || []).map(String);
+    }
+
+    // <option> tags for units in the chosen departments (all units when none chosen).
+    function unitOptions(departmentIds, selected) {
         selected = selected || [];
         return unitsData.filter(function(unit) {
-            return !departmentId || unit.department_id == departmentId;
+            return !departmentIds.length || departmentIds.indexOf(String(unit.department_id)) !== -1;
         }).map(function(unit) {
             var label = unit.name + (unit.unitCode ? ' (' + unit.unitCode + ')' : '');
             var isSel = selected.indexOf(String(unit.id)) !== -1 ? ' selected' : '';
@@ -161,10 +165,10 @@
         }).join('');
     }
 
-    function buildUnitsField(index, departmentId) {
+    function buildUnitsField(index, departmentIds) {
         return '<div class="form-group col-md-8"><label>Units</label>' +
             '<select name="lecturers[' + index + '][units][]" class="form-control units-select" multiple>' +
-            unitOptions(departmentId) + '</select></div>';
+            unitOptions(departmentIds) + '</select></div>';
     }
 
     function removeRow(btn) {
@@ -181,12 +185,16 @@
         });
     }
 
-    // Limit each units dropdown to the chosen department, keeping still-valid selections
-    document.getElementById('department_id').addEventListener('change', function() {
-        var departmentId = this.value;
-        $('.units-select').each(function() {
-            var selected = ($(this).val() || []).map(String);
-            $(this).html(unitOptions(departmentId, selected)).trigger('change');
+    $(function () {
+        $('#departments').select2({ theme: 'bootstrap4', width: '100%', placeholder: 'Select departments…', closeOnSelect: false });
+
+        // Limit each units dropdown to the chosen departments, keeping still-valid selections
+        $('#departments').on('change', function() {
+            var departmentIds = selectedDepartments();
+            $('.units-select').each(function() {
+                var selected = ($(this).val() || []).map(String);
+                $(this).html(unitOptions(departmentIds, selected)).trigger('change');
+            });
         });
     });
 </script>

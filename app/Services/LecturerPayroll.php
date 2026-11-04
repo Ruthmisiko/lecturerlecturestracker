@@ -41,11 +41,11 @@ class LecturerPayroll
 
         $lecturers = Lecturer::with('department')
             ->where('user_id', $ownerId)
-            ->when($deptIds, fn ($q) => $q->whereIn('department_id', $deptIds))
+            ->when($deptIds, fn ($q) => $q->inDepartments($deptIds))
             ->orderBy('name')
             ->get();
 
-        $lectures = LectureAdministered::with('unit')
+        $lectures = LectureAdministered::with('unit', 'department')
             ->where('user_id', $ownerId)
             ->whereIn('lecturer_id', $lecturers->pluck('id'))
             ->when($deptIds, fn ($q) => $q->whereIn('department_id', $deptIds))
@@ -61,40 +61,33 @@ class LecturerPayroll
         $allByLecturer     = $lectures->groupBy('lecturer_id');
 
         return $lecturers->map(function (Lecturer $lecturer) use ($payableByLecturer, $allByLecturer) {
-            $own      = $payableByLecturer->get($lecturer->id, collect());
-            $all      = $allByLecturer->get($lecturer->id, collect());
-            // Hours per unit, capped at the unit's max hours when one is set (units with no max are unchanged).
-            $unitDetails = $own->groupBy(fn ($l) => $l->unit_id ?? 0)->map(function ($group) {
-                $unit   = $group->first()->unit;
+            $own = $payableByLecturer->get($lecturer->id, collect());
+            $all = $allByLecturer->get($lecturer->id, collect());
+
+            // Share of each unit's hours that is paid (below 1 when the unit is over its max hours), so a
+            // capped unit is cut back by the same proportion in every department it was taught in.
+            $unitFactor = $own->groupBy(fn ($l) => $l->unit_id ?? 0)->map(function ($group) {
                 $actual = $group->sum(fn ($l) => self::minutes($l)) / 60;
-                $max    = $unit?->max_hours;
-                $counted = $max !== null ? min($actual, (float) $max) : $actual;
+                $max    = $group->first()->unit?->max_hours;
 
-                return [
-                    'name'    => $unit->name ?? 'No unit',
-                    'code'    => $unit->unitCode ?? null,
-                    'actual'  => round($actual, self::PRECISION),
-                    'counted' => round($counted, self::PRECISION),
-                    'max'     => $max !== null ? (float) $max : null,
-                    'capped'  => $max !== null && $actual > (float) $max,
-                    '_exact'  => $counted,
-                ];
-            })->sortByDesc('counted')->values();
+                return $max !== null && $actual > (float) $max ? (float) $max / $actual : 1.0;
+            });
 
-            $statusHours = $own->sum(fn ($l) => self::minutes($l)) / 60;   // before the unit caps
-            $exactHours  = $unitDetails->sum('_exact');
-            $hours       = round($exactHours, self::PRECISION);
-            $allHours    = round($all->sum(fn ($l) => self::minutes($l)) / 60, self::PRECISION);
-            $unitDetails = $unitDetails->map(fn ($d) => array_diff_key($d, ['_exact' => 1]))->all();
+            // Lectures count under the department they were recorded in (the lecturer's main one when not set).
+            $deptKey     = fn ($l) => (int) ($l->department_id ?: $lecturer->department_id);
+            $departments = $all->groupBy($deptKey)->map(function ($group, $key) use ($lecturer, $own, $deptKey, $unitFactor) {
+                $dept = $group->first(fn ($l) => $l->department)?->department
+                    ?? ($key == $lecturer->department_id ? $lecturer->department : null);
 
-            $rate    = (float) $lecturer->rate_per_hour;
-            // Work from the exact hours; keep every amount to 4 decimal places.
-            $exactGross = $exactHours * $rate;
-            $gross      = round($exactGross, self::PRECISION);
-            $tax        = round($exactGross * $lecturer->tax_rate / 100, self::PRECISION);
-            $housing    = round($exactGross * $lecturer->housing_levy_rate / 100, self::PRECISION);
+                return (object) ([
+                    'department_key'         => (int) $key,
+                    'department'             => $dept->name ?? '—',
+                    'department_id'          => $dept?->id,
+                    'department_description' => trim($dept->description ?? '') ?: ($dept->name ?? ''),
+                ] + $this->figures($lecturer, $own->filter(fn ($l) => $deptKey($l) == $key), $group, $unitFactor));
+            })->sortBy('department')->values()->all();
 
-            return (object) [
+            return (object) ([
                 'id'                => $lecturer->id,
                 'name'              => $lecturer->name,
                 'department'        => $lecturer->department->name ?? '—',
@@ -107,29 +100,85 @@ class LecturerPayroll
                 'account_number'    => $lecturer->account_number,
                 'bank_name'         => $lecturer->bank_name,
                 'bank_branch'       => $lecturer->bank_branch,
-                'sessions'          => $own->count(),
-                'hours'             => $hours,
-                'excluded_sessions' => $all->count() - $own->count(),
-                'excluded_hours'    => round($allHours - round($statusHours, self::PRECISION), self::PRECISION),
-                // Hours above a unit's max that are not paid (0 when no unit is over its max).
-                'capped_hours'      => round($statusHours - $exactHours, self::PRECISION),
-                'rate'              => $rate,
+                'rate'              => (float) $lecturer->rate_per_hour,
                 'tax_rate'          => (float) $lecturer->tax_rate,
                 'housing_levy_rate' => (float) $lecturer->housing_levy_rate,
-                'gross'             => $gross,
-                'tax'               => $tax,
-                'housing'           => $housing,
-                // Employer matches the employee's Affordable Housing Levy at the same rate.
-                'employer_levy'     => $housing,
-                'net'               => round($gross - $tax - $housing, self::PRECISION),
-                'last_lecture'      => $own->max('lecture_date'),
-                'total_sessions'    => $all->count(),
-                'period_taught'     => self::periodTaught($own->min('lecture_date'), $own->max('lecture_date')),
-                // name => paid hours (kept for existing displays); unit_details has actual/max/capped.
-                'units'             => collect($unitDetails)->mapWithKeys(fn ($d) => [$d['name'] => $d['counted']])->all(),
-                'unit_details'      => $unitDetails,
-            ];
+            ] + $this->figures($lecturer, $own, $all, $unitFactor) + [
+                // The same figures split by the department each lecture was recorded in (one payslip each).
+                'departments'       => $departments,
+            ]);
         })->values();
+    }
+
+    /** Hours and pay for a set of a lecturer's lectures ($own = payable ones, $all = every one in the period). */
+    protected function figures(Lecturer $lecturer, Collection $own, Collection $all, Collection $unitFactor): array
+    {
+        // Hours per unit, capped at the unit's max hours when one is set (units with no max are unchanged).
+        $unitDetails = $own->groupBy(fn ($l) => $l->unit_id ?? 0)->map(function ($group, $unitId) use ($unitFactor) {
+            $unit    = $group->first()->unit;
+            $actual  = $group->sum(fn ($l) => self::minutes($l)) / 60;
+            $factor  = $unitFactor->get($unitId, 1.0);
+            $counted = $actual * $factor;
+
+            return [
+                'name'    => $unit->name ?? 'No unit',
+                'code'    => $unit->unitCode ?? null,
+                'actual'  => round($actual, self::PRECISION),
+                'counted' => round($counted, self::PRECISION),
+                'max'     => $unit?->max_hours !== null ? (float) $unit->max_hours : null,
+                'capped'  => $factor < 1,
+                '_exact'  => $counted,
+            ];
+        })->sortByDesc('counted')->values();
+
+        $statusHours = $own->sum(fn ($l) => self::minutes($l)) / 60;   // before the unit caps
+        $exactHours  = $unitDetails->sum('_exact');
+        $hours       = round($exactHours, self::PRECISION);
+        $allHours    = round($all->sum(fn ($l) => self::minutes($l)) / 60, self::PRECISION);
+        $unitDetails = $unitDetails->map(fn ($d) => array_diff_key($d, ['_exact' => 1]))->all();
+
+        // Work from the exact hours; keep every amount to 4 decimal places.
+        $exactGross = $exactHours * (float) $lecturer->rate_per_hour;
+        $gross      = round($exactGross, self::PRECISION);
+        $tax        = round($exactGross * $lecturer->tax_rate / 100, self::PRECISION);
+        $housing    = round($exactGross * $lecturer->housing_levy_rate / 100, self::PRECISION);
+
+        return [
+            'sessions'          => $own->count(),
+            'hours'             => $hours,
+            'excluded_sessions' => $all->count() - $own->count(),
+            'excluded_hours'    => round($allHours - round($statusHours, self::PRECISION), self::PRECISION),
+            // Hours above a unit's max that are not paid (0 when no unit is over its max).
+            'capped_hours'      => round($statusHours - $exactHours, self::PRECISION),
+            'gross'             => $gross,
+            'tax'               => $tax,
+            'housing'           => $housing,
+            // Employer matches the employee's Affordable Housing Levy at the same rate.
+            'employer_levy'     => $housing,
+            'net'               => round($gross - $tax - $housing, self::PRECISION),
+            'last_lecture'      => $own->max('lecture_date'),
+            'total_sessions'    => $all->count(),
+            'period_taught'     => self::periodTaught($own->min('lecture_date'), $own->max('lecture_date')),
+            // name => paid hours (kept for existing displays); unit_details has actual/max/capped.
+            'units'             => collect($unitDetails)->mapWithKeys(fn ($d) => [$d['name'] => $d['counted']])->all(),
+            'unit_details'      => $unitDetails,
+        ];
+    }
+
+    /**
+     * One payslip per department the lecturer taught in during the period (just the row itself when
+     * they taught in no department or one). Each slip is the row with that department's figures.
+     */
+    public static function slips(object $row, ?int $departmentKey = null): array
+    {
+        $parts = collect($row->departments ?? [])
+            ->when($departmentKey !== null, fn ($c) => $c->where('department_key', $departmentKey));
+
+        if ($parts->isEmpty()) {
+            return $departmentKey === null ? [$row] : [];
+        }
+
+        return $parts->map(fn ($d) => (object) (array_merge((array) $row, (array) $d, ['departments' => []])))->values()->all();
     }
 
     /** e.g. "SEP 24-FEB 25", or "MAR 26" when all lectures fall in one month. */
