@@ -47,6 +47,7 @@
                     <th>DEPARTMENT</th>
                     <th>PERIOD TAUGHT</th>
                     <th>PV NO VCH NO</th>
+                    <th>TRANSACTION REF</th>
                 </tr>
             </thead>
             <tbody>
@@ -64,6 +65,7 @@
                         <td>{{ $r->department }}</td>
                         <td>{{ $r->period_taught }}</td>
                         <td>{{ $r->pv_no ?? '' }}</td>
+                        <td>{{ $r->transaction_ref ?? '' }}</td>
                     </tr>
                 @endforeach
             </tbody>
@@ -76,7 +78,7 @@
                     <td class="r">{{ $n($section->totals->housing) }}</td>
                     <td class="r">{{ $n($section->totals->tax) }}</td>
                     <td class="r">{{ $n($section->totals->net) }}</td>
-                    <td colspan="3"></td>
+                    <td colspan="4"></td>
                 </tr>
             </tfoot>
         </table>

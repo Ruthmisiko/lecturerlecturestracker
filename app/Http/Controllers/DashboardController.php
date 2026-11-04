@@ -6,6 +6,7 @@ use PDF;
 use App\Exports\CollectionExport;
 use App\Models\Department;
 use App\Models\Lecturer;
+use App\Models\PaymentReference;
 use App\Models\Unit;
 use App\Services\LecturerPayroll;
 use Illuminate\Http\Request;
@@ -33,7 +34,7 @@ class DashboardController extends Controller
 
         $stats = [
             'lecturers'   => Lecturer::where('user_id', $ownerId)
-                ->when($deptIds, fn ($q) => $q->whereIn('department_id', $deptIds))->count(),
+                ->when($deptIds, fn ($q) => $q->inDepartments($deptIds))->count(),
             'units'       => Unit::where('user_id', $ownerId)
                 ->when($deptIds, fn ($q) => $q->whereIn('department_id', $deptIds))->count(),
             'departments' => Department::where('user_id', $ownerId)
@@ -99,13 +100,20 @@ class DashboardController extends Controller
             ->when($departmentId, fn ($c) => $c->where('department_id', $departmentId))
             ->values();
 
-        // PV / voucher numbers typed on the report (not stored; carried into the downloads).
-        $pv = collect((array) $request->input('pv', []))
-            ->filter(fn ($v, $id) => ctype_digit((string) $id) && is_string($v) && trim($v) !== '')
-            ->map(fn ($v) => mb_substr(trim($v), 0, 50))
+        // Voucher numbers / transaction refs: saved ones, overridden by values typed on the page (carried into the downloads).
+        $saved = PaymentReference::where('period_key', PaymentReference::keyFor($from, $to))->get()->keyBy('lecturer_id');
+        $typed = fn (string $key, int $max) => collect((array) $request->input($key, []))
+            ->filter(fn ($v, $id) => ctype_digit((string) $id) && is_string($v))
+            ->map(fn ($v) => mb_substr(trim($v), 0, $max))
             ->all();
+        $pvTyped  = $typed('pv', 50);
+        $refTyped = $typed('ref', 100);
+        $pv = $refs = [];
         foreach ($rows as $r) {
-            $r->pv_no = $pv[$r->id] ?? '';
+            $r->pv_no           = $pvTyped[$r->id]  ?? $saved[$r->id]->pv_no ?? '';
+            $r->transaction_ref = $refTyped[$r->id] ?? $saved[$r->id]->transaction_ref ?? '';
+            $pv[$r->id]         = $r->pv_no;
+            $refs[$r->id]       = $r->transaction_ref;
         }
 
         $sections = $rows->groupBy('department')
@@ -132,7 +140,45 @@ class DashboardController extends Controller
                 ->download('lecturer_payment_report.pdf');
         }
 
-        return view('dashboard.report', compact('sections', 'totals', 'from', 'to', 'statuses', 'departments', 'department', 'overrides', 'pv'));
+        return view('dashboard.report', compact('sections', 'totals', 'from', 'to', 'statuses', 'departments', 'department', 'overrides', 'pv', 'refs'));
+    }
+
+    /** Saves voucher numbers and transaction refs (one row or many) for a report period. */
+    public function saveReferences(Request $request)
+    {
+        $this->authorizeAccess('payment-report.view');
+
+        $data = $request->validate([
+            'from'                    => 'nullable|date_format:Y-m-d',
+            'to'                      => 'nullable|date_format:Y-m-d',
+            'items'                   => 'required|array|min:1|max:500',
+            'items.*.lecturer_id'     => 'required|integer',
+            'items.*.pv_no'           => 'nullable|string|max:50',
+            'items.*.transaction_ref' => 'nullable|string|max:100',
+        ]);
+
+        $key = PaymentReference::keyFor($data['from'] ?? null, $data['to'] ?? null);
+        $ids = Lecturer::whereIn('id', collect($data['items'])->pluck('lecturer_id'))->pluck('id')->all(); // institution-scoped
+
+        $saved = 0;
+        foreach ($data['items'] as $item) {
+            if (!in_array((int) $item['lecturer_id'], $ids, true)) {
+                continue;
+            }
+
+            $pv    = trim((string) ($item['pv_no'] ?? ''));
+            $ref   = trim((string) ($item['transaction_ref'] ?? ''));
+            $match = ['lecturer_id' => $item['lecturer_id'], 'period_key' => $key];
+
+            if ($pv === '' && $ref === '') {
+                PaymentReference::where($match)->delete();
+            } else {
+                PaymentReference::updateOrCreate($match, ['pv_no' => $pv ?: null, 'transaction_ref' => $ref ?: null, 'user_id' => Auth::id()]);
+            }
+            $saved++;
+        }
+
+        return response()->json(['saved' => $saved]);
     }
 
     /** One lecturer's figures for the chosen payable statuses (used when a row's dropdown changes). */

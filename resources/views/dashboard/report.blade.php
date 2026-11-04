@@ -2,7 +2,8 @@
 
 @push('styles')
 <style>
-    .pay-report { font-size: 13px; min-width: 1250px; }
+    .pay-report { font-size: 13px; min-width: 1500px; }
+    tr.ref-dirty .save-row { background: #ffc107; border-color: #ffc107; color: #212529; }
     .pay-report th { white-space: nowrap; font-size: 12px; text-transform: uppercase; vertical-align: bottom; }
     .pay-report td { vertical-align: middle; padding: 6px 8px; }
     .pay-report .num { text-align: right; white-space: nowrap; }
@@ -42,6 +43,7 @@
             <a href="{{ route('dashboard', request()->only('from', 'to', 'statuses')) }}" class="btn btn-outline-secondary">
                 <i class="fas fa-arrow-left mr-1"></i> Dashboard
             </a>
+            <button type="button" id="saveAllRefs" class="btn btn-primary" title="Save the PV / VCH numbers and transaction refs of every lecturer shown"><i class="fas fa-save mr-1"></i> Save all</button>
             <a href="#" data-format="excel" class="btn btn-success export-link"><i class="fas fa-file-excel mr-1"></i> Excel</a>
             <a href="#" data-format="pdf" class="btn btn-danger export-link"><i class="fas fa-file-pdf mr-1"></i> PDF</a>
         </div>
@@ -77,8 +79,12 @@
 
     @forelse ($sections as $si => $section)
         <div class="card report-section" data-section="{{ $si }}">
-            <div class="card-header">
+            <div class="card-header d-flex flex-wrap justify-content-between align-items-center" style="gap:8px;">
                 <p class="section-title">{{ $section->name }}</p>
+                <div>
+                    <button type="button" class="btn btn-sm btn-outline-secondary clear-refs" title="Empty every transaction ref in this department">Clear refs</button>
+                    <button type="button" class="btn btn-sm btn-primary save-section"><i class="fas fa-save mr-1"></i> Save department</button>
+                </div>
             </div>
             <div class="card-body p-0 report-scroll">
                 <table class="table table-bordered table-striped mb-0 pay-report">
@@ -96,6 +102,7 @@
                             <th>Department</th>
                             <th>Period Taught</th>
                             <th>PV No / VCH No</th>
+                            <th>Transaction Ref</th>
                             <th></th>
                         </tr>
                     </thead>
@@ -135,7 +142,9 @@
                                 <td>{{ $r->department }}</td>
                                 <td class="c-period">{{ $r->period_taught }}</td>
                                 <td><input type="text" class="form-control form-control-sm pv-input" maxlength="50" style="min-width:110px;" value="{{ $pv[$r->id] ?? '' }}" placeholder="e.g. M156028"></td>
-                                <td class="text-center">
+                                <td><input type="text" class="form-control form-control-sm ref-input" maxlength="100" style="min-width:140px;" value="{{ $refs[$r->id] ?? '' }}" placeholder="e.g. QJ12ABC345" data-manual="{{ ($refs[$r->id] ?? '') !== '' ? 1 : 0 }}"></td>
+                                <td class="text-center text-nowrap">
+                                    <button type="button" class="btn btn-xs btn-outline-primary save-row" title="Save this line"><i class="fas fa-save"></i></button>
                                     <a href="#" class="btn btn-xs btn-outline-success payslip-link" title="Print payslip"><i class="fas fa-print"></i></a>
                                 </td>
                             </tr>
@@ -150,7 +159,7 @@
                             <td class="num t-housing"></td>
                             <td class="num t-tax"></td>
                             <td class="num t-net"></td>
-                            <td colspan="4"></td>
+                            <td colspan="5"></td>
                         </tr>
                     </tfoot>
                 </table>
@@ -206,6 +215,8 @@
         document.querySelectorAll('tr[data-lecturer]').forEach(function (tr) {
             var v = tr.querySelector('.pv-input').value.trim();
             if (v) p.append('pv[' + tr.dataset.lecturer + ']', v);
+            var ref = tr.querySelector('.ref-input').value.trim();
+            if (ref) p.append('ref[' + tr.dataset.lecturer + ']', ref);
         });
         Object.keys(extra || {}).forEach(function (k) { p.append(k, extra[k]); });
         return p.toString();
@@ -285,8 +296,83 @@
         });
     });
 
-    // Typed PV numbers go into the Excel/PDF links.
-    document.querySelectorAll('.pv-input').forEach(function (input) { input.addEventListener('input', refreshTotals); });
+    // Typed PV numbers and transaction refs go into the Excel/PDF links and mark the line as unsaved.
+    function markDirty(tr) { tr.classList.add('ref-dirty'); }
+    document.querySelectorAll('.pv-input').forEach(function (input) {
+        input.addEventListener('input', function () { markDirty(input.closest('tr')); refreshTotals(); });
+    });
+
+    // A transaction ref typed on one line fills the other lines of that department that the user has not touched.
+    document.querySelectorAll('.ref-input').forEach(function (input) {
+        input.addEventListener('input', function () {
+            input.dataset.manual = '1';
+            markDirty(input.closest('tr'));
+            input.closest('.report-section').querySelectorAll('.ref-input').forEach(function (other) {
+                if (other !== input && other.dataset.manual !== '1') {
+                    other.value = input.value;
+                    markDirty(other.closest('tr'));
+                }
+            });
+            refreshTotals();
+        });
+    });
+
+    document.querySelectorAll('.clear-refs').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            btn.closest('.report-section').querySelectorAll('.ref-input').forEach(function (i) {
+                i.value = '';
+                i.dataset.manual = '1';
+                markDirty(i.closest('tr'));
+            });
+            refreshTotals();
+        });
+    });
+
+    // Saving: one line, a whole department, or everything shown.
+    var saveUrl = @json(route('dashboard.report.references'));
+    var csrf    = @json(csrf_token());
+
+    function saveRows(trs, button) {
+        trs = Array.prototype.slice.call(trs);
+        if (!trs.length) return;
+        var items = trs.map(function (tr) {
+            return {
+                lecturer_id: tr.dataset.lecturer,
+                pv_no: tr.querySelector('.pv-input').value.trim(),
+                transaction_ref: tr.querySelector('.ref-input').value.trim()
+            };
+        });
+        var label = button.innerHTML;
+        button.disabled = true;
+        fetch(saveUrl, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrf },
+            body: JSON.stringify({ from: baseQuery.from || null, to: baseQuery.to || null, items: items })
+        })
+            .then(function (r) { if (!r.ok) throw new Error(); return r.json(); })
+            .then(function () {
+                trs.forEach(function (tr) {
+                    tr.classList.remove('ref-dirty');
+                    var ref = tr.querySelector('.ref-input');
+                    if (ref.value.trim() !== '') ref.dataset.manual = '1';
+                });
+                button.innerHTML = '<i class="fas fa-check mr-1"></i> Saved';
+                setTimeout(function () { button.innerHTML = label; }, 1500);
+            })
+            .catch(function () { alert('Could not save. Please try again.'); button.innerHTML = label; })
+            .finally(function () { button.disabled = false; });
+    }
+
+    document.querySelectorAll('.save-row').forEach(function (b) {
+        b.addEventListener('click', function () { saveRows([b.closest('tr')], b); });
+    });
+    document.querySelectorAll('.save-section').forEach(function (b) {
+        b.addEventListener('click', function () { saveRows(b.closest('.report-section').querySelectorAll('tr[data-lecturer]'), b); });
+    });
+    document.getElementById('saveAllRefs').addEventListener('click', function () {
+        saveRows(document.querySelectorAll('tr[data-lecturer]'), this);
+    });
 
     // The table scrolls inside its card, so open Payable hrs menus as fixed overlays (not clipped).
     if (window.jQuery && jQuery.fn.on) $(document).on('shown.bs.dropdown', '.report-section .dropdown', function () {

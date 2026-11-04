@@ -33,6 +33,7 @@ Route::middleware('auth')->prefix('owner')->name('owner.')->group(function () {
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [App\Http\Controllers\DashboardController::class, 'index'])->name('dashboard');
     Route::get('/dashboard/report', [App\Http\Controllers\DashboardController::class, 'report'])->name('dashboard.report');
+    Route::post('/dashboard/report/references', [App\Http\Controllers\DashboardController::class, 'saveReferences'])->name('dashboard.report.references');
     Route::get('/dashboard/report/row', [App\Http\Controllers\DashboardController::class, 'reportRow'])->name('dashboard.report.row');
     Route::post('/dashboard/payslip/{lecturer}/email', [App\Http\Controllers\DashboardController::class, 'emailPayslip'])->name('dashboard.payslip.email');
     Route::post('/email-configurations/{email_configuration}/test', [App\Http\Controllers\EmailConfigurationController::class, 'test'])->name('email-configurations.test');
