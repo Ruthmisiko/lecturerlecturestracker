@@ -103,19 +103,22 @@ class DashboardController extends Controller
             ->values();
 
         // Voucher numbers / transaction refs: saved ones, overridden by values typed on the page (carried into the downloads).
-        $saved = PaymentReference::where('period_key', PaymentReference::keyFor($from, $to))->get()->keyBy('lecturer_id');
+        // Voucher numbers and refs are kept per lecturer per department (key "lecturerId_departmentKey").
+        $saved = PaymentReference::where('period_key', PaymentReference::keyFor($from, $to))->get()
+            ->keyBy(fn ($p) => $p->lecturer_id . '_' . $p->department_key);
         $typed = fn (string $key, int $max) => collect((array) $request->input($key, []))
-            ->filter(fn ($v, $id) => ctype_digit((string) $id) && is_string($v))
+            ->filter(fn ($v, $id) => preg_match('/^\d+_\d+$/', (string) $id) && is_string($v))
             ->map(fn ($v) => mb_substr(trim($v), 0, $max))
             ->all();
         $pvTyped  = $typed('pv', 50);
         $refTyped = $typed('ref', 100);
         $pv = $refs = [];
         foreach ($rows as $r) {
-            $r->pv_no           = $pvTyped[$r->id]  ?? $saved[$r->id]->pv_no ?? '';
-            $r->transaction_ref = $refTyped[$r->id] ?? $saved[$r->id]->transaction_ref ?? '';
-            $pv[$r->id]         = $r->pv_no;
-            $refs[$r->id]       = $r->transaction_ref;
+            $k                  = $r->id . '_' . ($r->department_key ?? 0);
+            $r->pv_no           = $pvTyped[$k]  ?? $saved[$k]->pv_no ?? '';
+            $r->transaction_ref = $refTyped[$k] ?? $saved[$k]->transaction_ref ?? '';
+            $pv[$k]             = $r->pv_no;
+            $refs[$k]           = $r->transaction_ref;
         }
 
         $sections = $rows->groupBy('department')
@@ -155,6 +158,7 @@ class DashboardController extends Controller
             'to'                      => 'nullable|date_format:Y-m-d',
             'items'                   => 'required|array|min:1|max:500',
             'items.*.lecturer_id'     => 'required|integer',
+            'items.*.department_key'  => 'nullable|integer|min:0',
             'items.*.pv_no'           => 'nullable|string|max:50',
             'items.*.transaction_ref' => 'nullable|string|max:100',
         ]);
@@ -170,7 +174,7 @@ class DashboardController extends Controller
 
             $pv    = trim((string) ($item['pv_no'] ?? ''));
             $ref   = trim((string) ($item['transaction_ref'] ?? ''));
-            $match = ['lecturer_id' => $item['lecturer_id'], 'period_key' => $key];
+            $match = ['lecturer_id' => $item['lecturer_id'], 'department_key' => (int) ($item['department_key'] ?? 0), 'period_key' => $key];
 
             if ($pv === '' && $ref === '') {
                 PaymentReference::where($match)->delete();

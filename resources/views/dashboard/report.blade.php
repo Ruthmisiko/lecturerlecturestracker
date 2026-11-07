@@ -141,8 +141,8 @@
                                 <td class="num font-weight-bold c-net" data-v="{{ $r->net }}">{{ $n($r->net) }}</td>
                                 <td>{{ $r->department }}</td>
                                 <td class="c-period">{{ $r->period_taught }}</td>
-                                <td><input type="text" class="form-control form-control-sm pv-input" maxlength="50" style="min-width:110px;" value="{{ $pv[$r->id] ?? '' }}" placeholder="e.g. M156028"></td>
-                                <td><input type="text" class="form-control form-control-sm ref-input" maxlength="100" style="min-width:140px;" value="{{ $refs[$r->id] ?? '' }}" placeholder="e.g. QJ12ABC345" data-manual="{{ ($refs[$r->id] ?? '') !== '' ? 1 : 0 }}"></td>
+                                <td><input type="text" class="form-control form-control-sm pv-input" maxlength="50" style="min-width:110px;" value="{{ $pv[$r->id . '_' . ($r->department_key ?? 0)] ?? '' }}" placeholder="e.g. M156028"></td>
+                                <td><input type="text" class="form-control form-control-sm ref-input" maxlength="100" style="min-width:140px;" value="{{ $refs[$r->id . '_' . ($r->department_key ?? 0)] ?? '' }}" placeholder="e.g. QJ12ABC345" data-manual="{{ ($refs[$r->id . '_' . ($r->department_key ?? 0)] ?? '') !== '' ? 1 : 0 }}"></td>
                                 <td class="text-center text-nowrap">
                                     <button type="button" class="btn btn-xs btn-outline-primary save-row" title="Save this line"><i class="fas fa-save"></i></button>
                                     <a href="#" class="btn btn-xs btn-outline-success payslip-link" title="Print payslip"><i class="fas fa-print"></i></a>
@@ -214,9 +214,10 @@
         Object.keys(rs).forEach(function (id) { p.append('rs[' + id + ']', rs[id]); });
         document.querySelectorAll('tr[data-lecturer]').forEach(function (tr) {
             var v = tr.querySelector('.pv-input').value.trim();
-            if (v) p.append('pv[' + tr.dataset.lecturer + ']', v);
+            var k = tr.dataset.lecturer + '_' + (tr.dataset.dept || 0);
+            if (v) p.append('pv[' + k + ']', v);
             var ref = tr.querySelector('.ref-input').value.trim();
-            if (ref) p.append('ref[' + tr.dataset.lecturer + ']', ref);
+            if (ref) p.append('ref[' + k + ']', ref);
         });
         Object.keys(extra || {}).forEach(function (k) { p.append(k, extra[k]); });
         return p.toString();
@@ -308,15 +309,8 @@
 
     // Typed PV numbers and transaction refs go into the Excel/PDF links and mark the line as unsaved.
     function markDirty(tr) { tr.classList.add('ref-dirty'); }
-    // PV / ref are stored once per lecturer, so a lecturer's lines in other departments mirror what is typed.
-    function mirror(input, cls) {
-        var tr = input.closest('tr');
-        document.querySelectorAll('tr[data-lecturer="' + tr.dataset.lecturer + '"]').forEach(function (o) {
-            if (o !== tr) { var f = o.querySelector(cls); f.value = input.value; f.dataset.manual = '1'; markDirty(o); }
-        });
-    }
     document.querySelectorAll('.pv-input').forEach(function (input) {
-        input.addEventListener('input', function () { markDirty(input.closest('tr')); mirror(input, '.pv-input'); refreshTotals(); });
+        input.addEventListener('input', function () { markDirty(input.closest('tr')); refreshTotals(); });
     });
 
     // A transaction ref typed on one line fills the other lines of that department that the user has not touched.
@@ -324,7 +318,6 @@
         input.addEventListener('input', function () {
             input.dataset.manual = '1';
             markDirty(input.closest('tr'));
-            mirror(input, '.ref-input');
             input.closest('.report-section').querySelectorAll('.ref-input').forEach(function (other) {
                 if (other !== input && other.dataset.manual !== '1') {
                     other.value = input.value;
@@ -356,6 +349,7 @@
         var items = trs.map(function (tr) {
             return {
                 lecturer_id: tr.dataset.lecturer,
+                department_key: tr.dataset.dept || 0,
                 pv_no: tr.querySelector('.pv-input').value.trim(),
                 transaction_ref: tr.querySelector('.ref-input').value.trim()
             };
