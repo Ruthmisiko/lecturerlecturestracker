@@ -1,4 +1,5 @@
 {{-- The schedule itself, shared by the web view and the PDF. --}}
+@php $pvs = $schedule->pvNumbers(); @endphp
 <div class="ps-sheet">
     <div class="ps-title">{{ $schedule->title }}</div>
     <div class="ps-date">{{ $schedule->schedule_date->format('d.m.Y') }}</div>
@@ -7,7 +8,7 @@
         <thead>
             <tr class="ps-group">
                 <th colspan="2"></th>
-                <th colspan="5" class="ps-left">BANK ACCOUNT DETAILS</th>
+                <th colspan="6" class="ps-left">BANK ACCOUNT DETAILS</th>
             </tr>
             <tr>
                 <th class="ps-sno">S/NO</th>
@@ -17,6 +18,7 @@
                 <th class="ps-left">BANK</th>
                 <th class="ps-left">BRANCH</th>
                 <th class="ps-right">ID NO.</th>
+                <th class="ps-left">PV NO.</th>
             </tr>
         </thead>
         <tbody>
@@ -29,6 +31,7 @@
                     <td>{{ $item->bank }}</td>
                     <td>{{ $item->branch }}</td>
                     <td class="ps-right">{{ $item->id_number }}</td>
+                    <td>{{ $pvs[$item->lecturer_id] ?? '' }}</td>
                 </tr>
             @endforeach
         </tbody>
@@ -38,7 +41,7 @@
                 <td>TOTAL</td>
                 <td></td>
                 <td class="ps-right">{{ number_format($schedule->total(), 2) }}</td>
-                <td colspan="3"></td>
+                <td colspan="4"></td>
             </tr>
         </tfoot>
     </table>

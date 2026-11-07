@@ -143,14 +143,15 @@ class PaymentScheduleController extends Controller
             [$schedule->title],
             [$schedule->schedule_date->format('d.m.Y')],
             [],
-            ['S/NO', 'NAME', 'ACCOUNT NO.', 'AMOUNT', 'BANK', 'BRANCH', 'ID NO.'],
+            ['S/NO', 'NAME', 'ACCOUNT NO.', 'AMOUNT', 'BANK', 'BRANCH', 'ID NO.', 'PV NO.'],
         ]);
+        $pvs = $schedule->pvNumbers();
 
         foreach ($schedule->items as $i => $item) {
-            $rows->push([$i + 1, $item->name, (string) $item->account_number, round($item->amount, 2), $item->bank, $item->branch, (string) $item->id_number]);
+            $rows->push([$i + 1, $item->name, (string) $item->account_number, round($item->amount, 2), $item->bank, $item->branch, (string) $item->id_number, $pvs[$item->lecturer_id] ?? '']);
         }
 
-        $rows->push(['', 'TOTAL', '', round($schedule->total(), 2), '', '', '']);
+        $rows->push(['', 'TOTAL', '', round($schedule->total(), 2), '', '', '', '']);
         $rows->push([]);
         $rows->push(['', 'Authorized By', '', '', '', 'APPROVED BY']);
         $rows->push(['', $schedule->authorized_by_name, '', '', '', $schedule->approved_by_name]);
