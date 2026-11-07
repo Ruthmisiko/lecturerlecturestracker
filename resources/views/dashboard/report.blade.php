@@ -109,7 +109,7 @@
                     <tbody>
                         @foreach ($section->rows as $i => $r)
                             @php $on = $r->statuses ?: array_keys($statusOptions); @endphp
-                            <tr data-lecturer="{{ $r->id }}">
+                            <tr data-lecturer="{{ $r->id }}" data-dept="{{ $r->department_key ?? '' }}">
                                 <td>{{ $i + 1 }}</td>
                                 <td>{{ $r->kra_pin }}</td>
                                 <td><a href="{{ route('lecturers.show', $r->id) }}">{{ $r->name }}</a></td>
@@ -125,8 +125,8 @@
                                             <h6 class="dropdown-header px-0">Count hours with status</h6>
                                             @foreach ($statusOptions as $key => $label)
                                                 <div class="form-check mb-1">
-                                                    <input class="form-check-input payable-status" type="checkbox" value="{{ $key }}" id="rs_{{ $r->id }}_{{ $key }}" {{ in_array($key, $on) ? 'checked' : '' }}>
-                                                    <label class="form-check-label" for="rs_{{ $r->id }}_{{ $key }}">{{ $label }}</label>
+                                                    <input class="form-check-input payable-status" type="checkbox" value="{{ $key }}" id="rs_{{ $r->id }}_{{ $r->department_key ?? 0 }}_{{ $key }}" {{ in_array($key, $on) ? 'checked' : '' }}>
+                                                    <label class="form-check-label" for="rs_{{ $r->id }}_{{ $r->department_key ?? 0 }}_{{ $key }}">{{ $label }}</label>
                                                 </div>
                                             @endforeach
                                             <div class="d-flex justify-content-between mt-2">
@@ -254,6 +254,7 @@
             if (baseQuery.to) p.append('to', baseQuery.to);
             var list = rowStatuses(tr);
             if (list.length !== ALL.length) list.forEach(function (s) { p.append('statuses[]', s); });
+            if (tr.dataset.dept) p.append('department', tr.dataset.dept);
             tr.querySelector('.payslip-link').href = payslipUrl.replace('__ID__', tr.dataset.lecturer) + '?' + p.toString();
         });
     }
@@ -282,24 +283,40 @@
             if (baseQuery.to) p.append('to', baseQuery.to);
             if (list.length !== ALL.length) list.forEach(function (s) { p.append('statuses[]', s); });
 
-            tr.classList.add('row-busy');
+            // The choice applies to the lecturer, so every department line of that lecturer is updated.
+            var siblings = Array.prototype.slice.call(document.querySelectorAll('tr[data-lecturer="' + id + '"]'));
+            siblings.forEach(function (t) {
+                t.classList.add('row-busy');
+                t.querySelectorAll('.payable-status').forEach(function (b) { b.checked = list.indexOf(b.value) !== -1; });
+                t.querySelector('.payable-label').textContent = statusText(list);
+            });
             fetch(rowUrl + '?' + p.toString(), { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' })
                 .then(function (r) { if (!r.ok) throw new Error(); return r.json(); })
                 .then(function (row) {
-                    ['hours', 'gross', 'housing', 'tax', 'net'].forEach(function (k) { setCell(tr, 'c-' + k, row[k]); });
-                    tr.querySelector('.c-period').textContent = row.period_taught || '';
-                    tr.querySelector('.c-capped').textContent = row.capped_hours > 0 ? 'capped: ' + fmt(row.capped_hours) + ' over max' : '';
+                    siblings.forEach(function (t) {
+                        var part = (row.departments || []).filter(function (d) { return String(d.department_key) === t.dataset.dept; })[0] || row;
+                        ['hours', 'gross', 'housing', 'tax', 'net'].forEach(function (k) { setCell(t, 'c-' + k, part[k]); });
+                        t.querySelector('.c-period').textContent = part.period_taught || '';
+                        t.querySelector('.c-capped').textContent = part.capped_hours > 0 ? 'capped: ' + fmt(part.capped_hours) + ' over max' : '';
+                    });
                     refreshTotals();
                 })
                 .catch(function () { alert('Could not recalculate this lecturer. Please try again.'); })
-                .finally(function () { tr.classList.remove('row-busy'); });
+                .finally(function () { siblings.forEach(function (t) { t.classList.remove('row-busy'); }); });
         });
     });
 
     // Typed PV numbers and transaction refs go into the Excel/PDF links and mark the line as unsaved.
     function markDirty(tr) { tr.classList.add('ref-dirty'); }
+    // PV / ref are stored once per lecturer, so a lecturer's lines in other departments mirror what is typed.
+    function mirror(input, cls) {
+        var tr = input.closest('tr');
+        document.querySelectorAll('tr[data-lecturer="' + tr.dataset.lecturer + '"]').forEach(function (o) {
+            if (o !== tr) { var f = o.querySelector(cls); f.value = input.value; f.dataset.manual = '1'; markDirty(o); }
+        });
+    }
     document.querySelectorAll('.pv-input').forEach(function (input) {
-        input.addEventListener('input', function () { markDirty(input.closest('tr')); refreshTotals(); });
+        input.addEventListener('input', function () { markDirty(input.closest('tr')); mirror(input, '.pv-input'); refreshTotals(); });
     });
 
     // A transaction ref typed on one line fills the other lines of that department that the user has not touched.
@@ -307,6 +324,7 @@
         input.addEventListener('input', function () {
             input.dataset.manual = '1';
             markDirty(input.closest('tr'));
+            mirror(input, '.ref-input');
             input.closest('.report-section').querySelectorAll('.ref-input').forEach(function (other) {
                 if (other !== input && other.dataset.manual !== '1') {
                     other.value = input.value;

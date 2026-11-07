@@ -3,7 +3,7 @@
 @php
     $statusOptions = \App\Services\LecturerPayroll::STATUSES;
     $checkedStatuses = $statuses ?? array_keys($statusOptions);
-    $picked = collect(old('lecturer_ids', []))->map(fn ($id) => (int) $id)->all();
+    $picked = collect(old('lecturer_ids', []))->map(fn ($id) => (string) $id)->all();
 @endphp
 
 @section('content')
@@ -88,11 +88,12 @@
                     </div>
                     <div class="list-group list-group-flush" style="max-height:520px; overflow-y:auto;" id="recipientList">
                         @forelse ($rows as $r)
+                            @php $pickValue = $r->id . (isset($r->department_key) ? ':' . $r->department_key : ''); @endphp
                             <label class="list-group-item list-group-item-action d-flex align-items-center mb-0 recipient"
                                    data-search="{{ strtolower($r->name . ' ' . $r->email) }}" data-dept="{{ $r->department_id }}" data-hours="{{ $r->hours }}"
                                    style="cursor:{{ $r->email ? 'pointer' : 'not-allowed' }};">
-                                <input type="checkbox" name="lecturer_ids[]" value="{{ $r->id }}" class="mr-3 pick"
-                                       {{ $r->email ? '' : 'disabled' }} {{ in_array($r->id, $picked) ? 'checked' : '' }}>
+                                <input type="checkbox" name="lecturer_ids[]" value="{{ $pickValue }}" class="mr-3 pick"
+                                       {{ $r->email ? '' : 'disabled' }} {{ in_array($pickValue, $picked) ? 'checked' : '' }}>
                                 <span class="flex-grow-1" style="min-width:0;">
                                     <span class="font-weight-bold d-block text-truncate">{{ $r->name }}</span>
                                     <small class="text-muted d-block text-truncate">
@@ -145,7 +146,7 @@
                                 <input class="form-check-input" type="radio" name="attach_payslip" value="1" id="sendPayslip" {{ old('attach_payslip') ? 'checked' : '' }}>
                                 <label class="form-check-label" for="sendPayslip">Message + payslip PDF</label>
                             </div>
-                            <small class="text-muted d-block" id="payslipNote">Each lecturer gets their own payslip for {{ $periodText }}. Lecturers with no payable hours in the period are skipped.</small>
+                            <small class="text-muted d-block" id="payslipNote">Each lecturer gets their own payslip for {{ $periodText }}; one entry is listed per department taught in, and each ticked department's payslip is emailed separately. Lecturers with no payable hours in the period are skipped.</small>
                         </div>
 
                         <div class="form-group">

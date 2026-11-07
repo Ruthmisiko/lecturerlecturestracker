@@ -94,7 +94,9 @@ class DashboardController extends Controller
         $overrides    = $this->rowStatuses($request);
         $departmentId = $request->integer('department_id') ?: null;
 
+        // A lecturer who taught in several departments appears once in each, with that department's figures.
         $rows = $this->reportRows($from, $to, $statuses, $overrides)
+            ->flatMap(fn ($r) => LecturerPayroll::slips($r))
             // Only lecturers who taught in the period (or whose row was adjusted).
             ->filter(fn ($r) => $r->total_sessions > 0 || array_key_exists($r->id, $overrides))
             ->when($departmentId, fn ($c) => $c->where('department_id', $departmentId))
@@ -281,8 +283,11 @@ class DashboardController extends Controller
         [$lecturer, $row] = $this->payslipRow($lecturerId, $from, $to, $statuses);
 
         // A lecturer who taught in several departments gets one email per department, each with that payslip.
-        $slips       = LecturerPayroll::slips($row);
-        $split       = count($slips) > 1;
+        // With a department chosen on the dashboard, only that department's payslip is emailed.
+        $deptKey     = $request->filled('department') ? $request->integer('department') : null;
+        $slips       = LecturerPayroll::slips($row, $deptKey);
+        abort_unless($slips, 404);
+        $split       = count($row->departments ?? []) > 1;
         $period      = mb_substr(trim((string) $request->input('period_text')), 0, 100) ?: $this->periodLabel($from, $to);
         $institution = \App\Models\Institution::find(Auth::user()->currentInstitutionId())?->name ?: 'Accounts Office';
         $sent        = [];
@@ -321,9 +326,11 @@ class DashboardController extends Controller
             'user_id'                => Auth::id(),
         ]);
 
-        $message = $split
+        $message = $split && count($slips) === 1
+            ? "{$sent[0]} payslip sent to {$data['to']}."
+            : ($split
             ? count($slips) . " payslips (one per department: " . implode(', ', $sent) . ") sent to {$data['to']}."
-            : "Payslip sent to {$data['to']}.";
+            : "Payslip sent to {$data['to']}.");
 
         return response()->json(['message' => $message, 'sent_at' => now()->format('d M Y, H:i')]);
     }

@@ -545,7 +545,10 @@
                     return '<div class="border rounded p-3 mt-3">' +
                         '<div class="d-flex justify-content-between align-items-center mb-2">' +
                             '<h5 class="mb-0 font-weight-bold">' + esc(s.department) + '</h5>' +
-                            '<a href="' + slipUrl(r.id, d.department_key) + '" class="btn btn-sm btn-outline-success"><i class="fas fa-print mr-1"></i>Print</a>' +
+                            '<div class="text-nowrap">' +
+                                '<a href="' + slipUrl(r.id, d.department_key) + '" class="btn btn-sm btn-outline-success mr-1"><i class="fas fa-print mr-1"></i>Print</a>' +
+                                (canEmail ? '<button type="button" class="btn btn-sm btn-brand email-payslip" data-id="' + r.id + '" data-dept="' + d.department_key + '"><i class="far fa-envelope mr-1"></i>Email</button>' : '') +
+                            '</div>' +
                         '</div>' + figures(s) + '</div>';
                 }).join('');
         } else {
@@ -598,6 +601,9 @@
     var templates    = @json($emailTemplates->keyBy('id'));
     var defaultTpl   = @json($emailTemplates->firstWhere('is_default', true)?->id);
     var emailFor     = null;
+    var emailDept    = null;   // a department key = email just that department's payslip
+    // True when the open email goes out as several emails (one per department).
+    function multiEmail() { return emailDept === null && isSplit(rows[emailFor]); }
 
     // Fills the subject and message from the chosen template ('' = the standard message).
     function applyTemplate(tplId) {
@@ -607,7 +613,7 @@
             'Dear {name},\n\nPlease find attached your payslip for {period}.\n\n' +
             'Hours: {hours}\nGross amount: {gross}\nNet pay: {net}\n\nKind regards,\n{institution}';
         // Split lecturers keep the {tags}: the server fills them separately for each department's email.
-        var fill = isSplit(r) ? function (t) { return t; } : fillPlaceholders;
+        var fill = multiEmail() ? function (t) { return t; } : fillPlaceholders;
         document.getElementById('emailSubject').value = fill(subject);
         document.getElementById('emailBody').value = fill(body);
     }
@@ -636,24 +642,31 @@
 
     function fillPlaceholders(text) {
         var r = rows[emailFor];
-        var values = placeholderValues(parts(r).length === 1 ? slip(r, parts(r)[0]) : r);
+        var part = emailDept !== null
+            ? parts(r).filter(function (d) { return String(d.department_key) === String(emailDept); })[0]
+            : (parts(r).length === 1 ? parts(r)[0] : null);
+        var values = placeholderValues(part ? slip(r, part) : r);
         return text.replace(/\{(\w+)\}/g, function (m, key) { return values.hasOwnProperty(key) ? values[key] : m; });
     }
 
     // Clicking a detail in the Email Payslip window inserts the lecturer's value, not the tag
     // (split lecturers keep the tag, since each department's email gets its own values).
-    window.resolvePlaceholder = function (tag) { return emailFor && !isSplit(rows[emailFor]) ? fillPlaceholders(tag) : tag; };
+    window.resolvePlaceholder = function (tag) { return emailFor && !multiEmail() ? fillPlaceholders(tag) : tag; };
 
-    function openEmail(id) {
+    function openEmail(id, dept) {
         var r = rows[id];
         if (!r || !document.getElementById('emailTo')) { $('#emailModal').modal('show'); return; }
         emailFor = id;
+        emailDept = dept === undefined || dept === '' ? null : dept;
         document.getElementById('emailTo').value = r.email || '';
         document.getElementById('saveEmail').checked = false;
         document.getElementById('emailTemplate').value = defaultTpl || '';
         applyTemplate(defaultTpl || '');
         var slug = function (s) { return s.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, ''); };
-        document.getElementById('emailAttachment').textContent = isSplit(r)
+        var one = emailDept !== null ? parts(r).filter(function (d) { return String(d.department_key) === String(emailDept); })[0] : null;
+        document.getElementById('emailAttachment').textContent = one
+            ? 'payslip_' + slug(r.name) + '_' + slug(one.department) + '.pdf (' + one.department + ' only)'
+            : isSplit(r)
             ? parts(r).length + ' separate emails, one per department, each with its payslip (' +
               parts(r).map(function (d) { return 'payslip_' + slug(r.name) + '_' + slug(d.department) + '.pdf'; }).join(', ') +
               '). {Details} are filled in for each department'
@@ -664,7 +677,7 @@
 
     detail.addEventListener('click', function (e) {
         var btn = e.target.closest('.email-payslip');
-        if (btn) openEmail(btn.dataset.id);
+        if (btn) openEmail(btn.dataset.id, btn.dataset.dept);
     });
 
     var templateSelect = document.getElementById('emailTemplate');
@@ -677,7 +690,7 @@
         e.preventDefault();
         if (!emailFor) return;
         // Fill any {placeholders} typed by hand (split lecturers: the server fills them per department).
-        if (!isSplit(rows[emailFor])) {
+        if (!multiEmail()) {
             ['emailSubject', 'emailBody'].forEach(function (id) {
                 var field = document.getElementById(id);
                 field.value = fillPlaceholders(field.value);
@@ -688,6 +701,7 @@
         send.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Sending…';
         var formData = new FormData(emailForm);
         formData.append('period_text', periodText);
+        if (emailDept !== null) formData.append('department', emailDept);
         fetch(emailUrl.replace('__ID__', emailFor), {
             method: 'POST', credentials: 'same-origin',
             headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': @json(csrf_token()) },

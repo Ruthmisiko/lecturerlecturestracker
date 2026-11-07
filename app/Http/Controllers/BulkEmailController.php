@@ -30,7 +30,9 @@ class BulkEmailController extends DashboardController
         $statuses    = $this->statuses($request);
 
         return view('bulk_email.create', [
-            'rows'        => (new LecturerPayroll(Auth::user(), $from, $to, $statuses))->rows(),
+            // One entry per lecturer per department taught in, so each department's payslip can be picked.
+            'rows'        => (new LecturerPayroll(Auth::user(), $from, $to, $statuses))->rows()
+                ->flatMap(fn ($r) => LecturerPayroll::slips($r))->values(),
             'departments' => Department::orderBy('name')->get(['id', 'name']),
             'configs'     => EmailConfiguration::orderByDesc('is_default')->orderBy('name')->get(['id', 'name', 'from_address', 'is_default']),
             'templates'   => EmailTemplate::orderByDesc('is_default')->orderBy('name')->get(['id', 'name', 'subject', 'body', 'is_default']),
@@ -48,7 +50,7 @@ class BulkEmailController extends DashboardController
         $data = $request->validate([
             'email_configuration_id' => 'required|integer',
             'lecturer_ids'           => 'required|array|min:1|max:' . self::MAX_RECIPIENTS,
-            'lecturer_ids.*'         => 'integer',
+            'lecturer_ids.*'         => ['regex:/^\d+(:\d+)?$/'],   // "id" = every department, "id:departmentKey" = one
             'subject'                => 'required|string|max:200',
             'body'                   => 'required|string|max:10000',
             'attach_payslip'         => 'nullable|boolean',
@@ -66,8 +68,16 @@ class BulkEmailController extends DashboardController
         $institution = Institution::find(Auth::user()->currentInstitutionId())?->name ?: 'Accounts Office';
 
         // Payroll rows are only built for lecturers in the user's scope, so other IDs are ignored.
-        $rows      = (new LecturerPayroll(Auth::user(), $from, $to, $statuses))->rows()->keyBy('id');
-        $lecturers = Lecturer::with('department', 'institution')->whereIn('id', $data['lecturer_ids'])->get()
+        $rows = (new LecturerPayroll(Auth::user(), $from, $to, $statuses))->rows()->keyBy('id');
+
+        // Ticked entries: lecturer id => department keys picked (null = every department).
+        $picked = [];
+        foreach ($data['lecturer_ids'] as $value) {
+            [$id, $key] = array_pad(explode(':', $value), 2, null);
+            $picked[(int) $id][] = $key === null ? null : (int) $key;
+        }
+
+        $lecturers = Lecturer::with('department', 'institution')->whereIn('id', array_keys($picked))->get()
             ->filter(fn ($l) => $rows->has($l->id))->sortBy('name');
 
         set_time_limit(0);
@@ -88,8 +98,11 @@ class BulkEmailController extends DashboardController
             }
 
             // With payslips, a lecturer who taught in several departments gets one email per department.
-            $slips = $attach ? LecturerPayroll::slips($row) : [$row];
-            $split = count($slips) > 1;
+            $allSlips = LecturerPayroll::slips($row);
+            $split    = count($allSlips) > 1;
+            $keys     = $picked[$lecturer->id];
+            $slips    = !$attach ? [$row]
+                : (in_array(null, $keys, true) ? $allSlips : array_values(array_filter($allSlips, fn ($s) => in_array($s->department_key ?? null, $keys, true))));
 
             foreach ($slips as $slip) {
                 $label   = $split ? ['name' => "{$lecturer->name} ({$slip->department})"] : [];
