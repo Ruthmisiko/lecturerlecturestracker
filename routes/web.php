@@ -66,6 +66,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    Route::get('lecturers/lookup', [App\Http\Controllers\LecturerController::class, 'lookup'])->name('lecturers.lookup');
     Route::get('lecturers/export/pdf', [App\Http\Controllers\LecturerController::class, 'exportListPdf'])->name('lecturers.list.pdf');
     Route::get('lecturers/export/excel', [App\Http\Controllers\LecturerController::class, 'exportListExcel'])->name('lecturers.list.excel');
     Route::resource('lecturers', App\Http\Controllers\LecturerController::class);

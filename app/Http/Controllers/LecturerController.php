@@ -14,6 +14,7 @@ use App\Repositories\LecturerRepository;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Maatwebsite\Excel\Facades\Excel;
 use Flash;
 
@@ -105,25 +106,84 @@ class LecturerController extends AppBaseController
         return view('lecturers.create', compact('departments', 'units'));
     }
 
+    /**
+     * Lecturers of the user's other institutions, for copying their details into this one.
+     * Superusers only; only identity fields are returned (no pay or bank details).
+     */
+    public function lookup(Request $request)
+    {
+        $user = Auth::user();
+        abort_unless($user->isSuperAdmin(), 403);
+
+        $term = trim((string) $request->query('q', ''));
+        if (mb_strlen($term) < 2) {
+            return response()->json([]);
+        }
+
+        $current = $user->currentInstitutionId();
+        $others  = $user->accessibleInstitutions()->where('id', '!=', $current)->pluck('name', 'id');
+        if ($others->isEmpty()) {
+            return response()->json([]);
+        }
+
+        $like = '%' . addcslashes($term, '%_\\') . '%';
+        $found = Lecturer::withoutGlobalScopes()
+            ->whereIn('institution_id', $others->keys())
+            ->where(fn ($q) => $q->where('name', 'like', $like)->orWhere('email', 'like', $like)
+                ->orWhere('id_number', 'like', $like)->orWhere('kra_pin', 'like', $like))
+            ->orderBy('name')->limit(40)
+            ->get(['id', 'institution_id', 'name', 'email', 'phone', 'id_number', 'kra_pin', 'specialization']);
+
+        // Already on this institution's list (same email or ID number)?
+        $here = Lecturer::where(fn ($q) => $q->whereIn('email', $found->pluck('email')->filter())
+            ->orWhereIn('id_number', $found->pluck('id_number')->filter()))->get(['email', 'id_number']);
+
+        return response()->json(
+            $found->unique(fn ($l) => $l->id_number ?: ($l->email ?: 'id' . $l->id))->take(15)->map(fn ($l) => [
+                'id'             => $l->id,
+                'name'           => $l->name,
+                'email'          => $l->email,
+                'phone'          => $l->phone,
+                'id_number'      => $l->id_number,
+                'kra_pin'        => $l->kra_pin,
+                'specialization' => $l->specialization,
+                'institution'    => $others[$l->institution_id] ?? '',
+                'exists_here'    => $here->contains(fn ($h) => ($l->email && $h->email === $l->email) || ($l->id_number && (string) $h->id_number === (string) $l->id_number)),
+            ])->values()
+        );
+    }
+
     public function store(Request $request)
     {
         $user = Auth::user();
         $ownerId = $user->ownerId();
+        $institutionId = $user->currentInstitutionId();
 
         $request->validate([
             'departments' => 'nullable|array',
             'departments.*' => 'exists:departments,id',
             'lecturers' => 'required|array|min:1',
             'lecturers.*.name' => 'required|string|max:255',
-            'lecturers.*.email' => 'nullable|email|max:255',
+            'lecturers.*.email' => ['nullable', 'email', 'max:255', Rule::unique('lecturers', 'email')->where('institution_id', $institutionId)],
             'lecturers.*.phone' => 'nullable|string|max:50',
-            'lecturers.*.id_number' => 'nullable|string|max:50',
+            'lecturers.*.id_number' => ['nullable', 'string', 'max:50', Rule::unique('lecturers', 'id_number')->where('institution_id', $institutionId)],
             'lecturers.*.kra_pin' => 'nullable|string|max:50',
             'lecturers.*.specialization' => 'nullable|string|max:255',
             'lecturers.*.rate_per_hour' => 'nullable|numeric|min:0',
             'lecturers.*.tax_rate' => 'nullable|numeric|min:0|max:100',
             'lecturers.*.housing_levy_rate' => 'nullable|numeric|min:0|max:100',
+        ], [
+            'lecturers.*.email.unique'     => 'A lecturer with the email :input already exists in this institution.',
+            'lecturers.*.id_number.unique' => 'A lecturer with ID number :input already exists in this institution.',
         ]);
+
+        // The same email or ID number twice in this one submission.
+        foreach (['email', 'id_number'] as $field) {
+            $values = collect($request->lecturers)->pluck($field)->map(fn ($v) => strtolower(trim((string) $v)))->filter();
+            if ($values->count() !== $values->unique()->count()) {
+                return back()->withInput()->withErrors(["lecturers" => 'The same ' . str_replace('_', ' ', $field) . ' appears more than once below.']);
+            }
+        }
 
         $departmentIds = $request->input('departments', []);
         $canSetPay     = $user->isSuperAdmin();

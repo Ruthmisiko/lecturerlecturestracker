@@ -97,6 +97,44 @@
     var rowCount = 1;
     var unitsData = @json($units);
     var canSetPay = @json(Auth::user()->isSuperAdmin());
+    var canCopy   = @json(Auth::user()->isSuperAdmin() && Auth::user()->accessibleInstitutions()->count() > 1);
+    var lookupUrl = @json(route('lecturers.lookup'));
+
+    // "Copy from another institution": search a lecturer there and fill this row's identity fields.
+    function addCopyPicker(rowEl) {
+        if (!canCopy || rowEl.querySelector('.copy-lecturer')) return;
+        var wrap = document.createElement('div');
+        wrap.className = 'form-group col-md-12';
+        wrap.innerHTML = '<label>Copy details of a lecturer from another institution</label>' +
+            '<select class="form-control copy-lecturer"></select>' +
+            '<small class="text-muted">Optional. Fills name, email, phone, ID number, KRA PIN and specialization. Pay rates and units are set for this institution.</small>';
+        rowEl.querySelector('.row').insertAdjacentElement('afterbegin', wrap);
+
+        var $sel = $(wrap).find('select');
+        $sel.select2({
+            theme: 'bootstrap4', width: '100%', allowClear: true, minimumInputLength: 2,
+            placeholder: 'Search by name, ID number, email or KRA PIN…',
+            ajax: {
+                url: lookupUrl, dataType: 'json', delay: 250,
+                data: function (p) { return { q: p.term }; },
+                processResults: function (list) {
+                    return { results: list.map(function (l) {
+                        return {
+                            id: l.id, data: l, disabled: l.exists_here,
+                            text: l.name + (l.id_number ? ' · ID ' + l.id_number : '') + ' (' + l.institution + ')' + (l.exists_here ? ' – already in this institution' : '')
+                        };
+                    }) };
+                }
+            }
+        });
+        $sel.on('select2:select', function (e) {
+            var l = e.params.data.data;
+            ['name', 'email', 'phone', 'id_number', 'kra_pin', 'specialization'].forEach(function (f) {
+                var input = rowEl.querySelector('input[name$="[' + f + ']"]');
+                if (input) input.value = l[f] == null ? '' : l[f];
+            });
+        });
+    }
 
     function addRow() {
         var index = rowCount;
@@ -125,6 +163,7 @@
 
         document.getElementById('lecturer-rows').insertAdjacentHTML('beforeend', html);
         initUnitsSelect(document.querySelector('.lecturer-row[data-index="' + index + '"] .units-select'));
+        addCopyPicker(document.querySelector('.lecturer-row[data-index="' + index + '"]'));
         updateRowNumbers();
     }
 
@@ -186,6 +225,7 @@
     }
 
     $(function () {
+        document.querySelectorAll('.lecturer-row').forEach(addCopyPicker);
         $('#departments').select2({ theme: 'bootstrap4', width: '100%', placeholder: 'Select departments…', closeOnSelect: false });
 
         // Limit each units dropdown to the chosen departments, keeping still-valid selections

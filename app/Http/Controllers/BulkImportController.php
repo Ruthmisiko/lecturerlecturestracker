@@ -182,12 +182,12 @@ class BulkImportController extends Controller
 
             $problems = $validator->errors()->all();
 
-            // Email and ID number are unique across the whole system.
+            // Email and ID number are unique within the institution (the query is limited to it).
             if (!$problems) {
-                if (Lecturer::withoutGlobalScopes()->where('email', $data['email'])->exists()) {
+                if (Lecturer::where('email', $data['email'])->exists()) {
                     $problems[] = 'a lecturer with this email already exists';
                 }
-                if (Lecturer::withoutGlobalScopes()->where('id_number', $data['id_number'])->exists()) {
+                if (Lecturer::where('id_number', $data['id_number'])->exists()) {
                     $problems[] = 'a lecturer with this ID number already exists';
                 }
             }
