@@ -169,6 +169,9 @@ class LecturerController extends AppBaseController
             'lecturers.*.id_number' => ['nullable', 'string', 'max:50', Rule::unique('lecturers', 'id_number')->where('institution_id', $institutionId)],
             'lecturers.*.kra_pin' => 'nullable|string|max:50',
             'lecturers.*.specialization' => 'nullable|string|max:255',
+            'lecturers.*.personal_number' => 'nullable|string|max:50',
+            'lecturers.*.job_group' => 'nullable|string|max:50',
+            'lecturers.*.per_diem_rate' => 'nullable|numeric|min:0',
             'lecturers.*.rate_per_hour' => 'nullable|numeric|min:0',
             'lecturers.*.tax_rate' => 'nullable|numeric|min:0|max:100',
             'lecturers.*.housing_levy_rate' => 'nullable|numeric|min:0|max:100',
@@ -193,6 +196,7 @@ class LecturerController extends AppBaseController
                 // Non-superusers always get the defaults; the superuser can adjust later.
                 $pay = [
                     'rate_per_hour'     => ($canSetPay ? $data['rate_per_hour'] ?? null : null) ?? Lecturer::DEFAULT_RATE_PER_HOUR,
+                    'per_diem_rate'     => ($canSetPay ? $data['per_diem_rate'] ?? null : null) ?? 0,
                     'tax_rate'          => ($canSetPay ? $data['tax_rate'] ?? null : null) ?? Lecturer::DEFAULT_TAX_RATE,
                     'housing_levy_rate' => ($canSetPay ? $data['housing_levy_rate'] ?? null : null) ?? Lecturer::DEFAULT_HOUSING_LEVY_RATE,
                 ];
@@ -204,6 +208,8 @@ class LecturerController extends AppBaseController
                     'phone'          => $data['phone'] ?? null,
                     'id_number'      => $data['id_number'] ?? null,
                     'kra_pin'        => $data['kra_pin'] ?? null,
+                    'personal_number' => $data['personal_number'] ?? null,
+                    'job_group'      => $data['job_group'] ?? null,
                     'specialization' => $data['specialization'] ?? null,
                 ]);
 
@@ -419,6 +425,9 @@ class LecturerController extends AppBaseController
 
         $request->validate([
             'rate_per_hour'     => 'nullable|numeric|min:0',
+            'per_diem_rate'     => 'nullable|numeric|min:0',
+            'personal_number'   => 'nullable|string|max:50',
+            'job_group'         => 'nullable|string|max:50',
             'tax_rate'          => 'nullable|numeric|min:0|max:100',
             'housing_levy_rate' => 'nullable|numeric|min:0|max:100',
             'departments'       => 'nullable|array',

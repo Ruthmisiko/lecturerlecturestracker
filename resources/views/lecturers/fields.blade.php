@@ -42,6 +42,16 @@
 </div>
 
 <div class="form-group col-md-6">
+    {!! Form::label('personal_number', 'Personal No.:') !!}
+    {!! Form::text('personal_number', null, ['class' => 'form-control', 'maxlength' => 50, 'placeholder' => 'Payroll / staff number']) !!}
+</div>
+
+<div class="form-group col-md-6">
+    {!! Form::label('job_group', 'Job Group:') !!}
+    {!! Form::text('job_group', null, ['class' => 'form-control', 'maxlength' => 50, 'placeholder' => 'e.g. KMTC 8']) !!}
+</div>
+
+<div class="form-group col-md-6">
     {!! Form::label('specialization', 'Specialization:') !!}
     {!! Form::text('specialization', null, ['class' => 'form-control']) !!}
 </div>
@@ -69,6 +79,12 @@
     <div class="form-group col-md-4">
         {!! Form::label('rate_per_hour', 'Rate per Hour (KES):') !!}
         {!! Form::number('rate_per_hour', null, ['class' => 'form-control', 'step' => '0.01', 'min' => 0]) !!}
+    </div>
+
+    <div class="form-group col-md-4">
+        {!! Form::label('per_diem_rate', 'Per Diem Rate / Day (KES):') !!}
+        {!! Form::number('per_diem_rate', null, ['class' => 'form-control', 'step' => '0.01', 'min' => 0]) !!}
+        <small class="text-muted">Used when logging Staff Visits.</small>
     </div>
 
     <div class="form-group col-md-4">

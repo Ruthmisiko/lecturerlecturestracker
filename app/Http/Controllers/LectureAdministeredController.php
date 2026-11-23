@@ -357,8 +357,41 @@ private function fetchExportData(Request $request): array
             }
         });
 
-        Flash::success('Lecture(s) recorded successfully.');
+        $onVisit = $this->lecturesDuringVisits($request->records);
+
+        if ($onVisit) {
+            Flash::warning('Lecture(s) recorded, but these clash with a staff visit: ' . implode('; ', $onVisit));
+        } else {
+            Flash::success('Lecture(s) recorded successfully.');
+        }
         return redirect(route('lecture-administereds.index'));
+    }
+
+    /** Describes lectures falling while the lecturer is away on a staff visit. */
+    private function lecturesDuringVisits(array $records): array
+    {
+        $messages = [];
+
+        foreach ($records as $record) {
+            $lecturer = Lecturer::find($record['lecturer_id']);
+
+            foreach ($record['dates'] as $date) {
+                $lecture = new LectureAdministered([
+                    'lecturer_id' => $record['lecturer_id'], 'lecture_date' => $date,
+                    'start_time' => $record['start_time'], 'end_time' => $record['end_time'],
+                ]);
+
+                $visit = \App\Models\StaffVisit::where('lecturer_id', $record['lecturer_id'])
+                    ->whereDate('start_date', '<=', $date)->whereDate('end_date', '>=', $date)
+                    ->get()->first(fn ($v) => $v->overlapsLecture($lecture));
+
+                if ($visit) {
+                    $messages[] = ($lecturer->name ?? 'Lecturer') . ' on ' . $date . ' (' . $visit->typeLabel() . ': ' . $visit->purpose . ')';
+                }
+            }
+        }
+
+        return array_values(array_unique($messages));
     }
 
 

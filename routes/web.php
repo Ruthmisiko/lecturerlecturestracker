@@ -49,6 +49,13 @@ Route::middleware('auth')->group(function () {
     Route::get('/payment-schedules/{payment_schedule}/pdf', [App\Http\Controllers\PaymentScheduleController::class, 'pdf'])->name('payment-schedules.pdf');
     Route::get('/payment-schedules/{payment_schedule}/excel', [App\Http\Controllers\PaymentScheduleController::class, 'excel'])->name('payment-schedules.excel');
     Route::resource('payment-schedules', App\Http\Controllers\PaymentScheduleController::class);
+    Route::get('/staff-visits/report', [App\Http\Controllers\StaffVisitController::class, 'report'])->name('staff-visits.report');
+    Route::get('/staff-visits/report/pdf', [App\Http\Controllers\StaffVisitController::class, 'reportPdf'])->name('staff-visits.report.pdf');
+    Route::get('/staff-visits/report/excel', [App\Http\Controllers\StaffVisitController::class, 'reportExcel'])->name('staff-visits.report.excel');
+    Route::post('/staff-visits/narrate', [App\Http\Controllers\StaffVisitController::class, 'narrate'])->name('staff-visits.narrate');
+    Route::get('/travel-budgets', [App\Http\Controllers\TravelBudgetController::class, 'index'])->name('travel-budgets.index');
+    Route::post('/staff-visits/{staff_visit}/paid', [App\Http\Controllers\StaffVisitController::class, 'markPaid'])->name('staff-visits.paid');
+    Route::resource('staff-visits', App\Http\Controllers\StaffVisitController::class)->except('show');
     Route::post('/semesters/{semester}/current', [App\Http\Controllers\SemesterController::class, 'makeCurrent'])->name('semesters.current');
     Route::resource('semesters', App\Http\Controllers\SemesterController::class)->except('show');
     Route::get('/attendance-upload', [App\Http\Controllers\AttendanceUploadController::class, 'create'])->name('attendance-upload.create');

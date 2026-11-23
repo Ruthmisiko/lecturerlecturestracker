@@ -17,6 +17,8 @@ class Lecturer extends Model
         'email',
         'phone',
         'id_number',
+        'personal_number',
+        'job_group',
         'kra_pin',
         'account_number',
         'bank_name',
@@ -24,12 +26,13 @@ class Lecturer extends Model
         'specialization',
         'department_id',
         'rate_per_hour',
+        'per_diem_rate',
         'tax_rate',
         'housing_levy_rate',
     ];
 
     /** Pay fields only the superuser may set. */
-    public const PAY_FIELDS = ['rate_per_hour', 'tax_rate', 'housing_levy_rate'];
+    public const PAY_FIELDS = ['rate_per_hour', 'per_diem_rate', 'tax_rate', 'housing_levy_rate'];
 
     public const DEFAULT_RATE_PER_HOUR     = 1000;
     public const DEFAULT_TAX_RATE          = 30;
@@ -44,6 +47,7 @@ class Lecturer extends Model
 
     protected $casts = [
         'rate_per_hour'     => 'float',
+        'per_diem_rate'     => 'float',
         'tax_rate'          => 'float',
         'housing_levy_rate' => 'float',
     ];

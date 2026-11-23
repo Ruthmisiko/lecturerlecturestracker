@@ -98,13 +98,19 @@ class DepartmentController extends AppBaseController
     private function withApprovedHours(Request $request): array
     {
         if (!Auth::user()->isSuperAdmin()) {
-            return $request->except('approved_hours');
+            return $request->except('approved_hours', 'travel_budget', 'travel_budget_parent_id');
         }
 
-        $request->validate(['approved_hours' => 'nullable|numeric|min:0']);
+        $request->validate([
+            'approved_hours'          => 'nullable|numeric|min:0',
+            'travel_budget'           => 'nullable|numeric|min:0',
+            'travel_budget_parent_id' => 'nullable|exists:departments,id',
+        ]);
 
         $input = $request->all();
         $input['approved_hours'] = $request->filled('approved_hours') ? $request->approved_hours : null;
+        $input['travel_budget'] = $request->filled('travel_budget') ? $request->travel_budget : null;
+        $input['travel_budget_parent_id'] = $request->input('travel_budget_parent_id') ?: null;
 
         return $input;
     }

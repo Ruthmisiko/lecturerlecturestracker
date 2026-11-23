@@ -25,11 +25,26 @@
     </div>
 
     <div class="form-group col-md-4">
+        <label>Personal No.</label>
+        <input type="text" name="lecturers[{{ $index }}][personal_number]" class="form-control" maxlength="50">
+    </div>
+
+    <div class="form-group col-md-4">
+        <label>Job Group</label>
+        <input type="text" name="lecturers[{{ $index }}][job_group]" class="form-control" maxlength="50" placeholder="e.g. KMTC 8">
+    </div>
+
+    <div class="form-group col-md-4">
         <label>Specialization</label>
         <input type="text" name="lecturers[{{ $index }}][specialization]" class="form-control">
     </div>
 
     @if (Auth::user()->isSuperAdmin())
+        <div class="form-group col-md-4">
+            <label>Per Diem Rate / Day (KES)</label>
+            <input type="number" step="0.01" min="0" name="lecturers[{{ $index }}][per_diem_rate]" class="form-control" value="0">
+        </div>
+
         <div class="form-group col-md-4">
             <label>Rate per Hour (KES)</label>
             <input type="number" step="0.01" min="0" name="lecturers[{{ $index }}][rate_per_hour]" class="form-control" value="{{ \App\Models\Lecturer::DEFAULT_RATE_PER_HOUR }}">

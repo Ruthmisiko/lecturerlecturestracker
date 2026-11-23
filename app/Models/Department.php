@@ -17,10 +17,13 @@ class Department extends Model
         'code',
         'description',
         'approved_hours',
+        'travel_budget',
+        'travel_budget_parent_id',
     ];
 
     protected $casts = [
         'approved_hours' => 'float',
+        'travel_budget'  => 'float',
     ];
 
     public static array $rules = [];
@@ -33,6 +36,18 @@ class Department extends Model
     public function lecturers()
     {
         return $this->hasMany(Lecturer::class);
+    }
+
+    /** The department whose travel budget this one draws on (e.g. Accounts → Administration), if any. */
+    public function travelBudgetParent()
+    {
+        return $this->belongsTo(self::class, 'travel_budget_parent_id');
+    }
+
+    /** The department that holds the travel budget this one is charged to (itself unless it draws on another). */
+    public function travelBudgetHolderId(): int
+    {
+        return (int) ($this->travel_budget_parent_id ?: $this->id);
     }
 
     public function user()

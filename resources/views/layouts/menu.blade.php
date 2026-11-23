@@ -37,6 +37,15 @@
 </a>
 @endcan
 
+@if (Auth::user()->hasAccess('staff-visit.manage'))
+<a href="{{ route('staff-visits.index') }}" class="nav-link text-white font-weight-bold {{ Request::is('staff-visits*') ? 'active' : '' }}">
+    <p>Staff Visits</p>
+</a>
+<a href="{{ route('travel-budgets.index') }}" class="nav-link text-white font-weight-bold {{ Request::is('travel-budgets*') ? 'active' : '' }}">
+    <p>Travel Budgets</p>
+</a>
+@endif
+
 @if (Auth::user()->hasAccess('semester.manage'))
 <a href="{{ route('semesters.index') }}" class="nav-link text-white font-weight-bold {{ Request::is('semesters*') ? 'active' : '' }}">
     <p>Semesters</p>
